@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="4514" systemVersion="13A603" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" initialViewController="2">
+    <dependencies>
+        <deployment defaultVersion="1552" identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="3746"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="5">
+            <objects>
+                <viewController id="2" customClass="ViewController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="8QX-j7-Mpe"/>
+                        <viewControllerLayoutGuide type="bottom" id="C9A-fY-9fy"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="3">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <subviews>
+                            <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="JRl-kc-bti">
+                                <rect key="frame" x="126" y="190" width="75" height="30"/>
+                                <state key="normal" title="Add Media">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="addMedia:" destination="2" eventType="touchUpInside" id="ENH-bH-nev"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="2jo-6M-XtW">
+                                <rect key="frame" x="113" y="256" width="95" height="30"/>
+                                <state key="normal" title="Add nil Media">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="addNilMedia:" destination="2" eventType="touchUpInside" id="YII-fL-dIU"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ws7-jM-niB">
+                                <rect key="frame" x="101" y="338" width="118" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Add Video Media">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="addVideoMedia:" destination="2" eventType="touchUpInside" id="l6p-sN-XYo"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="5DY-ca-ghA">
+                                <rect key="frame" x="84" y="405" width="158" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Add video delos Media">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="addVideoDelosMedia:" destination="2" eventType="touchUpInside" id="qk6-fd-3NI"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="4FJ-F8-go1">
+                                <rect key="frame" x="101" y="461" width="118" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="ProjectDictionary">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="projectDictionary:" destination="2" eventType="touchUpInside" id="j4p-Zc-mqb"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="iPO-Xd-bzR">
+                                <rect key="frame" x="84" y="130" width="165" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Update ARMediaLibrary">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="updateARMediaLibrary:" destination="2" eventType="touchUpInside" id="5tS-br-EaA"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="39w-r4-5Sc">
+                                <rect key="frame" x="96" y="73" width="135" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Init ARMediaLibrary">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="ARMediaLibrary:" destination="2" eventType="touchUpInside" id="5Fg-XT-dHB"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ifb-qW-Jng">
+                                <rect key="frame" x="92" y="509" width="137" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="All Projectdictionary">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="allProjectDictionary:" destination="2" eventType="touchUpInside" id="L8u-48-uEB"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstItem="iPO-Xd-bzR" firstAttribute="centerX" secondItem="39w-r4-5Sc" secondAttribute="centerX" id="7Gg-Wc-FHd"/>
+                            <constraint firstItem="ws7-jM-niB" firstAttribute="centerX" secondItem="2jo-6M-XtW" secondAttribute="centerX" id="GyY-wY-0Ay"/>
+                            <constraint firstItem="39w-r4-5Sc" firstAttribute="top" secondItem="8QX-j7-Mpe" secondAttribute="bottom" constant="53" id="JSz-a7-N4h"/>
+                            <constraint firstAttribute="centerX" secondItem="39w-r4-5Sc" secondAttribute="centerX" id="Ol4-No-ck5"/>
+                            <constraint firstItem="JRl-kc-bti" firstAttribute="centerX" secondItem="iPO-Xd-bzR" secondAttribute="centerX" id="UDw-6I-dwj"/>
+                            <constraint firstItem="ws7-jM-niB" firstAttribute="centerX" secondItem="5DY-ca-ghA" secondAttribute="centerX" id="Uoy-ZM-2ME"/>
+                            <constraint firstItem="4FJ-F8-go1" firstAttribute="centerX" secondItem="5DY-ca-ghA" secondAttribute="centerX" id="d1x-t8-auw"/>
+                            <constraint firstItem="JRl-kc-bti" firstAttribute="centerX" secondItem="2jo-6M-XtW" secondAttribute="centerX" id="ryE-OT-VNh"/>
+                            <constraint firstItem="ifb-qW-Jng" firstAttribute="centerX" secondItem="4FJ-F8-go1" secondAttribute="centerX" id="yeu-Ad-CAa"/>
+                        </constraints>
+                    </view>
+                    <connections>
+                        <outlet property="ARMediaLibrary" destination="39w-r4-5Sc" id="mXS-Ne-qDE"/>
+                        <outlet property="addMedia" destination="JRl-kc-bti" id="H6x-lu-j4V"/>
+                        <outlet property="addNilMedia" destination="2jo-6M-XtW" id="TmK-SU-lpP"/>
+                        <outlet property="addVideoDelosMedia" destination="5DY-ca-ghA" id="bGM-u2-89J"/>
+                        <outlet property="addVideoMedia" destination="ws7-jM-niB" id="Xrl-uM-1VD"/>
+                        <outlet property="projectDictionary" destination="4FJ-F8-go1" id="9LJ-3h-Wwx"/>
+                        <outlet property="updateARMediaLibrary" destination="iPO-Xd-bzR" id="xNk-Cp-slq"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="4" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1016" y="-8"/>
+        </scene>
+    </scenes>
+    <simulatedMetricsContainer key="defaultSimulatedMetrics">
+        <simulatedStatusBarMetrics key="statusBar"/>
+        <simulatedOrientationMetrics key="orientation"/>
+        <simulatedScreenMetrics key="destination" type="retina4"/>
+    </simulatedMetricsContainer>
+</document>
