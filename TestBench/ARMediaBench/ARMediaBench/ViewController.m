@@ -15,10 +15,11 @@
 @implementation ViewController
 @synthesize addMedia = _addMedia;
 @synthesize addNilMedia = _addNilMedia;
-@synthesize addVideoMedia = _addVideoMedia;
+@synthesize addVideoMediaAtom32Bit = _addVideoMediaAtom32Bit;
+@synthesize addVideoMediaAtom64Bit = _addVideoMediaAtom64Bit;
 @synthesize pictureFolderPath = _pictureFolderPath;
-@synthesize videoFolderPath = _videoFolderPath;
-@synthesize delosVideoFolderPath = _delosVideoFolderPath;
+@synthesize videoAtom32BitFolderPath = _videoAtom32BitFolderPath;
+@synthesize videoAtom64BitFolderPath = _videoAtom64BitFolderPath;
 @synthesize retreiveProjectDic = _retreiveProjectDic;
 
 - (void)callback:(NSNotification *)notification
@@ -29,6 +30,7 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(callback:) name:kARMediaManagerNotificationUpdated object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(callback:) name:kARMediaManagerNotificationUpdating object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(callback:) name:kARMediaManagerNotificationInitialized object:nil];
@@ -38,22 +40,21 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSError *error;
     NSString *documentsDirectory = [paths objectAtIndex:0];
-    
-    NSString *txtPath = [documentsDirectory stringByAppendingPathComponent:@"IMG_1115.mov"];
-    NSString *resourcePath = [[NSBundle mainBundle] pathForResource:@"IMG_1115" ofType:@"mov"];
-    [fileManager copyItemAtPath:resourcePath toPath:txtPath error:&error];
-    self.videoFolderPath = txtPath;
 
-    NSString *txtPath2 = [documentsDirectory stringByAppendingPathComponent:@"IMG_delos_pvat2.mov"];
-    NSString *resourcePath2 = [[NSBundle mainBundle] pathForResource:@"IMG_delos_pvat2" ofType:@"mov"];
+    NSString *txtPath2 = [documentsDirectory stringByAppendingPathComponent:@"IMG_delos_pvat64Bit.mov"];
+    NSString *resourcePath2 = [[NSBundle mainBundle] pathForResource:@"IMG_delos_pvat64Bit" ofType:@"mov"];
     [fileManager copyItemAtPath:resourcePath2 toPath:txtPath2 error:&error];
-    self.delosVideoFolderPath = txtPath2;
+    self.videoAtom64BitFolderPath = txtPath2;
+    
+    NSString *txtPath = [documentsDirectory stringByAppendingPathComponent:@"IMG_delos_pvat2.mov"];
+    NSString *resourcePath = [[NSBundle mainBundle] pathForResource:@"IMG_delos_pvat2" ofType:@"mov"];
+    [fileManager copyItemAtPath:resourcePath toPath:txtPath error:&error];
+    self.videoAtom32BitFolderPath = txtPath2;
     
     NSString *picturePath = [documentsDirectory stringByAppendingPathComponent:@"IMG_1155.JPG"];
     NSString *pictureResourcePath = [[NSBundle mainBundle] pathForResource:@"IMG_1155" ofType:@"JPG"];
     [fileManager copyItemAtPath:pictureResourcePath toPath:picturePath error:&error];
     self.pictureFolderPath = picturePath;
-    
     self.retreiveProjectDic = [NSMutableDictionary dictionary];
 }
 
@@ -72,17 +73,17 @@
     });
 }
 
-- (IBAction)addVideoMedia:(UIButton *)sender
+- (IBAction)addVideoMediaAtom32Bit:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [[ARMedia_Manager sharedARMedia_Manager ]ARMedia_Manager_AddMedia:self.videoFolderPath];
+        [[ARMedia_Manager sharedARMedia_Manager ]ARMedia_Manager_AddMedia:self.videoAtom32BitFolderPath];
     });
 }
 
-- (IBAction)addVideoDelosMedia:(UIButton *)sender
+- (IBAction)addVideoDelosMediaAtom64Bit:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [[ARMedia_Manager sharedARMedia_Manager ]ARMedia_Manager_AddMedia:self.delosVideoFolderPath];
+        [[ARMedia_Manager sharedARMedia_Manager ]ARMedia_Manager_AddMedia:self.videoAtom64BitFolderPath];
     });
 }
 
@@ -101,10 +102,6 @@
 
 - (IBAction)projectDictionary:(UIButton *)sender
 {
-   /* dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        
-        NSLog(@"DONE = %@",[[ARMedia_Manager sharedARMedia_Manager] getRefreshedProjectMediaDictionary:@"Parrot AR.Drone"]);
-    });*/
     [self.retreiveProjectDic removeObjectForKey:@"Parrot AR.Drone"];
     NSLog(@"retreiveProjectDic : %@",self.retreiveProjectDic);
 }

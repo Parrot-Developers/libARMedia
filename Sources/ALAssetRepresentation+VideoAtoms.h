@@ -13,20 +13,16 @@
 /**
  get the next Atom in a video from an offset.
  @param movie_atom_t for the Atom
- @param long long for thr offset
+ @param long long for the offset
  @return BOOL return YES if sucsess else NO.
  */
-- (BOOL)getNextAtom:(movie_atom_t *)atom fromOffset:(long long *)offset;
-/**
- get the ardtAtom from a video if it exist.
- @return NSString with the ardt.
- */
-- (NSString *)ardtAtomExist;
+//- (BOOL)getNextAtom:(movie_atom_t *)atom fromOffset:(long long *)offset;
 
 /**
- get the pvatAtom from a video if it exist.
+ check from a video if atomName it exist.
+ @param NSString for the name of the atom
  @return NSDictionary with the pvat informations.
  */
-- (NSDictionary *)pvatAtomExist;
+- (NSDictionary *)atomExist:(NSString *)atomName;
 
 @end

@@ -16,6 +16,8 @@
 #define ARDRONE_MEDIAMANAGER_MOV_EXTENSION                      @"mov"
 #define ARDRONE_MEDIAMANAGER_JPG_EXTENSION                      @"JPG"
 
+#define ARDRONE_MEDIAMANAGER_ATOM_PVAT                          @"pvat"
+
 // PVAT Keys
 NSString *const kARMediaManagerPVATRunDateKey                   = @"runDate";
 NSString *const kARMediaManagerPVATMediaDateKey                 = @"mediaDate";
@@ -293,7 +295,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
             {
                 if([asset valueForProperty:ALAssetPropertyType] == ALAssetTypeVideo)
                 {
-                    NSDictionary *atomValue = [representation pvatAtomExist];
+                    NSDictionary *atomValue = [representation atomExist:ARDRONE_MEDIAMANAGER_ATOM_PVAT];
                     
                     if(atomValue != nil)
                     {
@@ -380,7 +382,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                               
                               ALAssetRepresentation *representation = [asset defaultRepresentation];
                               
-                              NSDictionary *atomValue = [representation pvatAtomExist];
+                              NSDictionary *atomValue = [representation atomExist:ARDRONE_MEDIAMANAGER_ATOM_PVAT];
                               
                               if(atomValue != nil)
                               {

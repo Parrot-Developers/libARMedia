@@ -2,7 +2,7 @@
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="4514" systemVersion="13A603" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" initialViewController="2">
     <dependencies>
         <deployment defaultVersion="1552" identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="3746"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="3747"/>
     </dependencies>
     <scenes>
         <!--View Controller-->
@@ -36,23 +36,23 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ws7-jM-niB">
-                                <rect key="frame" x="101" y="338" width="118" height="30"/>
+                                <rect key="frame" x="62" y="338" width="197" height="30"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <state key="normal" title="Add Video Media">
+                                <state key="normal" title="Add Video Media Atom 32bit">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
-                                    <action selector="addVideoMedia:" destination="2" eventType="touchUpInside" id="l6p-sN-XYo"/>
+                                    <action selector="addVideoMediaAtom32Bit:" destination="2" eventType="touchUpInside" id="ROj-S3-qrw"/>
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="5DY-ca-ghA">
-                                <rect key="frame" x="84" y="405" width="158" height="30"/>
+                                <rect key="frame" x="36" y="400" width="239" height="30"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <state key="normal" title="Add video delos Media">
+                                <state key="normal" title="Add video delos Media Atom 64Bit">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
-                                    <action selector="addVideoDelosMedia:" destination="2" eventType="touchUpInside" id="qk6-fd-3NI"/>
+                                    <action selector="addVideoDelosMediaAtom64Bit:" destination="2" eventType="touchUpInside" id="CjD-jo-U6f"/>
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" ambiguous="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="4FJ-F8-go1">
@@ -97,6 +97,7 @@
                             </button>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                        <gestureRecognizers/>
                         <constraints>
                             <constraint firstItem="iPO-Xd-bzR" firstAttribute="centerX" secondItem="39w-r4-5Sc" secondAttribute="centerX" id="7Gg-Wc-FHd"/>
                             <constraint firstItem="ws7-jM-niB" firstAttribute="centerX" secondItem="2jo-6M-XtW" secondAttribute="centerX" id="GyY-wY-0Ay"/>
@@ -113,8 +114,8 @@
                         <outlet property="ARMediaLibrary" destination="39w-r4-5Sc" id="mXS-Ne-qDE"/>
                         <outlet property="addMedia" destination="JRl-kc-bti" id="H6x-lu-j4V"/>
                         <outlet property="addNilMedia" destination="2jo-6M-XtW" id="TmK-SU-lpP"/>
-                        <outlet property="addVideoDelosMedia" destination="5DY-ca-ghA" id="bGM-u2-89J"/>
-                        <outlet property="addVideoMedia" destination="ws7-jM-niB" id="Xrl-uM-1VD"/>
+                        <outlet property="addVideoMediaAtom32Bit" destination="ws7-jM-niB" id="rZC-Wo-NS9"/>
+                        <outlet property="addVideoMediaAtom64Bit" destination="5DY-ca-ghA" id="zCg-gt-JY2"/>
                         <outlet property="projectDictionary" destination="4FJ-F8-go1" id="9LJ-3h-Wwx"/>
                         <outlet property="updateARMediaLibrary" destination="iPO-Xd-bzR" id="xNk-Cp-slq"/>
                     </connections>

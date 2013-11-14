@@ -14,11 +14,17 @@
 #include <time.h>
 
 typedef struct _movie_atom_t {
-  uint32_t size;
-  char tag [4];
+  uint64_t size;
+  char *tag;
   uint8_t *data;
   uint8_t wide;
 } movie_atom_t;
+
+typedef struct _atom_check_return{
+    uint64_t size;
+    int flag;
+    long long offset;
+}atom_check_return;
 
 #define PRRT_DATA_VERSION 3 // No parenthesis !
 
@@ -48,6 +54,8 @@ typedef struct _prrt_data_v3_t {
     float framePsiDiscontinuity;
     int32_t frameAltitude;
 } prrt_data_v3_t;
+
+#define atom_ntohll(x)  swap_uint64(x)
 
 // Auto select the correct prrt_data_t type for the current version
 #define DECLARE_PRRT_DATA_T(VER) _DECLARE_PRRT_DATA_T(VER)
@@ -139,5 +147,22 @@ uint32_t getVideoFpsFromFile (FILE *videoFile);
  * @note This call may fail on non-AR.Drone generated videos
  */
 uint32_t getVideoFpsFromAtom (uint8_t *mdhdAtom, const int atomSize);
+
+/**
+ * @brief Read size and atomName from a given buffer of atom
+ * This function get the size and the name of a given buffer atom
+ * @param buffer Pointer to the buffer atom
+ * @param offset Pointer of number of bytes offset in the video
+ * @param tag char Pointer of the wanted atom Name
+ * @return int return 0 if the tag is not found and increment the off with the atom size else return 1 if success
+ */
+int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag);
+
+/**
+ * @brief This function reversed the byte order of a uint64_t
+ * @param value in uint64_t
+ * @return uint64_t reversed
+*/
+uint64_t swap_uint64(uint64_t value);
 
 #endif // _ARDRONE_VIDEO_ATOMS_H_

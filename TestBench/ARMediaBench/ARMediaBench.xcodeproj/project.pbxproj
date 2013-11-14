@@ -23,6 +23,7 @@
 		3E0A757818069ED6006B479E /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E0A757718069ED6006B479E /* AssetsLibrary.framework */; };
 		3E82FC18182A83D30000DDA4 /* IMG_1155.JPG in Resources */ = {isa = PBXBuildFile; fileRef = 3E82FC16182A83D30000DDA4 /* IMG_1155.JPG */; };
 		3E82FC19182A83D30000DDA4 /* IMG_delos_pvat2.mov in Resources */ = {isa = PBXBuildFile; fileRef = 3E82FC17182A83D30000DDA4 /* IMG_delos_pvat2.mov */; };
+		3E95362B1834D54600E3314A /* IMG_delos_pvat64Bit.mov in Resources */ = {isa = PBXBuildFile; fileRef = 3E95362A1834D54600E3314A /* IMG_delos_pvat64Bit.mov */; };
 		3E9EE3EB180830FB00F80B96 /* libARMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E9EE3EA180830FB00F80B96 /* libARMedia.framework */; };
 /* End PBXBuildFile section */
 
@@ -49,6 +50,7 @@
 		3E0A757718069ED6006B479E /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		3E82FC16182A83D30000DDA4 /* IMG_1155.JPG */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = IMG_1155.JPG; sourceTree = "<group>"; };
 		3E82FC17182A83D30000DDA4 /* IMG_delos_pvat2.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = IMG_delos_pvat2.mov; sourceTree = "<group>"; };
+		3E95362A1834D54600E3314A /* IMG_delos_pvat64Bit.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = IMG_delos_pvat64Bit.mov; sourceTree = "<group>"; };
 		3E9EE3EA180830FB00F80B96 /* libARMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libARMedia.framework; path = ../../../ARBuildUtils/Targets/iOS/Install/Frameworks/libARMedia.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -106,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				3E82FC16182A83D30000DDA4 /* IMG_1155.JPG */,
+				3E95362A1834D54600E3314A /* IMG_delos_pvat64Bit.mov */,
 				3E82FC17182A83D30000DDA4 /* IMG_delos_pvat2.mov */,
 				3E0A754218069E82006B479E /* AppDelegate.h */,
 				3E0A754318069E82006B479E /* AppDelegate.m */,
@@ -187,6 +190,7 @@
 				3E0A754818069E82006B479E /* Default@2x.png in Resources */,
 				3E82FC18182A83D30000DDA4 /* IMG_1155.JPG in Resources */,
 				3E82FC19182A83D30000DDA4 /* IMG_delos_pvat2.mov in Resources */,
+				3E95362B1834D54600E3314A /* IMG_delos_pvat64Bit.mov in Resources */,
 				3E0A754A18069E82006B479E /* Default-568h@2x.png in Resources */,
 				3E01A18B180BEE8000EB2F27 /* MainStoryboard.storyboard in Resources */,
 			);

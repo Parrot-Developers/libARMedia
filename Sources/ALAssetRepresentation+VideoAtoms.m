@@ -7,110 +7,92 @@
 
 #import "ALAssetRepresentation+VideoAtoms.h"
 
-
 /*************************************/
 /*ALAssetRepresentation (VideosAtoms)*/
 /*************************************/
 
 @implementation ALAssetRepresentation (VideosAtoms)
-- (BOOL) getNextAtom:(movie_atom_t *)atom fromOffset:(long long *)offset
-{
-    BOOL result = NO;
-    long long current_offset = *offset;
-    if([self getBytes:(uint8_t *)&atom->size fromOffset:current_offset length:sizeof(uint32_t) error:nil] != 0)
-    {
-        atom->size = ntohl(atom->size);
-        current_offset += sizeof(uint32_t);
-        if([self getBytes:(uint8_t *)&atom->tag[0] fromOffset:current_offset length:sizeof(uint32_t) error:nil] != 0)
-        {
-            current_offset += sizeof(uint32_t);
-            *offset = current_offset;
-            result = YES;
-        }
-        // NO ELSE because if error, we continue the parsing
-    }
-    // NO ELSE because if error, we continue the parsing
-    
-    return result;
-}
 
-- (NSString *)ardtAtomExist
+- (NSDictionary *)atomExist:(NSString *)atomName
 {
-    BOOL result = NO;
-    NSString *retval = nil;
+    int result = 0;
+    NSDictionary *retVal = nil;
+    
     movie_atom_t atom = { 0 };
-    long long atomOffset = 0;
+   
+    NSError *error = nil;
+    long long offset = 0;
     
-    do
-    {
-        result = [self getNextAtom:&atom fromOffset:&atomOffset];
-        atomOffset += (atom.size - 8);
-    }
-    while (result &&
-           ('a' != atom.tag [0] ||
-            'r' != atom.tag [1] ||
-            'd' != atom.tag [2] ||
-            't' != atom.tag [3] ) );
+    uint32_t size = (2 * sizeof(uint32_t)) + sizeof(uint64_t);
+    uint8_t *buff = (uint8_t *)malloc(size);
+    NSUInteger bytesRead;
     
-    // If result == YES, we found atom "ardt"
-    if(result)
+    if(buff != NULL)
     {
-        atomOffset -= (atom.size - 8);
-        atom.data = (uint8_t *)malloc(sizeof(uint8_t) * ((atom.size - 8) + 1));
-        memset(atom.data, 0, sizeof(uint8_t) * ((atom.size - 8) + 1)); // +1 for '\0'
-        if((atom.size - 8) > 0)
+        do
         {
-            [self getBytes:atom.data fromOffset:atomOffset length:(atom.size - 8) error:nil];
-            retval = [NSString stringWithUTF8String:(const char *)atom.data + 4];
+            bytesRead = [self getBytes:buff fromOffset:offset length:size error:&error];
+            result = seekMediaBufferToAtom(buff, &offset, [atomName UTF8String]);
         }
-        free(atom.data);
-    }
-    // NO ELSE - we didn't find atom 'ardt' atom, nothing to do.
-    
-    return retval;
-}
-
-- (NSDictionary *)pvatAtomExist
-{
-    BOOL result = NO;
-    NSDictionary *retval = nil;
-    movie_atom_t atom = { 0 };
-    long long atomOffset = 0;
-    
-    do
-    {
-        result = [self getNextAtom:&atom fromOffset:&atomOffset];
-        atomOffset += (atom.size - 8);
-    }
-    while (result &&
-           ('p' != atom.tag [0] ||
-            'v' != atom.tag [1] ||
-            'a' != atom.tag [2] ||
-            't' != atom.tag [3] ) );
-    
-    // If result == YES, we found atom "ardt"
-    if(result)
-    {
-        atomOffset -= (atom.size - 8);
-        atom.data = (uint8_t *)malloc(sizeof(uint8_t) * (atom.size - 8));
-        memset(atom.data, 0, sizeof(uint8_t) * (atom.size - 8));
-        if((atom.size - 8) > 0)
+        while ((error == nil) && !result && bytesRead !=0);
+        
+        // If result = 1, we found the atomName
+        if(result)
         {
-            NSError *error = nil;
-
-            [self getBytes:atom.data fromOffset:atomOffset length:atom.size error:nil];
-            NSDictionary *jSONDataDic = [NSJSONSerialization JSONObjectWithData:[NSData dataWithBytes:atom.data length:atom.size - 8] options:NSJSONReadingMutableContainers error:&error];
-            if(error == nil)
-            {
-                retval = jSONDataDic;
-            }
+            
+            [self getBytes:(uint8_t *)&atom.size fromOffset:offset length:sizeof(uint32_t) error:&error];
+            if(error != nil)
+                result = 0;
         }
         
-        free(atom.data);
+        if(result)
+        {
+            atom.size = htonl(atom.size);
+            offset += (2 * sizeof(uint32_t));
+            
+            if(atom.size == 1)
+            {
+                [self getBytes:(uint8_t *)&atom.size fromOffset:offset length:sizeof(uint64_t) error:&error];
+                if(error == nil)
+                {
+                    atom.size = atom_ntohll(atom.size);
+                }
+                else
+                {
+                    result = 0;
+                }
+            }
+            // NO ELSE - Don't need to get 64 bits wide
+        }
+
+        if(result)
+        {
+            atom.size -= (2 * sizeof(uint32_t));
+            if(atom.size > 0)
+            {
+                NSError *error = nil;
+
+                atom.data = (uint8_t *)malloc(atom.size * sizeof(uint8_t));
+                memset(atom.data, 0, sizeof(uint8_t) * atom.size);
+
+                [self getBytes:atom.data fromOffset:offset length:atom.size error:&error];
+                if(error != nil)
+                    result = 0;
+            }
+            // TODO case
+        }
+        
+        if(result)
+        {
+            NSDictionary *jSONDataDic = [NSJSONSerialization JSONObjectWithData:[NSData dataWithBytes:atom.data length:atom.size] options:NSJSONReadingMutableContainers error:&error];
+            free(atom.data);
+            if (error == nil)
+            {
+                retVal = jSONDataDic;
+            }
+        }
+        free(buff);
     }
-    // NO ELSE - we didn't find atom 'ardt' atom, nothing to do.
-    
-    return retval;
+    return retVal;
 }
 @end
-

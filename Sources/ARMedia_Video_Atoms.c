@@ -11,6 +11,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define ATOM_MALLOC(SIZE) malloc(SIZE)
 #define ATOM_CALLOC(NMEMB, SIZE) calloc(NMEMB, SIZE)
@@ -136,6 +137,7 @@
    }
 */
 
+// Actual read functions
 static void read_uint32 (FILE *fptr, uint32_t *dest)
 {
     uint32_t locValue = 0;
@@ -164,7 +166,7 @@ static void read_uint64 (FILE *fptr, uint64_t *dest)
     *dest = retValue;
 }
 
-void read_4cc (FILE *fptr, char dest[5])
+static void read_4cc (FILE *fptr, char dest[5])
 {
     if (1 != fread (dest, 4, 1, fptr))
     {
@@ -172,7 +174,6 @@ void read_4cc (FILE *fptr, char dest[5])
     }
 }
 
-// Actual read functions
 
 static int seekMediaFileToAtom (FILE *videoFile, char *atomName, uint64_t *retAtomSize)
 {
@@ -519,4 +520,49 @@ uint32_t getVideoFpsFromAtom (uint8_t *mdhdAtom, const int atomSize)
         ATOM_READ_U32 (fps);
     }
     return fps;
+}
+
+uint64_t swap_uint64(uint64_t value)
+{
+    uint32_t atomSizeLow;
+    uint32_t atomSizeHigh;
+    
+    atomSizeLow = value & 0xffffffff;
+    atomSizeHigh = value >> 32;
+    atomSizeHigh = ntohl(atomSizeHigh);
+    atomSizeLow = ntohl(atomSizeLow);
+    
+    return ((uint64_t)atomSizeLow) << 32 | atomSizeHigh;
+}
+
+int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag)
+{
+    int retVal = 0;
+    
+    uint32_t atomSize32 = 0;
+    uint64_t atomSize = 0;
+    uint32_t atomTag = 0;
+    memcpy(&atomSize32, buff, sizeof(uint32_t));
+    atomSize = (uint64_t)ntohl(atomSize32);
+    memcpy(&atomTag, buff + sizeof(uint32_t), sizeof(uint32_t));
+
+    if(atomSize == 1)
+    {
+        memcpy(&atomSize, buff + (2 * sizeof(uint32_t)), sizeof(uint64_t));
+        atomSize = atom_ntohll(atomSize);
+    }
+
+    if(((uint8_t *)&atomTag)[0] == tag[0] &&
+       ((uint8_t *)&atomTag)[1] == tag[1] &&
+       ((uint8_t *)&atomTag)[2] == tag[2] &&
+       ((uint8_t *)&atomTag)[3] == tag[3])
+    {
+        retVal = 1;
+    }
+    else
+    {
+        *offset += atomSize;
+    }
+
+    return retVal;
 }
