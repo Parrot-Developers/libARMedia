@@ -13,8 +13,8 @@
 #import "ARMedia_Singleton.h"
 
 #define ARMEDIA_MANAGER_DATABASE_FILENAME                       @"ARMediaDB.ar"
-#define ARDRONE_MEDIAMANAGER_MOV_EXTENSION                      @"mov"
-#define ARDRONE_MEDIAMANAGER_JPG_EXTENSION                      @"JPG"
+#define ARDRONE_MEDIAMANAGER_MOV_EXTENSION                      @"mp4"
+#define ARDRONE_MEDIAMANAGER_JPG_EXTENSION                      @"jpg"
 
 #define ARDRONE_MEDIAMANAGER_ATOM_PVAT                          @"pvat"
 
@@ -91,9 +91,12 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
         if(valueKARMediaManagerKey > 0)
         {
             // If data is not empty, unarchiving
-            NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:data];
-            _privateProjectsDictionary  = [unarchiver decodeObjectForKey:kARMediaManagerArchiverKey];
-            [unarchiver finishDecoding];
+            if (data != nil)
+            {
+                NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:data];
+                _privateProjectsDictionary  = [unarchiver decodeObjectForKey:kARMediaManagerArchiverKey];
+                [unarchiver finishDecoding];
+            }
         }
         else
         {
@@ -193,6 +196,10 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     return returnVal;
 }
 
+- (BOOL)ARMedia_Manager_isUpdated
+{
+    return _isUpdate;
+}
 /*************************************/
 /*      ARMedia_Manager (private)    */
 /*************************************/
@@ -277,7 +284,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
             if ([[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] intValue] > index)
             {
                 stringAsset = [[representation url] absoluteString];
-                
                 for (NSString *projectID in _privateProjectsDictionary)
                 {
                     NSMutableDictionary *projectDictionary = [_privateProjectsDictionary valueForKey:projectID];
@@ -285,7 +291,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                     if (object != nil)
                     {
                         [[tempProjectDictionaries objectForKey:projectID] setValue:[projectDictionary objectForKey:stringAsset] forKey:stringAsset];
-                        
                         [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
                     }
                     // NO ELSE - We add only existing media from Camera roll
@@ -296,7 +301,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                 if([asset valueForProperty:ALAssetPropertyType] == ALAssetTypeVideo)
                 {
                     NSDictionary *atomValue = [representation atomExist:ARDRONE_MEDIAMANAGER_ATOM_PVAT];
-                    
                     if(atomValue != nil)
                     {
                         stringAsset = [[representation url] absoluteString];
@@ -311,7 +315,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                 else if([asset valueForProperty:ALAssetPropertyType] == ALAssetTypePhoto)
                 {
                     NSDictionary *metadata = [representation metadata];
-                    
                     if(metadata != nil)
                     {
                         NSDictionary *tiffDictionary = [metadata valueForKey:(NSString *)kCGImagePropertyTIFFDictionary];
@@ -323,15 +326,17 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                             NSError *jSONerror = nil;
                             
                             NSData * data = [tiffDescription dataUsingEncoding:NSASCIIStringEncoding];
-                            NSDictionary *jSONDataDic =[NSJSONSerialization  JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
-                            
-                            if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey]] && (jSONerror == nil))
+                            if (data != nil)
                             {
-                                object.runDate = [jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
-                                object.mediaDate = [jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
-                                object.device = [jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey];
-                                [[tempProjectDictionaries valueForKey:object.device] setValue:object forKey:stringAsset];
-                                [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                                NSDictionary *jSONDataDic =[NSJSONSerialization  JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
+                                if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey]] && (jSONerror == nil))
+                                {
+                                    object.runDate = [jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
+                                    object.mediaDate = [jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
+                                    object.device = [jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey];
+                                    [[tempProjectDictionaries valueForKey:object.device] setValue:object forKey:stringAsset];
+                                    [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                                }
                             }
                         }
                     }
@@ -350,7 +355,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
             [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
             _isUpdate = YES;
         }
-        
         *stop = _cancelRefresh;
     };
     [group enumerateAssetsUsingBlock:assetEnumerator];
@@ -376,7 +380,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
              }
              else
              {
-                 
                  [library assetForURL:assetURL
                           resultBlock:^(ALAsset *asset) {
                               
@@ -392,7 +395,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                                   object.device = [atomValue valueForKey:kARMediaManagerPVATDeviceKey];
                                   [[_privateProjectsDictionary valueForKey:object.device] setValue:object forKey:stringAsset];
                                   [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
-                                  
                               }
                               // NO ELSE - Ignoring this video - ardt value format not recognized
                               dispatch_semaphore_signal(sema);
@@ -414,8 +416,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     {
         NSArray *pathComponents = [mediaPath pathComponents];
         NSData *data = [NSData dataWithContentsOfFile:mediaPath];
-        
-        [library writeImageDataToSavedPhotosAlbum:data metadata:nil  completionBlock:^(NSURL *assetURL, NSError *error)
+        [library writeImageDataToSavedPhotosAlbum:data metadata:nil completionBlock:^(NSURL *assetURL, NSError *error)
          {
              if(error != nil || assetURL == nil)
              {
@@ -425,7 +426,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
              }
              else
              {
-                 
                  [library assetForURL:assetURL
                           resultBlock:^(ALAsset *asset) {
                               ALAssetRepresentation *representation = [asset defaultRepresentation];
@@ -433,24 +433,33 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                               NSDictionary *metadata = [representation metadata];
                               if(metadata != nil)
                               {
+                                  //NSLog(@"metadata : %@",metadata);
                                   NSDictionary *tiffDictionary = [metadata valueForKey:(NSString *)kCGImagePropertyTIFFDictionary];
-                                  
+                                  //NSLog(@"tiffDictionary : %@",tiffDictionary);
                                   if(tiffDictionary != nil)
                                   {
-                                      NSString *tiffDescription = [tiffDictionary valueForKey:(NSString *)kCGImagePropertyTIFFImageDescription];
+                                      NSString *tiffDescription = [tiffDictionary valueForKey:(NSString *)kCGImagePropertyTIFFImageDescription];//@"media_20130828_115641/picture_20130828_115641.jpg";
                                       stringAsset = [[representation url] absoluteString];
+                                      //NSLog(@"tiffDescription : %@",tiffDescription);
+                                      
                                       NSError *jSONerror = nil;
-                                      
-                                      NSData * data = [tiffDescription dataUsingEncoding:NSASCIIStringEncoding];
-                                      NSDictionary *jSONDataDic =[NSJSONSerialization  JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
-                                      
-                                      if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey]] && (jSONerror == nil))
+                                      NSData *data = [tiffDescription dataUsingEncoding:NSASCIIStringEncoding];
+                                      if (data != nil)
                                       {
-                                          object.runDate = [jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
-                                          object.mediaDate = [jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
-                                          object.device = [jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey];
-                                          [[_privateProjectsDictionary valueForKey:object.device] setValue:object forKey:stringAsset];
-                                          [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                                          NSDictionary *jSONDataDic =[NSJSONSerialization  JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
+                                          
+                                          //NSLog(@"jSONDataDic : %@",jSONDataDic);
+                                          if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey]] && (jSONerror == nil))
+                                          {
+                                              object.runDate = [jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey]; //@"20130725_140153";//
+                                              object.mediaDate = [jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];//@"20130725_140153";//
+                                              object.device = [jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey];//@"Parrot Delos";//
+                                             // NSLog(@"object.device = %@",object.device);
+                                              //NSLog(@"runDate = %@",object.runDate);
+                                              //NSLog(@"mediaDate = %@",object.mediaDate);
+                                              [[_privateProjectsDictionary valueForKey:object.device] setValue:object forKey:stringAsset];
+                                              [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                                          }
                                       }
                                   }
                               }

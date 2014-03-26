@@ -55,4 +55,6 @@ UIKIT_EXTERN NSString *const kARMediaManagerNotificationMediaAdded;
  @return NSDictionary who containt media projectDictionary.
  */
 - (NSDictionary *)ARMedia_Manager_GetProjectDictionary:(NSString *)project;
+
+- (BOOL)ARMedia_Manager_isUpdated;
 @end
