@@ -62,41 +62,41 @@
 - (IBAction)addMedia:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [[ARMedia_Manager sharedARMedia_Manager]ARMedia_Manager_AddMedia:self.pictureFolderPath];
+        [[ARMediaManager sharedInstance] addMedia:self.pictureFolderPath];
     });
 }
 
 - (IBAction)addNilMedia:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [[ARMedia_Manager sharedARMedia_Manager ]ARMedia_Manager_AddMedia:nil];
+        [[ARMediaManager sharedInstance] addMedia:nil];
     });
 }
 
 - (IBAction)addVideoMediaAtom32Bit:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [[ARMedia_Manager sharedARMedia_Manager ]ARMedia_Manager_AddMedia:self.videoAtom32BitFolderPath];
+        [[ARMediaManager sharedInstance] addMedia:self.videoAtom32BitFolderPath];
     });
 }
 
 - (IBAction)addVideoDelosMediaAtom64Bit:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [[ARMedia_Manager sharedARMedia_Manager ]ARMedia_Manager_AddMedia:self.videoAtom64BitFolderPath];
+        [[ARMediaManager sharedInstance] addMedia:self.videoAtom64BitFolderPath];
     });
 }
 
 - (IBAction)ARMediaLibrary:(UIButton *)sender
 {
-    [[ARMedia_Manager sharedARMedia_Manager] ARMedia_Manager_InitWithProjectIDs:[NSArray arrayWithObjects:@"Parrot AR.Drone", @"Parrot Delos", nil]];
+    [[ARMediaManager sharedInstance] initWithProjectIDs:[NSArray arrayWithObjects:@"Parrot AR.Drone", @"Parrot Delos", nil]];
 }
 
 - (IBAction)updateARMediaLibrary:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         
-        [[ARMedia_Manager sharedARMedia_Manager] ARMedia_Manager_Update];
+        [[ARMediaManager sharedInstance] update];
     });
 }
 
@@ -110,7 +110,7 @@
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         
-       [self.retreiveProjectDic setDictionary:[[ARMedia_Manager sharedARMedia_Manager] ARMedia_Manager_GetProjectDictionary:nil]];
+       [self.retreiveProjectDic setDictionary:[[ARMediaManager sharedInstance] getProjectDictionary:nil]];
         NSLog(@"retreiveProjectDic : %@",self.retreiveProjectDic);
     });
 }

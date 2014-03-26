@@ -1,16 +1,15 @@
 /**
- * @file   ARMedia_Manager.m
+ * @file   ARMEDIA_Manager.m
  * @author malick.sylla.ext@parrot.fr
  * @brief
  *
  */
 
 #import <UIKit/UIKit.h>
-#import <libARMedia/ARMedia_Manager.h>
-#import "ARMedia_Video_Atoms.h"
+#import <libARMedia/ARMEDIA_Manager.h>
+#import "ARMEDIA_Video_Atoms.h"
 #import "ALAssetRepresentation+VideoAtoms.h"
-#import "ARMedia_MediaDescription.h"
-#import "ARMedia_Singleton.h"
+#import "ARMEDIA_Description.h"
 
 #define ARMEDIA_MANAGER_DATABASE_FILENAME                       @"ARMediaDB.ar"
 #define ARDRONE_MEDIAMANAGER_MOV_EXTENSION                      @"mp4"
@@ -36,7 +35,7 @@ NSString *const kARMediaManagerNotificationMediaAdded           = @"kARMediaMana
 // This block is always executed. If failure, an NSError is passed.
 typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 
-@interface ARMedia_Manager ()
+@interface ARMediaManager ()
 @property (nonatomic, assign) BOOL cancelRefresh;
 @property (nonatomic, assign) BOOL isUpdate;
 @property (nonatomic, assign) BOOL isInit;
@@ -45,38 +44,36 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 @property (nonatomic, strong) NSMutableDictionary *groupMediaDictionary;
 @property (nonatomic, strong) NSDictionary *projectsDictionary;
 
-- (BOOL)ARMedia_Manager_SaveMedia:(NSString *)mediaPath transferingBlock:(ARMediaManagerTranferingBlock)_transferingBlock;
-- (void)ARMedia_Manager_AddAssetToLibrary:(ALAsset *)asset albumName:(NSString *)albumName;
-- (void)ARMedia_Manager_CustomInit;
+- (BOOL)saveMedia:(NSString *)mediaPath transferingBlock:(ARMediaManagerTranferingBlock)_transferingBlock;
+- (void)addAssetToLibrary:(ALAsset *)asset albumName:(NSString *)albumName;
 @end
 
-@implementation ARMedia_Manager
+@implementation ARMediaManager
 
 /*************************************/
-/*      ARMedia_Manager (public)     */
+/*      ARMediaManager (public)     */
 /*************************************/
 
-SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
-
-- (NSDictionary *)ARMedia_Manager_GetProjectDictionary:(NSString *)project
++ (ARMediaManager *)sharedInstance
 {
-    NSMutableDictionary *retDictionary = nil;
-    if (project == nil)
-    {
-        NSMutableDictionary *mutableReturnedDictionary = [NSMutableDictionary dictionary];
-        for (NSDictionary *dictionary in _projectsDictionary)
-            [mutableReturnedDictionary setObject:[_projectsDictionary objectForKey:dictionary] forKey:dictionary];
-        retDictionary = mutableReturnedDictionary;
-    }
-    else
-    {
-        retDictionary = [_projectsDictionary objectForKey:project];
-    }
+    static ARMediaManager *_sharedARMediaManager = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _sharedARMediaManager = [[ARMediaManager alloc] init];
+        
+        /**
+         *  custom init
+         */
+        _sharedARMediaManager.isInit = NO;
+        _sharedARMediaManager.isUpdate = NO;
+        _sharedARMediaManager.groupMediaDictionary = [NSMutableDictionary dictionary];
+
+    });
     
-    return retDictionary;
+    return _sharedARMediaManager;
 }
 
-- (eARMEDIA_MANAGER_ERROR)ARMedia_Manager_InitWithProjectIDs:(NSArray *)projectIDs;
+- (eARMEDIA_MANAGER_ERROR)initWithProjectIDs:(NSArray *)projectIDs;
 {
     NSUInteger returnVal = ARMEDIA_MANAGER_ALREADY_INITIALIZED;
     if(!_isInit)
@@ -119,7 +116,26 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     return returnVal;
 }
 
-- (eARMEDIA_MANAGER_ERROR)ARMedia_Manager_Update
+- (NSDictionary *)getProjectDictionary:(NSString *)project
+{
+    NSMutableDictionary *retDictionary = nil;
+    if (project == nil)
+    {
+        NSMutableDictionary *mutableReturnedDictionary = [NSMutableDictionary dictionary];
+        for (NSDictionary *dictionary in _projectsDictionary)
+            [mutableReturnedDictionary setObject:[_projectsDictionary objectForKey:dictionary] forKey:dictionary];
+        retDictionary = mutableReturnedDictionary;
+    }
+    else
+    {
+        retDictionary = [_projectsDictionary objectForKey:project];
+    }
+    
+    return retDictionary;
+}
+
+
+- (eARMEDIA_MANAGER_ERROR)update
 {
     if(!_isInit)
         return ARMEDIA_MANAGER_NOT_INITIALIZED;
@@ -139,7 +155,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                 NSLog(@"mediaAssetCount : %d",[group numberOfAssets]);
                 if(_mediaAssetsCount > 0)
                 {
-                    [self ARMedia_Manager_RetrieveAssetsWithGroup:group];
+                    [self retrieveAssetsWithGroup:group];
                 }
                 else
                 {
@@ -170,7 +186,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     return ARMEDIA_MANAGER_OK;
 }
 
-- (BOOL)ARMedia_Manager_AddMedia:(NSString *)mediaPath
+- (BOOL)addMedia:(NSString *)mediaPath
 {
     BOOL returnVal = NO;
     if (mediaPath == nil || !_isUpdate)
@@ -180,7 +196,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     {
         if(assetURLString != nil)
         {
-            [self ARMedia_Manager_SaveMediaOnArchive];
+            [self saveMediaOnArchive];
             _projectsDictionary = [_privateProjectsDictionary copy];
             [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationMediaAdded object:assetURLString];
             
@@ -191,20 +207,20 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     if (_isUpdate)
     {
         _isUpdate = NO;
-        returnVal = [self ARMedia_Manager_SaveMedia:mediaPath transferingBlock:transferingBlock];
+        returnVal = [self saveMedia:mediaPath transferingBlock:transferingBlock];
     }
     return returnVal;
 }
 
-- (BOOL)ARMedia_Manager_isUpdated
+- (BOOL)isUpdated
 {
     return _isUpdate;
 }
 /*************************************/
-/*      ARMedia_Manager (private)    */
+/*      ARMediaManager (private)    */
 /*************************************/
 
--(void)ARMedia_Manager_SaveMediaOnArchive
+-(void)saveMediaOnArchive
 {
     // Save on file with NSCoding
     NSString *documentsDirectory = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
@@ -216,14 +232,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     [data writeToFile:archivePath atomically:YES];
 }
 
-- (void)ARMedia_Manager_CustomInit
-{
-    _isInit = NO;
-    _isUpdate = NO;
-    _groupMediaDictionary = [NSMutableDictionary dictionary];
-}
-
-- (void)ARMedia_Manager_AddAssetToLibrary:(ALAsset *)asset albumName:(NSString *)albumName
+- (void)addAssetToLibrary:(ALAsset *)asset albumName:(NSString *)albumName
 {
     dispatch_semaphore_t sema = dispatch_semaphore_create(0);
     ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
@@ -262,7 +271,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     dispatch_semaphore_wait(sema, DISPATCH_TIME_FOREVER);
 }
 
-- (void)ARMedia_Manager_RetrieveAssetsWithGroup:(ALAssetsGroup *)group
+- (void)retrieveAssetsWithGroup:(ALAssetsGroup *)group
 {
     // RETRIEVING ALL ASSETS IN CAMERA ROLL
     ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
@@ -279,7 +288,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
         {
             NSString *stringAsset = nil;
             ALAssetRepresentation *representation = [asset defaultRepresentation];
-            ARMedia_MediaDescription *object = [[ARMedia_MediaDescription alloc] init];
+            ARMediaDescription *object = [[ARMediaDescription alloc] init];
             
             if ([[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] intValue] > index)
             {
@@ -287,11 +296,11 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                 for (NSString *projectID in _privateProjectsDictionary)
                 {
                     NSMutableDictionary *projectDictionary = [_privateProjectsDictionary valueForKey:projectID];
-                    ARMedia_MediaDescription *object = [projectDictionary objectForKey:stringAsset];
+                    ARMediaDescription *object = [projectDictionary objectForKey:stringAsset];
                     if (object != nil)
                     {
                         [[tempProjectDictionaries objectForKey:projectID] setValue:[projectDictionary objectForKey:stringAsset] forKey:stringAsset];
-                        [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                        [self addAssetToLibrary:asset albumName:object.device];
                     }
                     // NO ELSE - We add only existing media from Camera roll
                 }
@@ -308,7 +317,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                         object.mediaDate = [atomValue valueForKey:kARMediaManagerPVATMediaDateKey];
                         object.device = [atomValue valueForKey:kARMediaManagerPVATDeviceKey];
                         [[tempProjectDictionaries valueForKey:object.device] setValue:object forKey:stringAsset];
-                        [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                        [self addAssetToLibrary:asset albumName:object.device];
                     }
                     // NO ELSE - Ignoring this video - ardt value format not recognized
                 }
@@ -335,7 +344,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                                     object.mediaDate = [jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
                                     object.device = [jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey];
                                     [[tempProjectDictionaries valueForKey:object.device] setValue:object forKey:stringAsset];
-                                    [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                                    [self addAssetToLibrary:asset albumName:object.device];
                                 }
                             }
                         }
@@ -350,7 +359,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
         {
             [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithFormat:@"%d",index]  forKey:kARMediaManagerKey];
             [_privateProjectsDictionary setDictionary:tempProjectDictionaries];
-            [self ARMedia_Manager_SaveMediaOnArchive];
+            [self saveMediaOnArchive];
             _projectsDictionary = [_privateProjectsDictionary copy];
             [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
             _isUpdate = YES;
@@ -360,14 +369,14 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
     [group enumerateAssetsUsingBlock:assetEnumerator];
 }
 
-- (BOOL)ARMedia_Manager_SaveMedia:(NSString *)mediaPath transferingBlock:(ARMediaManagerTranferingBlock)_transferingBlock
+- (BOOL)saveMedia:(NSString *)mediaPath transferingBlock:(ARMediaManagerTranferingBlock)_transferingBlock
 {
     __block BOOL added = NO;
     __block  NSString *stringAsset = nil;
     __block ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
     dispatch_semaphore_t sema = dispatch_semaphore_create(0);
     
-    ARMedia_MediaDescription *object = [[ARMedia_MediaDescription alloc]init];
+    ARMediaDescription *object = [[ARMediaDescription alloc]init];
     if ([mediaPath.pathExtension isEqualToString:ARDRONE_MEDIAMANAGER_MOV_EXTENSION])
     {
         [library writeVideoAtPathToSavedPhotosAlbum:[NSURL URLWithString:mediaPath]  completionBlock:^(NSURL *assetURL, NSError *error)
@@ -394,7 +403,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                                   object.mediaDate = [atomValue valueForKey:kARMediaManagerPVATMediaDateKey];
                                   object.device = [atomValue valueForKey:kARMediaManagerPVATDeviceKey];
                                   [[_privateProjectsDictionary valueForKey:object.device] setValue:object forKey:stringAsset];
-                                  [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                                  [self addAssetToLibrary:asset albumName:object.device];
                               }
                               // NO ELSE - Ignoring this video - ardt value format not recognized
                               dispatch_semaphore_signal(sema);
@@ -433,14 +442,11 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                               NSDictionary *metadata = [representation metadata];
                               if(metadata != nil)
                               {
-                                  //NSLog(@"metadata : %@",metadata);
                                   NSDictionary *tiffDictionary = [metadata valueForKey:(NSString *)kCGImagePropertyTIFFDictionary];
-                                  //NSLog(@"tiffDictionary : %@",tiffDictionary);
                                   if(tiffDictionary != nil)
                                   {
-                                      NSString *tiffDescription = [tiffDictionary valueForKey:(NSString *)kCGImagePropertyTIFFImageDescription];//@"media_20130828_115641/picture_20130828_115641.jpg";
+                                      NSString *tiffDescription = [tiffDictionary valueForKey:(NSString *)kCGImagePropertyTIFFImageDescription];
                                       stringAsset = [[representation url] absoluteString];
-                                      //NSLog(@"tiffDescription : %@",tiffDescription);
                                       
                                       NSError *jSONerror = nil;
                                       NSData *data = [tiffDescription dataUsingEncoding:NSASCIIStringEncoding];
@@ -448,17 +454,13 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(ARMedia_Manager, ARMedia_Manager_CustomInit)
                                       {
                                           NSDictionary *jSONDataDic =[NSJSONSerialization  JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
                                           
-                                          //NSLog(@"jSONDataDic : %@",jSONDataDic);
                                           if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey]] && (jSONerror == nil))
                                           {
-                                              object.runDate = [jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey]; //@"20130725_140153";//
-                                              object.mediaDate = [jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];//@"20130725_140153";//
-                                              object.device = [jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey];//@"Parrot Delos";//
-                                             // NSLog(@"object.device = %@",object.device);
-                                              //NSLog(@"runDate = %@",object.runDate);
-                                              //NSLog(@"mediaDate = %@",object.mediaDate);
+                                              object.runDate = [jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
+                                              object.mediaDate = [jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
+                                              object.device = [jSONDataDic valueForKey:kARMediaManagerPVATDeviceKey];
                                               [[_privateProjectsDictionary valueForKey:object.device] setValue:object forKey:stringAsset];
-                                              [self ARMedia_Manager_AddAssetToLibrary:asset albumName:object.device];
+                                              [self addAssetToLibrary:asset albumName:object.device];
                                           }
                                       }
                                   }

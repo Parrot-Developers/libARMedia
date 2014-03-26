@@ -1,5 +1,5 @@
 /*
- * ardrone_video_atoms.c
+ * ARMEDIA_Video_Atoms.c
  * ARDroneLib
  *
  * Created by n.brulez on 19/08/11
@@ -7,7 +7,7 @@
  *
  */
 
-#include "ARMedia_Video_Atoms.h"
+#include "ARMEDIA_Video_Atoms.h"
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdlib.h>

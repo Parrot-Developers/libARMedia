@@ -7,7 +7,7 @@
 //
 
 #import <UIKit/UIKit.h>
-#import <libARMedia/ARMedia_Manager.h>
+#import <libARMedia/ARMEDIA_Manager.h>
 
 
 @interface ViewController : UIViewController

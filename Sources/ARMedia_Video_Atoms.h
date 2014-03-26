@@ -1,13 +1,14 @@
 /*
- * ardrone_video_atoms.h
+ * ARMEDIA_Video_Atoms.h
  * ARDroneLib
  *
  * Created by n.brulez on 19/08/11
  * Copyright 2011 Parrot SA. All rights reserved.
  *
  */
-#ifndef _ARDRONE_VIDEO_ATOMS_H_
-#define _ARDRONE_VIDEO_ATOMS_H_
+
+#ifndef _ARMEDIA_VIDEO_ATOMS_H_
+#define _ARMEDIA_VIDEO_ATOMS_H_
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -165,4 +166,4 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag);
 */
 uint64_t swap_uint64(uint64_t value);
 
-#endif // _ARDRONE_VIDEO_ATOMS_H_
+#endif // _ARMEDIA_VIDEO_ATOMS_H_

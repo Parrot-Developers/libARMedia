@@ -1,5 +1,5 @@
 /**
- * @file   ARMedia_Manager.h
+ * @file   ARMEDIA_Manager.h
  * @author malick.sylla.ext@parrot.fr
  * @brief
  */
@@ -8,8 +8,8 @@
 #import <ImageIO/CGImageProperties.h>
 #import <CoreLocation/CoreLocation.h>
 
-/**
- * @brief status return by the callback.
+ /**
+  * @brief status return by the callback.
  */
 typedef enum 
 {
@@ -26,35 +26,35 @@ UIKIT_EXTERN NSString *const kARMediaManagerNotificationUpdating;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationUpdated;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationMediaAdded;
 
-@interface ARMedia_Manager : NSObject
+@interface ARMediaManager : NSObject
 /**
  init a ARMedia_Manager Singleton.
  @return ARMedia_Manager Singleton.
  */
-+ (ARMedia_Manager *)sharedARMedia_Manager;
++ (ARMediaManager *)sharedInstance;
 /**
  init a ARMedia_Manager with NSArray of NSString projectIDs.
  @param  NSArray for array of project.
  @return eARMEDIA_MANAGER_ERROR for enum of status.
  */
-- (eARMEDIA_MANAGER_ERROR)ARMedia_Manager_InitWithProjectIDs:(NSArray *)projectIDs;
+- (eARMEDIA_MANAGER_ERROR)initWithProjectIDs:(NSArray *)projectIDs;
 /**
  update media of ARMedia_Manager library.
  @return eARMEDIA_MANAGER_ERROR for enum of status.
  */
-- (eARMEDIA_MANAGER_ERROR)ARMedia_Manager_Update;
+- (eARMEDIA_MANAGER_ERROR)update;
 /**
  add a media in ARMedia_Manager.
  @param NSString for mediaPath.
  @return BOOL for result of the add.
  */
-- (BOOL)ARMedia_Manager_AddMedia:(NSString *)mediaPath;
+- (BOOL)addMedia:(NSString *)mediaPath;
 /**
  retreive the refresh project media dictionary.
  @param NSString for project to get, if nil all project are get.
  @return NSDictionary who containt media projectDictionary.
  */
-- (NSDictionary *)ARMedia_Manager_GetProjectDictionary:(NSString *)project;
+- (NSDictionary *)getProjectDictionary:(NSString *)project;
 
-- (BOOL)ARMedia_Manager_isUpdated;
+- (BOOL)isUpdated;
 @end
