@@ -1,5 +1,5 @@
 /*
- * ARMEDIA_Video_Atoms.c
+ * ARMEDIA_VideoAtoms.c
  * ARDroneLib
  *
  * Created by n.brulez on 19/08/11
@@ -7,7 +7,7 @@
  *
  */
 
-#include "ARMEDIA_Video_Atoms.h"
+#include <libARMedia/ARMedia.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
@@ -102,14 +102,12 @@
         pBuffer++;                              \
     } while (0)
 
-// DO NOT USE DIRECTLY
-#define _ATOM_READ_PRRT_V(VAL, TYPE)            \
-    do                                          \
-    {                                           \
-        VAL = *(TYPE *)pBuffer;                 \
-        pBuffer += sizeof (TYPE);               \
-    } while (0)
-#define ATOM_READ_PRRT_V(VER, VAL) _ATOM_READ_PRRT_V(VAL, prrt_data_v##VER##_t)
+#define ATOM_READ_BYTES(POINTER, SIZE)                  \
+do                                                      \
+{                                                       \
+    ATOM_MEMCOPY (POINTER, (uint8_t *)pBuffer, SIZE);   \
+    pBuffer += SIZE;                                    \
+} while (0)
 
 /**
  * Read from a file functions
@@ -175,7 +173,7 @@ static void read_4cc (FILE *fptr, char dest[5])
 }
 
 
-static int seekMediaFileToAtom (FILE *videoFile, char *atomName, uint64_t *retAtomSize)
+static int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAtomSize)
 {
     uint32_t atomSize = 0;
     char fourCCTag [5] = {0};
@@ -228,11 +226,11 @@ static int seekMediaFileToAtom (FILE *videoFile, char *atomName, uint64_t *retAt
     return found;
 }
 
-prrt_data_t *createPrrtDataFromFile (FILE *videoFile, int *videoNbFrames)
+uint8_t *createDataFromFile (FILE *videoFile, const char* atom)
 {
     uint64_t atomSize = 0;
     uint8_t *atomBuffer = NULL;
-    prrt_data_t *retBuffer = NULL;
+    uint8_t *retBuffer = NULL;
     int valid = 1;
     // Rewind videoFile
     if (NULL != videoFile)
@@ -240,11 +238,10 @@ prrt_data_t *createPrrtDataFromFile (FILE *videoFile, int *videoNbFrames)
         rewind (videoFile);
     }
 
-    // Seek to prrt atom
-    int seekRes = seekMediaFileToAtom (videoFile, "prrt", &atomSize);
+    // Seek to atom
+    int seekRes = seekMediaFileToAtom (videoFile, atom, &atomSize);
     if (0 == seekRes)
     {
-        if (NULL != videoNbFrames) { *videoNbFrames = 0; }
         return NULL;
     }
 
@@ -257,7 +254,7 @@ prrt_data_t *createPrrtDataFromFile (FILE *videoFile, int *videoNbFrames)
         valid = 0;
     }
 
-    // Read prrt atom from file
+    // Read atom from file
     if (1 == valid)
     {
         size_t nbRead = fread (atomBuffer, sizeof (uint8_t), atomSize, videoFile);
@@ -267,140 +264,51 @@ prrt_data_t *createPrrtDataFromFile (FILE *videoFile, int *videoNbFrames)
         }
     }
 
-    // Create prrt buffer from prrt atom
+    // Create buffer from prrt atom
     if (1 == valid)
     {
-        retBuffer = createPrrtDataFromAtom (atomBuffer, atomSize, videoNbFrames);
+        retBuffer = createDataFromAtom (atomBuffer, atomSize);
     }
 
     // Free any allocated resource
-    if (NULL != atomBuffer) { ATOM_FREE (atomBuffer); }
+    if (NULL != atomBuffer)
+    {
+        ATOM_FREE (atomBuffer);
+    }
 
     return retBuffer;
 }
 
-prrt_data_t *createPrrtDataFromAtom (uint8_t *prrtAtomBuffer, const int prrtAtomSize, int *videoNbFrames)
+uint8_t *createDataFromAtom(uint8_t *atomBuffer, const int atomSize)
 {
-    uint16_t prrtVersion;
-    uint16_t prrtSize;
-    uint32_t nbFrames;
-    uint32_t totalPrrtSize;
-    uint32_t maxSize = prrtAtomSize;
-    uint8_t *pBuffer = prrtAtomBuffer;
-    prrt_data_t *retVal = NULL;
-    int sizeFailed = 0;
+    uint32_t dataSize;
+    uint32_t maxSize = atomSize;
+    uint8_t *pBuffer = atomBuffer;
+    uint8_t *retVal = NULL;
     // Sanity check : ensure that the buffer we got is not null and long enough
-    if (NULL == prrtAtomBuffer ||
-        12 > prrtAtomSize)
+    if ((NULL == atomBuffer) || (atomSize < 4))
     {
         return NULL;
     }
 
-    // Read prrtData infos
-    ATOM_READ_U16 (prrtVersion);
-    ATOM_READ_U16 (prrtSize);
-    ATOM_READ_U32 (nbFrames);
-    if (NULL != videoNbFrames)
-    {
-        *videoNbFrames = nbFrames;
-    }
-    ATOM_READ_U32 (totalPrrtSize);
+    // Read data size
+    ATOM_READ_U32 (dataSize);
 
     // Sanity check : remaining buffer size must be ok with the read totalSize
-    if (maxSize - 12 /* We already have read 12 bytes */ < totalPrrtSize)
+    if ((atomSize - 4) < dataSize) /* We already have read 4 bytes */
     {
         return NULL;
     }
 
-    // Sanity check : ensure the size of the video prrt_data_vX_t match ours
-    switch (prrtVersion)
-    {
-    case 1:
-        if (sizeof (prrt_data_v1_t) != prrtSize)
-            sizeFailed = 1;
-        break;
-    case 2:
-        if (sizeof (prrt_data_v2_t) != prrtSize)
-            sizeFailed = 1;
-        break;
-        // Add all known cases after this one
-
-    case 3:
-        if (sizeof (prrt_data_v3_t) != prrtSize)
-            sizeFailed = 1;
-        break;
-        // Add all known cases after this one
-            
-    default: // Unknown version
-        sizeFailed = 1;
-        break;
-    }
-    if (1 == sizeFailed)
-    {
-        return NULL;
-    }
-
-    // Buffer and prrt size are ok, alloc return pointer
-    retVal = ATOM_CALLOC (nbFrames, sizeof (prrt_data_t));
+    // Buffer and size are ok, alloc return pointer
+    retVal = ATOM_CALLOC (1, sizeof(dataSize));
     if (NULL == retVal)
     {
         return NULL;
     }
 
-    // Start reading prrt infos
-    int currFrame;
-    switch (prrtVersion) {
-    case PRRT_DATA_VERSION:
-        // Ideal case : just memcpy
-        ATOM_MEMCOPY (retVal, pBuffer, totalPrrtSize);
-        break;
-    case 1:
-        for (currFrame = 0; currFrame < nbFrames; currFrame++)
-        {
-            // Read obsolete data
-            prrt_data_v1_t data;
-            ATOM_READ_PRRT_V(1, data);
-            // get pointer to output data
-            prrt_data_t *out = &retVal[currFrame];
-            // Fill output fata with as many data as possible
-            out->frameControlState = data.frameControlState;
-            out->frameTimestamp = data.frameTimestamp;
-            out->frameTheta = data.frameTheta;
-            out->framePhi = data.framePhi;
-            out->framePsi = data.framePsi;
-            // out->framePsiDiscontinuity can't be retreived, let to zero
-            // out->frameAltitude can't be retreived, let to INT32_MAX
-            out->frameAltitude = INT32_MAX;
-        }
-        break;
-
-    case 2:
-        for (currFrame = 0; currFrame < nbFrames; currFrame++)
-        {
-            // Read obsolete data
-            prrt_data_v2_t data;
-            ATOM_READ_PRRT_V(2, data);
-            // get pointer to output data
-            prrt_data_t *out = &retVal[currFrame];
-            // Fill output fata with as many data as possible
-            out->frameControlState = data.frameControlState;
-            out->frameTimestamp = data.frameTimestamp;
-            out->frameTheta = data.frameTheta;
-            out->framePhi = data.framePhi;
-            out->framePsi = data.framePsi;
-            out->framePsiDiscontinuity = data.framePsiDiscontinuity;
-            // out->frameAltitude can't be retreived, let to INT32_MAX
-            out->frameAltitude = INT32_MAX;
-        }
-        break;
-        // Add older known cases after this one
-            
-    default:
-        // Should never come here
-        ATOM_FREE (retVal);
-        retVal = NULL;
-        break;
-    }
+    // Start reading atom data
+    ATOM_READ_BYTES(retVal, dataSize);
 
     return retVal;
 }

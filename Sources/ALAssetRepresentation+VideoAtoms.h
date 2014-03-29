@@ -7,7 +7,7 @@
 
 #import <Foundation/Foundation.h>
 #import <AssetsLibrary/AssetsLibrary.h>
-#import "ARMedia_Video_Atoms.h"
+#import <libARMedia/ARMedia.h>
 
 @interface ALAssetRepresentation (VideosAtoms)
 

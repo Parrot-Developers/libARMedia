@@ -1,69 +1,35 @@
 /*
- * ARMEDIA_Video_Atoms.h
- * ARDroneLib
+ * ARMEDIA_VideoAtoms.h
  *
  * Created by n.brulez on 19/08/11
  * Copyright 2011 Parrot SA. All rights reserved.
  *
  */
-
-#ifndef _ARMEDIA_VIDEO_ATOMS_H_
-#define _ARMEDIA_VIDEO_ATOMS_H_
+#ifndef _ARMEDIA_VIDEOATOMS_H_
+#define _ARMEDIA_VIDEOATOMS_H_
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <time.h>
 
-typedef struct _movie_atom_t {
+#define ARMEDIA_VIDEOATOMS_PVAT "pvat"
+
+typedef struct
+{
   uint64_t size;
   char *tag;
   uint8_t *data;
   uint8_t wide;
 } movie_atom_t;
 
-typedef struct _atom_check_return{
+typedef struct
+{
     uint64_t size;
     int flag;
     long long offset;
-}atom_check_return;
-
-#define PRRT_DATA_VERSION 3 // No parenthesis !
-
-typedef struct _prrt_data_v1_t {
-    uint32_t frameControlState;
-    uint32_t frameTimestamp;
-    float frameTheta;
-    float framePhi;
-    float framePsi;
-} prrt_data_v1_t;
-
-typedef struct _prrt_data_v2_t {
-    uint32_t frameControlState;
-    uint32_t frameTimestamp;
-    float frameTheta;
-    float framePhi;
-    float framePsi;
-    float framePsiDiscontinuity;
-} prrt_data_v2_t;
-
-typedef struct _prrt_data_v3_t {
-    uint32_t frameControlState;
-    uint32_t frameTimestamp;
-    float frameTheta;
-    float framePhi;
-    float framePsi;
-    float framePsiDiscontinuity;
-    int32_t frameAltitude;
-} prrt_data_v3_t;
+} atom_check_return;
 
 #define atom_ntohll(x)  swap_uint64(x)
-
-// Auto select the correct prrt_data_t type for the current version
-#define DECLARE_PRRT_DATA_T(VER) _DECLARE_PRRT_DATA_T(VER)
-#define _DECLARE_PRRT_DATA_T(VER)               \
-    typedef prrt_data_v##VER##_t prrt_data_t
-DECLARE_PRRT_DATA_T (PRRT_DATA_VERSION);
-
 
 /* Atoms :
 LEGEND :
@@ -96,38 +62,30 @@ moov -> empty
      |- meta1 -> all meta specific (metadataAtomFromTagAndValue)
    [...]
      \- metaN -> all meta specific (metadataAtomFromTagAndValue)
-ardt -> specific
-prrt -> specific
+pvat -> specific
 */
 
 /* REMINDER : NEVER INCLUDE A MDAT ATOM INTO ANY OTHER ATOM */
 
-
 /**
- * @brief Read PRRT data from a video file into a self alloced array
- * Thid function get the PRRT data from a video file and convert it to the latest version
- * All fields present in video prrt info and not in prrt_data_t will be discarded
- * All fields present in prrt_data_t but not in video prrt info will be filled with zeroes
+ * @brief Read atom data from a video file into a self alloced array
+ * Thid function get the atom data from a video file and convert it to the latest version
  * This function alloc (using vp_os_calloc) the return pointer. Application MUST handle the free of the pointer.
  * @param videoFile Pointer to the video file.
- * @param videoNbFrames [out] Pointer to an int that will contain the number of frames in the video
- * @return A new, malloc'd, array of prrt_data_t filled with as many informations as possible about the video. In case of failure, returns NULL
+ * @return A new, malloc'd, pointer of pvat data filled with data buffer. In case of failure, returns NULL
  * @note The video FILE* pointer position will be modified by this call
  */
-prrt_data_t *createPrrtDataFromFile (FILE *videoFile, int *videoNbFrames);
+uint8_t *createDataFromFile (FILE *videoFile, const char *atom);
 
 /**
- * @brief Read PRRT data from prrt atom into a self alloced array
- * This function get the PRRT data from a video and convert it to the latest version
- * All fields present in video prrt info and not in prrt_data_t will be discarded
- * All fields present in prrt_data_t but not in video prrt info will be filled with zeroes
+ * @brief Read atom data from atom into a self alloced array
+ * This function get the atom data from a video and convert it to the latest version
  * This function alloc (using vp_os_calloc) the return pointer. Application MUST handle the free of the pointer.
- * @param prrtAtomBuffer Pointer to the prrt atom data (not including the leading size and atom tag)
- * @param prrtAtomSize Size of the prrtAtomBuffer. This is used to avoid overflow, or if the prrtAtom size was set to zero
- * @param videoNbFrames [out] Pointer to an int that will contain the number of frames in the video
- * @return A new, malloc'd, array of prrt_data_t filled with as many informations as possible about the video. In case of failure, returns NULL
+ * @param atomBuffer Pointer to the atom data (not including the leading size and atom tag)
+ * @param atomSize Size of the atom. This is used to avoid overflow, or if the atom size was set to zero
+ * @return A new, malloc'd, pointer of atom data filled with data. In case of failure, returns NULL
  */
-prrt_data_t *createPrrtDataFromAtom (uint8_t *prrtAtomBuffer, const int prrtAtomSize, int *videoNbFrames);
+uint8_t *createDataFromAtom (uint8_t *atomBuffer, const int atomSize);
 
 /**
  * @brief Read FPS from a given video file

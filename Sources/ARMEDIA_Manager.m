@@ -6,16 +6,12 @@
  */
 
 #import <UIKit/UIKit.h>
+#import <libARMedia/ARMedia.h>
 #import <libARMedia/ARMEDIA_Manager.h>
-#import "ARMEDIA_Video_Atoms.h"
 #import "ALAssetRepresentation+VideoAtoms.h"
 #import "ARMEDIA_Description.h"
 
 #define ARMEDIA_MANAGER_DATABASE_FILENAME                       @"ARMediaDB.ar"
-#define ARDRONE_MEDIAMANAGER_MOV_EXTENSION                      @"mp4"
-#define ARDRONE_MEDIAMANAGER_JPG_EXTENSION                      @"jpg"
-
-#define ARDRONE_MEDIAMANAGER_ATOM_PVAT                          @"pvat"
 
 // PVAT Keys
 NSString *const kARMediaManagerPVATRunDateKey                   = @"runDate";
@@ -309,7 +305,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
             {
                 if([asset valueForProperty:ALAssetPropertyType] == ALAssetTypeVideo)
                 {
-                    NSDictionary *atomValue = [representation atomExist:ARDRONE_MEDIAMANAGER_ATOM_PVAT];
+                    NSDictionary *atomValue = [representation atomExist:[NSString stringWithUTF8String:ARMEDIA_VIDEOATOMS_PVAT]];
                     if(atomValue != nil)
                     {
                         stringAsset = [[representation url] absoluteString];
@@ -377,7 +373,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     dispatch_semaphore_t sema = dispatch_semaphore_create(0);
     
     ARMediaDescription *object = [[ARMediaDescription alloc]init];
-    if ([mediaPath.pathExtension isEqualToString:ARDRONE_MEDIAMANAGER_MOV_EXTENSION])
+    if ([mediaPath.pathExtension isEqualToString:[NSString stringWithUTF8String:ARMEDIA_MP4_EXTENSION]])
     {
         [library writeVideoAtPathToSavedPhotosAlbum:[NSURL URLWithString:mediaPath]  completionBlock:^(NSURL *assetURL, NSError *error)
          {
@@ -394,7 +390,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                               
                               ALAssetRepresentation *representation = [asset defaultRepresentation];
                               
-                              NSDictionary *atomValue = [representation atomExist:ARDRONE_MEDIAMANAGER_ATOM_PVAT];
+                              NSDictionary *atomValue = [representation atomExist:[NSString stringWithUTF8String:ARMEDIA_VIDEOATOMS_PVAT]];
                               
                               if(atomValue != nil)
                               {
@@ -421,7 +417,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
          }];
         
     }
-    else if ([mediaPath.pathExtension isEqualToString:ARDRONE_MEDIAMANAGER_JPG_EXTENSION])
+    else if ([mediaPath.pathExtension isEqualToString:[NSString stringWithUTF8String:ARMEDIA_JPG_EXTENSION]])
     {
         NSArray *pathComponents = [mediaPath pathComponents];
         NSData *data = [NSData dataWithContentsOfFile:mediaPath];

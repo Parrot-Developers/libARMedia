@@ -6,14 +6,15 @@ ACLOCAL_AMFLAGS                                     =   -I m4
 # The list of header files that belong to the library (to be installed later)
                                                    
 # The iOS dependency sources
+HEADER_FILES                                        = ../Includes/libARMedia/ARMEDIA_VideoAtoms.h \
+                                                      ../Includes/libARMedia/ARMedia.h
 if HAVE_UIKIT
-HEADER_FILES                                        = ../Includes/libARMedia/ARMEDIA_Manager.h
+HEADER_FILES                                        += ../Includes/libARMedia/ARMEDIA_Manager.h
 endif
 
 # The sources to add to the library and to add to the source distribution
 SOURCE_FILES                                        =   $(HEADER_FILES)                       \
-                                                        ../Sources/ARMEDIA_Video_Atoms.h       \
-                                                        ../Sources/ARMEDIA_Video_Atoms.c
+                                                        ../Sources/ARMEDIA_VideoAtoms.c
 
 
 # The iOS dependency sources
