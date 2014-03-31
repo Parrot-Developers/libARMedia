@@ -19,7 +19,6 @@
 #define ATOM_FREE(PTR) free(PTR)
 #define ATOM_MEMCOPY(DST, SRC, SIZE) memcpy(DST, SRC, SIZE)
 
-
 #define TIMESTAMP_FROM_1970_TO_1904 (0x7c25b080U)
 
 /**
