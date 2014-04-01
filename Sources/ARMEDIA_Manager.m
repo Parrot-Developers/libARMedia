@@ -270,7 +270,6 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 - (void)retrieveAssetsWithGroup:(ALAssetsGroup *)group
 {
     // RETRIEVING ALL ASSETS IN CAMERA ROLL
-    ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
     __block NSMutableDictionary *tempProjectDictionaries = [NSMutableDictionary dictionary];
     
     for(NSMutableDictionary *tmpProject in _privateProjectsDictionary)
@@ -419,7 +418,6 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     }
     else if ([mediaPath.pathExtension isEqualToString:[NSString stringWithUTF8String:ARMEDIA_JPG_EXTENSION]])
     {
-        NSArray *pathComponents = [mediaPath pathComponents];
         NSData *data = [NSData dataWithContentsOfFile:mediaPath];
         [library writeImageDataToSavedPhotosAlbum:data metadata:nil completionBlock:^(NSURL *assetURL, NSError *error)
          {

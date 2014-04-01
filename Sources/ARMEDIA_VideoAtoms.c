@@ -281,7 +281,6 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom)
 uint8_t *createDataFromAtom(uint8_t *atomBuffer, const int atomSize)
 {
     uint32_t dataSize;
-    uint32_t maxSize = atomSize;
     uint8_t *pBuffer = atomBuffer;
     uint8_t *retVal = NULL;
     // Sanity check : ensure that the buffer we got is not null and long enough
