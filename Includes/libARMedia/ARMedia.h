@@ -7,6 +7,7 @@
  */
 #ifndef _ARMEDIA_H_
 #define _ARMEDIA_H_
+#include <libARSAL/ARSAL.h>
 #include <libARMedia/ARMEDIA_Error.h>
 #include <libARMedia/ARMEDIA_VideoAtoms.h>
 

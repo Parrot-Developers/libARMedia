@@ -19,6 +19,9 @@ typedef enum
     ARMEDIA_ERROR_MANAGER_ALREADY_INITIALIZED, /**< Error manager already initialized */
     ARMEDIA_ERROR_MANAGER_NOT_INITIALIZED, /**< Error manager not initialized */
     ARMEDIA_ERROR_ENCAPSULER = -3000, /**< Error encapsuler generic error */
+    ARMEDIA_ERROR_ENCAPSULER_WAITING_FOR_IFRAME, /**< Error encapsuler waiting for i-frame */
+    ARMEDIA_ERROR_ENCAPSULER_BAD_CODEC, /**< Codec non-supported */
+    ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR, /**< File error while encapsulating*/
     
 } eARMEDIA_ERROR;
 

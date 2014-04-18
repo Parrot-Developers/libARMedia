@@ -11,13 +11,16 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <time.h>
+#include <libARMedia/ARMEDIA_VideoEncapsuler.h>
 
 #define ARMEDIA_VIDEOATOMS_PVAT "pvat"
+
+#define ARMEDIA_ATOM_TAG_SIZE 4
 
 typedef struct
 {
   uint64_t size;
-  char *tag;
+  char tag[ARMEDIA_ATOM_TAG_SIZE];
   uint8_t *data;
   uint8_t wide;
 } movie_atom_t;
@@ -66,6 +69,29 @@ pvat -> specific
 */
 
 /* REMINDER : NEVER INCLUDE A MDAT ATOM INTO ANY OTHER ATOM */
+
+/* GENERIC */
+movie_atom_t *atomFromData (uint32_t data_size, const char *tag, const uint8_t *data);
+void insertAtomIntoAtom (movie_atom_t *container, movie_atom_t **leaf); // will free leaf
+int writeAtomToFile (movie_atom_t **atom, FILE *file); // Will free _atom
+void freeAtom (movie_atom_t **atom);
+
+/* SPECIFIC */
+movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_CODEC codec, uint32_t *offset);
+movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize);
+movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t fps, uint32_t nbFrames, time_t date);
+movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t nbFrames, uint32_t fps, time_t date);
+movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t fps, uint32_t nbFrames, time_t date);
+movie_atom_t *hdlrAtomForMdia ();
+movie_atom_t *vmhdAtomGen ();
+movie_atom_t *hdlrAtomForMinf ();
+movie_atom_t *drefAtomGen ();
+movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_CODEC codec);
+movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_CODEC codec, uint8_t *sps, uint32_t spsSize, uint8_t *pps, uint32_t ppsSize);
+movie_atom_t *sttsAtomWithNumFrames (uint32_t nbFrames, uint32_t fps);
+movie_atom_t *stscAtomGen ();
+movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value);
+movie_atom_t *pvatAtomGen(const char *jsonString);
 
 /**
  * @brief Read atom data from a video file into a self alloced array
