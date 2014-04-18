@@ -62,13 +62,7 @@ typedef enum
 	ARMEDIA_ENCAPSULER_FRAME_TYPE_MAX
 } eARMEDIA_ENCAPSULER_FRAME_TYPE;
 
-typedef struct ARMEDIA_Video_t ARMEDIA_Video_t;
-
-typedef struct
-{
-    uint32_t fps;
-    ARMEDIA_Video_t* video;
-} ARMEDIA_VideoEncapsuler_t;
+typedef struct ARMEDIA_VideoEncapsuler_t ARMEDIA_VideoEncapsuler_t;
 
 typedef struct {
     uint8_t  video_codec;
@@ -140,7 +134,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
  * @param longitude current longitude
  * @param altitude current altitude
  */
-void ARMEDIA_VideoEncapsuler_SetGPSInfos (ARMEDIA_Video_t* video, double latitude, double longitude, double altitude);
+void ARMEDIA_VideoEncapsuler_SetGPSInfos (ARMEDIA_VideoEncapsuler_t* encapsuler, double latitude, double longitude, double altitude);
 
 /**
  * Try fo fix an MP4 infovid file.

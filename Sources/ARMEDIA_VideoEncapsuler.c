@@ -29,7 +29,15 @@ typedef struct
     double altitude;
 } ARMEDIA_videoGpsInfos_t;
 
-typedef struct ARMEDIA_Video_t
+typedef struct ARMEDIA_Video_t ARMEDIA_Video_t;
+
+struct ARMEDIA_VideoEncapsuler_t
+{
+    uint32_t fps;
+    ARMEDIA_Video_t* video;
+};
+
+struct ARMEDIA_Video_t
 {
     uint32_t version;
     // Provided to constructor
@@ -67,7 +75,7 @@ typedef struct ARMEDIA_Video_t
     uint32_t droneVersion;
     ARMEDIA_videoGpsInfos_t videoGpsInfos;
 
-} ARMEDIA_Video_t;
+};
 
 #define ENCAPSULER_DEBUG_ENABLE (0)
 #define ENCAPSULER_FLUSH_ON_EACH_WRITE (0)
@@ -891,12 +899,14 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
     return ARMEDIA_OK;
 }
 
-void ARMEDIA_VideoEncapsuler_SetGPSInfos (ARMEDIA_Video_t* video, double latitude, double longitude, double altitude)
+void ARMEDIA_VideoEncapsuler_SetGPSInfos (ARMEDIA_VideoEncapsuler_t* encapsuler, double latitude, double longitude, double altitude)
 {
-    if (video != NULL) {
-        video->videoGpsInfos.latitude = latitude;
-        video->videoGpsInfos.longitude = longitude;
-        video->videoGpsInfos.altitude = altitude;
+    if (encapsuler != NULL) {
+        if (encapsuler->video != NULL) {
+            encapsuler->video->videoGpsInfos.latitude = latitude;
+            encapsuler->video->videoGpsInfos.longitude = longitude;
+            encapsuler->video->videoGpsInfos.altitude = altitude;
+        }
     }
 }
 
