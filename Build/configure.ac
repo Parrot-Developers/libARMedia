@@ -5,6 +5,8 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(m4)
 
+m4_include([../../ARBuildUtils/Utils/m4/ARSDK.m4])
+
 # automake initialisation and check for minimal automake API version 1.9
 AM_INIT_AUTOMAKE
 
@@ -55,6 +57,10 @@ LOCAL_CFLAGS+=" -I$srcdir/../Includes -I$srcdir/../Sources"
 CFLAGS+="$LOCAL_CFLAGS"
 CPPFLAGS+="$LOCAL_CFLAGS"
 OBJCFLAGS+="$LOCAL_CFLAGS"
+
+# Add libARxxx deps
+
+AR_DEPENDS([libARSAL], [Y], [libARSAL/ARSAL.h])
 
 ##########################################################################
 # Define binaries directories
