@@ -60,8 +60,8 @@ struct ARMEDIA_Video_t
     /* H.264 only values */
     uint8_t *sps;
     uint8_t *pps;
-    uint16_t spsSize;
-    uint16_t ppsSize;
+    uint16_t spsSize; // full size with headers 0x00000001
+    uint16_t ppsSize; // full size with headers 0x00000001
 
     /* Slices recording values */
     uint32_t lastFrameNumber;
@@ -267,44 +267,44 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         // If codec is H.264, save SPS/PPS
         if (CODEC_MPEG4_AVC == video->videoCodec)
         {
-            if (ARMEDIA_ENCAPSULER_FRAME_TYPE_IDR_FRAME != frameHeader->frame_type)
+            if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME != frameHeader->frame_type)
             {
                 // Wait until we get an IFrame-slice 1 to start the actual recording
                 ARSAL_Mutex_Unlock(&video->mutex);
                 return ARMEDIA_ERROR_ENCAPSULER_WAITING_FOR_IFRAME;
             }
 
-            if (!frameHeader->sps_header_size)
+            // we'll need to search the "00 00 00 01" pattern to find each header size
+            // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
+            for (searchIndex = 4; searchIndex <= frameHeader->frame_size - 4; searchIndex ++)
             {
-                ENCAPSULER_ERROR ("IFrame don't have SPS/PPS infos\n");
-                ARSAL_Mutex_Unlock(&video->mutex);
-                return ARMEDIA_ERROR_ENCAPSULER;
-            }
-            if (!frameHeader->pps_header_size)
-            {
-                // Header 1 size contains the SPS + PPS size : we'll need to search the "00 00 00 01" pattern to find each header size
-                // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
-                searchIndex = 4;
-                for (searchIndex = 4; searchIndex <= frameHeader->sps_header_size - 4; searchIndex ++)
+                if (0 == data[searchIndex  ] &&
+                    0 == data[searchIndex+1] &&
+                    0 == data[searchIndex+2] &&
+                    1 == data[searchIndex+3])
                 {
-                    if (0 == data[searchIndex  ] &&
-                        0 == data[searchIndex+1] &&
-                        0 == data[searchIndex+2] &&
-                        1 == data[searchIndex+3])
-                    {
-                        break;
-                    }
+                    break;  // PPS header found
                 }
-                video->spsSize = searchIndex - 4;
-                video->ppsSize = frameHeader->sps_header_size - searchIndex - 4;
             }
-            else
+            video->spsSize = searchIndex;
+
+            // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
+            for (searchIndex = video->spsSize+4; searchIndex <= frameHeader->frame_size - 4; searchIndex ++)
             {
-                video->spsSize = frameHeader->sps_header_size - 4;
-                video->ppsSize = frameHeader->pps_header_size - 4;
+                if (0 == data[searchIndex  ] &&
+                    0 == data[searchIndex+1] &&
+                    0 == data[searchIndex+2] &&
+                    1 == data[searchIndex+3])
+                {
+                    break;  // frame header found
+                }
             }
+
+            video->ppsSize = searchIndex - video->spsSize;
+
             video->sps = malloc (video->spsSize);
             video->pps = malloc (video->ppsSize);
+
             if (NULL == video->sps || NULL == video->pps)
             {
                 ENCAPSULER_ERROR ("Unable to allocate SPS/PPS buffers");
@@ -322,8 +322,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
                 ARSAL_Mutex_Unlock(&video->mutex);
                 return ARMEDIA_ERROR_ENCAPSULER;
             }
-            memcpy (video->sps, &data[4], video->spsSize);
-            memcpy (video->pps, &data[8+video->spsSize], video->ppsSize);
+            memcpy (video->sps, data, video->spsSize);
+            memcpy (video->pps, &data[video->spsSize], video->ppsSize);
         }
 
         // Start to write file
@@ -409,7 +409,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
             char infoData [ENCAPSULER_INFODATA_MAX_SIZE] = {0};
             char fTypeChar = 'p';
             if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME == video->lastFrameType ||
-                ARMEDIA_ENCAPSULER_FRAME_TYPE_IDR_FRAME == video->lastFrameType ||
                 ARMEDIA_ENCAPSULER_FRAME_TYPE_JPEG == video->lastFrameType)
             {
                 fTypeChar = 'i';
@@ -450,35 +449,21 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     }
     memcpy (myData, data, frameHeader->frame_size);
 
-    // Modify slices before writing
-    if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME != frameHeader->frame_type &&
-         ARMEDIA_ENCAPSULER_FRAME_TYPE_IDR_FRAME != frameHeader->frame_type &&
-         ARMEDIA_ENCAPSULER_FRAME_TYPE_JPEG != frameHeader->frame_type)
-    {
-        // P_Frame : only first 4 octets
-        // I_Frame (not first slice) : only first 4 octets
-        // 00 00 00 01 to sliceSize -4
-        uint32_t f_size = htonl (frameHeader->frame_size - 4);
-        memcpy (myData, &f_size, sizeof (uint32_t));
-    }
-    else if (video->videoCodec != CODEC_MOTION_JPEG)
-    {
-        // I_Frame first slice : modify all 00 00 00 01 patterns
-        // to the size of the following SPS/PPS/Frame
-        // SPS   00 00 00 01 -> sps_size-4
-        // PPS   00 00 00 01 -> pps_size-4
-        // Frame 00 00 00 01 -> sliceSize - (sps_size + pps_size + 4)
-        uint8_t sps_size = frameHeader->sps_header_size;
-        uint8_t pps_size = frameHeader->pps_header_size;
-        uint32_t sps_size_NE = htonl (sps_size - 4);
-        uint32_t pps_size_NE = htonl (pps_size - 4);
-        uint32_t f_size = htonl (frameHeader->frame_size - (sps_size + pps_size + 4));
-        uint32_t pps_offset = sps_size;
-        uint32_t slice_offset = pps_offset + pps_size;
-
-        memcpy ( myData,               &sps_size_NE, sizeof (uint32_t));
-        memcpy (&myData[pps_offset],   &pps_size_NE, sizeof (uint32_t));
-        memcpy (&myData[slice_offset], &f_size,      sizeof (uint32_t));
+    if (video->videoCodec == CODEC_MPEG4_AVC) {
+        // Modify slices before writing
+        if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME == frameHeader->frame_type) {
+            // set correct sizes for SPS & PPS headers + frame
+            uint32_t sps_size_NE = htonl (video->spsSize - 4);
+            uint32_t pps_size_NE = htonl (video->ppsSize - 4);
+            uint32_t f_size_NE   = htonl (frameHeader->frame_size - (video->spsSize + video->ppsSize + 4));
+            memcpy ( myData                                 , &sps_size_NE, sizeof (uint32_t));
+            memcpy (&myData[video->spsSize]                 , &pps_size_NE, sizeof (uint32_t));
+            memcpy (&myData[video->spsSize + video->ppsSize], &f_size_NE  , sizeof (uint32_t));
+        } else if (ARMEDIA_ENCAPSULER_FRAME_TYPE_P_FRAME == frameHeader->frame_type) {
+            // set correct size for frame
+            uint32_t f_size_NE = htonl (frameHeader->frame_size - 4);
+            memcpy (myData, &f_size_NE, sizeof (uint32_t));
+        }
     }
 
     if (frameHeader->frame_size != fwrite (myData, 1, frameHeader->frame_size, video->outFile))
@@ -554,7 +539,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 uint32_t infoLen;
 
                 if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME == myVideo->lastFrameType ||
-                    ARMEDIA_ENCAPSULER_FRAME_TYPE_IDR_FRAME == myVideo->lastFrameType ||
                     ARMEDIA_ENCAPSULER_FRAME_TYPE_JPEG == myVideo->lastFrameType)
                 {
                     fTypeChar = 'i';
@@ -710,7 +694,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         EMPTY_ATOM(dinf);
         drefAtom = drefAtomGen ();
         EMPTY_ATOM(stbl);
-        stsdAtom = stsdAtomWithResolutionCodecSpsAndPps (myVideo->width, myVideo->height, myVideo->videoCodec, myVideo->sps, myVideo->spsSize, myVideo->pps, myVideo->ppsSize);
+        stsdAtom = stsdAtomWithResolutionCodecSpsAndPps (myVideo->width, myVideo->height, myVideo->videoCodec, &myVideo->sps[4], myVideo->spsSize -4, &myVideo->pps[4], myVideo->ppsSize -4);
         sttsAtom = sttsAtomWithNumFrames (nbFrames, (*encapsuler)->fps);
 
         // Generate stss atom from iFramesIndexBuffer and nbIFrames

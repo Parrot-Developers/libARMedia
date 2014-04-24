@@ -55,8 +55,7 @@ typedef enum {
 typedef enum
 {
 	ARMEDIA_ENCAPSULER_FRAME_TYPE_UNKNNOWN = 0,
-	ARMEDIA_ENCAPSULER_FRAME_TYPE_IDR_FRAME, /* headers followed by I-frame */
-	ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME,
+	ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME, // contains SPS & PPS headers
 	ARMEDIA_ENCAPSULER_FRAME_TYPE_P_FRAME,
     ARMEDIA_ENCAPSULER_FRAME_TYPE_JPEG, /* only type for mjpeg */
 	ARMEDIA_ENCAPSULER_FRAME_TYPE_MAX
@@ -71,9 +70,7 @@ typedef struct {
     uint16_t video_width;
     uint16_t video_height;
     uint32_t timestamp;                /* in milliseconds */
-    uint8_t  frame_type;               /* I-frame, P-frame */
-    uint8_t  sps_header_size;          /* H.264 only : size of SPS inside frame - no SPS present if value is zero */
-    uint8_t  pps_header_size;          /* H.264 only : size of PPS inside frame - no PPS present if value is zero */
+    uint8_t  frame_type;               /* I-frame, P-frame, JPEG-frame */
     uint8_t* frame;
 } ARMEDIA_Frame_Header_t;
 
