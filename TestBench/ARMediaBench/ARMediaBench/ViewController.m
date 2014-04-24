@@ -46,15 +46,15 @@
     [fileManager copyItemAtPath:resourcePath2 toPath:txtPath2 error:&error];
     self.videoAtom64BitFolderPath = txtPath2;
     
-    NSString *txtPath = [documentsDirectory stringByAppendingPathComponent:@"IMG_delos_pvat2.mov"];
-    NSString *resourcePath = [[NSBundle mainBundle] pathForResource:@"IMG_delos_pvat2" ofType:@"mov"];
+    NSString *txtPath = [documentsDirectory stringByAppendingPathComponent:@"AR.Drone_D7AC4F9E27364A35B605AEAE920E6A5B_1970-01-01T000224+0000.mp4"];
+    NSString *resourcePath = [[NSBundle mainBundle] pathForResource:@"AR.Drone_D7AC4F9E27364A35B605AEAE920E6A5B_1970-01-01T000224+0000" ofType:@"mp4"];
     [fileManager copyItemAtPath:resourcePath toPath:txtPath error:&error];
-    self.videoAtom32BitFolderPath = txtPath2;
+    self.videoAtom32BitFolderPath = txtPath;
     
-    NSString *picturePath = [documentsDirectory stringByAppendingPathComponent:@"IMG_1155.JPG"];
-    NSString *pictureResourcePath = [[NSBundle mainBundle] pathForResource:@"IMG_1155" ofType:@"JPG"];
+    /*NSString *picturePath = [documentsDirectory stringByAppendingPathComponent:@"IMG_1155.jpg"];
+    NSString *pictureResourcePath = [[NSBundle mainBundle] pathForResource:@"IMG_1155" ofType:@"jpg"];
     [fileManager copyItemAtPath:pictureResourcePath toPath:picturePath error:&error];
-    self.pictureFolderPath = picturePath;
+    self.pictureFolderPath = picturePath;*/
     self.retreiveProjectDic = [NSMutableDictionary dictionary];
 }
 
@@ -89,27 +89,25 @@
 
 - (IBAction)ARMediaLibrary:(UIButton *)sender
 {
-    [[ARMediaManager sharedInstance] initWithProjectIDs:[NSArray arrayWithObjects:@"Parrot AR.Drone", @"Parrot Delos", nil]];
+    [[ARMediaManager sharedInstance] initWithProjectIDs:[NSArray arrayWithObjects:@"AR.Drone", @"MiniDrone", @"Jumping Sumo", nil]];
 }
 
 - (IBAction)updateARMediaLibrary:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        
         [[ARMediaManager sharedInstance] update];
     });
 }
 
 - (IBAction)projectDictionary:(UIButton *)sender
 {
-    [self.retreiveProjectDic removeObjectForKey:@"Parrot AR.Drone"];
+    [self.retreiveProjectDic removeObjectForKey:@"AR.Drone"];
     NSLog(@"retreiveProjectDic : %@",self.retreiveProjectDic);
 }
 
 - (IBAction)allProjectDictionary:(UIButton *)sender
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        
        [self.retreiveProjectDic setDictionary:[[ARMediaManager sharedInstance] getProjectDictionary:nil]];
         NSLog(@"retreiveProjectDic : %@",self.retreiveProjectDic);
     });

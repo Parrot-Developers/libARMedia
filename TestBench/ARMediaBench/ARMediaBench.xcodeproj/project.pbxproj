@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0539BC0318F837610029B731 /* The_Henri_Movie.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 0539BC0218F8368C0029B731 /* The_Henri_Movie.mp4 */; };
+		0539BC0518F8397A0029B731 /* 3frames.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 0539BC0418F8397A0029B731 /* 3frames.mp4 */; };
+		05F50576190962AE0098AD88 /* AR.Drone_D7AC4F9E27364A35B605AEAE920E6A5B_1970-01-01T000224+0000.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 05F50575190962AE0098AD88 /* AR.Drone_D7AC4F9E27364A35B605AEAE920E6A5B_1970-01-01T000224+0000.mp4 */; };
+		05F50578190963070098AD88 /* libARDiscovery.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05F50577190963070098AD88 /* libARDiscovery.framework */; };
+		05F5057A190963340098AD88 /* libARSAL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05F50579190963330098AD88 /* libARSAL.framework */; };
+		05F5057C190963710098AD88 /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05F5057B190963710098AD88 /* CoreBluetooth.framework */; };
+		05F8ABAC18EB08CF00417110 /* IMG_1155.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 05F8ABAB18EB08CF00417110 /* IMG_1155.jpg */; };
 		3E01A18B180BEE8000EB2F27 /* MainStoryboard.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3E01A18A180BEE8000EB2F27 /* MainStoryboard.storyboard */; };
 		3E0A753418069E82006B479E /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E0A753318069E82006B479E /* UIKit.framework */; };
 		3E0A753618069E82006B479E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E0A753518069E82006B479E /* Foundation.framework */; };
@@ -21,13 +28,19 @@
 		3E0A757218069EAA006B479E /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E0A757118069EAA006B479E /* ImageIO.framework */; };
 		3E0A757618069ED2006B479E /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E0A757518069ED2006B479E /* CoreLocation.framework */; };
 		3E0A757818069ED6006B479E /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E0A757718069ED6006B479E /* AssetsLibrary.framework */; };
-		3E82FC18182A83D30000DDA4 /* IMG_1155.JPG in Resources */ = {isa = PBXBuildFile; fileRef = 3E82FC16182A83D30000DDA4 /* IMG_1155.JPG */; };
 		3E82FC19182A83D30000DDA4 /* IMG_delos_pvat2.mov in Resources */ = {isa = PBXBuildFile; fileRef = 3E82FC17182A83D30000DDA4 /* IMG_delos_pvat2.mov */; };
 		3E95362B1834D54600E3314A /* IMG_delos_pvat64Bit.mov in Resources */ = {isa = PBXBuildFile; fileRef = 3E95362A1834D54600E3314A /* IMG_delos_pvat64Bit.mov */; };
 		3E9EE3EB180830FB00F80B96 /* libARMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E9EE3EA180830FB00F80B96 /* libARMedia.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0539BC0218F8368C0029B731 /* The_Henri_Movie.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = The_Henri_Movie.mp4; sourceTree = "<group>"; };
+		0539BC0418F8397A0029B731 /* 3frames.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = 3frames.mp4; sourceTree = "<group>"; };
+		05F50575190962AE0098AD88 /* AR.Drone_D7AC4F9E27364A35B605AEAE920E6A5B_1970-01-01T000224+0000.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AR.Drone_D7AC4F9E27364A35B605AEAE920E6A5B_1970-01-01T000224+0000.mp4"; sourceTree = "<group>"; };
+		05F50577190963070098AD88 /* libARDiscovery.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libARDiscovery.framework; path = ../../../ARBuildUtils/Targets/iOS/Install/Frameworks/libARDiscovery.framework; sourceTree = "<group>"; };
+		05F50579190963330098AD88 /* libARSAL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libARSAL.framework; path = ../../../ARBuildUtils/Targets/iOS/Install/Frameworks/libARSAL.framework; sourceTree = "<group>"; };
+		05F5057B190963710098AD88 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
+		05F8ABAB18EB08CF00417110 /* IMG_1155.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = IMG_1155.jpg; sourceTree = "<group>"; };
 		3E01A18A180BEE8000EB2F27 /* MainStoryboard.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = MainStoryboard.storyboard; sourceTree = "<group>"; };
 		3E0A753018069E82006B479E /* ARMediaBench.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ARMediaBench.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3E0A753318069E82006B479E /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -48,7 +61,6 @@
 		3E0A757118069EAA006B479E /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
 		3E0A757518069ED2006B479E /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 		3E0A757718069ED6006B479E /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
-		3E82FC16182A83D30000DDA4 /* IMG_1155.JPG */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = IMG_1155.JPG; sourceTree = "<group>"; };
 		3E82FC17182A83D30000DDA4 /* IMG_delos_pvat2.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = IMG_delos_pvat2.mov; sourceTree = "<group>"; };
 		3E95362A1834D54600E3314A /* IMG_delos_pvat64Bit.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = IMG_delos_pvat64Bit.mov; sourceTree = "<group>"; };
 		3E9EE3EA180830FB00F80B96 /* libARMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libARMedia.framework; path = ../../../ARBuildUtils/Targets/iOS/Install/Frameworks/libARMedia.framework; sourceTree = "<group>"; };
@@ -59,6 +71,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				05F5057C190963710098AD88 /* CoreBluetooth.framework in Frameworks */,
+				05F5057A190963340098AD88 /* libARSAL.framework in Frameworks */,
+				05F50578190963070098AD88 /* libARDiscovery.framework in Frameworks */,
 				3E9EE3EB180830FB00F80B96 /* libARMedia.framework in Frameworks */,
 				3E0A753818069E82006B479E /* CoreGraphics.framework in Frameworks */,
 				3E0A757818069ED6006B479E /* AssetsLibrary.framework in Frameworks */,
@@ -92,6 +107,9 @@
 		3E0A753218069E82006B479E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				05F5057B190963710098AD88 /* CoreBluetooth.framework */,
+				05F50579190963330098AD88 /* libARSAL.framework */,
+				05F50577190963070098AD88 /* libARDiscovery.framework */,
 				3E9EE3EA180830FB00F80B96 /* libARMedia.framework */,
 				3E0A757718069ED6006B479E /* AssetsLibrary.framework */,
 				3E0A757518069ED2006B479E /* CoreLocation.framework */,
@@ -107,9 +125,12 @@
 		3E0A753918069E82006B479E /* ARMediaBench */ = {
 			isa = PBXGroup;
 			children = (
-				3E82FC16182A83D30000DDA4 /* IMG_1155.JPG */,
+				05F8ABAB18EB08CF00417110 /* IMG_1155.jpg */,
 				3E95362A1834D54600E3314A /* IMG_delos_pvat64Bit.mov */,
 				3E82FC17182A83D30000DDA4 /* IMG_delos_pvat2.mov */,
+				0539BC0218F8368C0029B731 /* The_Henri_Movie.mp4 */,
+				0539BC0418F8397A0029B731 /* 3frames.mp4 */,
+				05F50575190962AE0098AD88 /* AR.Drone_D7AC4F9E27364A35B605AEAE920E6A5B_1970-01-01T000224+0000.mp4 */,
 				3E0A754218069E82006B479E /* AppDelegate.h */,
 				3E0A754318069E82006B479E /* AppDelegate.m */,
 				3E0A755118069E82006B479E /* ViewController.h */,
@@ -188,11 +209,14 @@
 				3E0A753E18069E82006B479E /* InfoPlist.strings in Resources */,
 				3E0A754618069E82006B479E /* Default.png in Resources */,
 				3E0A754818069E82006B479E /* Default@2x.png in Resources */,
-				3E82FC18182A83D30000DDA4 /* IMG_1155.JPG in Resources */,
+				0539BC0318F837610029B731 /* The_Henri_Movie.mp4 in Resources */,
+				05F8ABAC18EB08CF00417110 /* IMG_1155.jpg in Resources */,
 				3E82FC19182A83D30000DDA4 /* IMG_delos_pvat2.mov in Resources */,
 				3E95362B1834D54600E3314A /* IMG_delos_pvat64Bit.mov in Resources */,
 				3E0A754A18069E82006B479E /* Default-568h@2x.png in Resources */,
+				05F50576190962AE0098AD88 /* AR.Drone_D7AC4F9E27364A35B605AEAE920E6A5B_1970-01-01T000224+0000.mp4 in Resources */,
 				3E01A18B180BEE8000EB2F27 /* MainStoryboard.storyboard in Resources */,
+				0539BC0518F8397A0029B731 /* 3frames.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -287,6 +311,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../../../ARBuildUtils/Targets/iOS/Install/Frameworks\"",
+					/Users/parrot/Documents/SDK3/ARBuildUtils/Targets/iOS/Install/Frameworks,
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ARMediaBench/ARMediaBench-Prefix.pch";
@@ -303,6 +328,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../../../ARBuildUtils/Targets/iOS/Install/Frameworks\"",
+					/Users/parrot/Documents/SDK3/ARBuildUtils/Targets/iOS/Install/Frameworks,
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ARMediaBench/ARMediaBench-Prefix.pch";

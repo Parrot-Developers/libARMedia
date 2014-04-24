@@ -10,8 +10,14 @@
 #include <libARSAL/ARSAL.h>
 #include <libARMedia/ARMEDIA_Error.h>
 #include <libARMedia/ARMEDIA_VideoAtoms.h>
-
 #define ARMEDIA_MP4_EXTENSION   "mp4"
 #define ARMEDIA_JPG_EXTENSION   "jpg"
+
+typedef enum
+{
+    MEDIA_TYPE_VIDEO = 0,
+    MEDIA_TYPE_PHOTO,
+    MEDIA_TYPE_MAX
+} eMEDIA_TYPE;
 
 #endif // _ARMEDIA_H_

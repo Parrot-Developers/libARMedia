@@ -59,8 +59,8 @@ CPPFLAGS+="$LOCAL_CFLAGS"
 OBJCFLAGS+="$LOCAL_CFLAGS"
 
 # Add libARxxx deps
-
 AR_DEPENDS([libARSAL], [Y], [libARSAL/ARSAL.h])
+AR_DEPENDS([libARDiscovery], [Y], [libARDiscovery/ARDiscovery.h])
 
 ##########################################################################
 # Define binaries directories
