@@ -483,6 +483,12 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
              }
          }];
     }
+    else //Bad media extension
+    {
+        _transferingBlock(nil);
+        added = NO;
+    }
+    
     return added;
 }
 
