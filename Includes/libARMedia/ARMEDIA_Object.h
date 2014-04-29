@@ -16,7 +16,7 @@
 @interface ARMediaObject : NSObject <NSCoding, NSCopying>
 
 @property (nonatomic, strong) NSString *runDate;
-@property (nonatomic, strong) NSNumber *product;
+@property (nonatomic, strong) NSString *productId;
 @property (nonatomic, strong) NSString *name;
 @property (nonatomic, strong) NSString *date;
 @property (nonatomic, strong) NSString *filePath;

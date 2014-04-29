@@ -9,7 +9,7 @@
 
 @implementation ARMediaObject
 @synthesize mediaType = _mediaType;
-@synthesize product = _product;
+@synthesize productId = _productId;
 @synthesize runDate = _runDate;
 @synthesize name = _name;
 @synthesize date = _date;
@@ -26,7 +26,7 @@
         _filePath = nil;
         _date = nil;
         _size = NULL;
-        _product = NULL;
+        _productId = nil;
         _thumbnail = nil;
         _runDate = nil;
         _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_MAX];
@@ -42,7 +42,7 @@
         _filePath = [NSString stringWithUTF8String:media->filePath];
         _date = [NSString stringWithUTF8String:media->date];
         _size = [NSNumber numberWithDouble:media->size];
-        _product = [NSNumber numberWithInt:(media->product)];
+        _productId = [NSString stringWithFormat:@"%04x",ARDISCOVERY_getProductID(media->product)];
         _thumbnail = [UIImage imageWithData:[NSData dataWithBytes:media->thumbnail length:media->thumbnailSize]];
     }
     
@@ -103,7 +103,7 @@
     self = [super init];
     if (self)
     {
-        _product = [coder decodeObjectForKey:@"product"];
+        _productId = [coder decodeObjectForKey:@"productId"];
         _name = [coder decodeObjectForKey:@"name"];
         _date = [coder decodeObjectForKey:@"date"];
         _filePath = [coder decodeObjectForKey:@"filePath"];
@@ -116,7 +116,7 @@
 
 - (void)encodeWithCoder: (NSCoder *)coder
 {
-    [coder encodeObject:_product forKey:@"product"];
+    [coder encodeObject:_productId forKey:@"productId"];
     [coder encodeObject:_name forKey:@"name"];
     [coder encodeObject:_date forKey:@"date"];
     [coder encodeObject:_filePath forKey:@"filePath"];
@@ -131,7 +131,7 @@
     ARMediaObject *copy = [[ARMediaObject alloc] init];
     if (copy)
     {
-        [copy setProduct:[_product copyWithZone:zone]];
+        [copy setProductId:[_productId copyWithZone:zone]];
         [copy setName:[_name copyWithZone:zone]];
         [copy setDate:[_date copyWithZone:zone]];
         [copy setFilePath:[_filePath copyWithZone:zone]];
