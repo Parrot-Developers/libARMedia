@@ -273,15 +273,20 @@ movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_CODEC cod
     if (NULL == data)
         return NULL;
 
-    ATOM_WRITE_4CC('i', 's', 'o', 'm'); // major brand
-    ATOM_WRITE_U32(0x00000200); // minor version
-    ATOM_WRITE_4CC('i', 's', 'o', 'm'); // compatible brands
-    ATOM_WRITE_4CC('i', 's', 'o', '2');
-    ATOM_WRITE_4CC('m', 'p', '4', '1');
     if (codec == CODEC_MPEG4_AVC) {
+        ATOM_WRITE_4CC('i', 's', 'o', 'm'); // major brand
+        ATOM_WRITE_U32(0x00000200); // minor version
+        ATOM_WRITE_4CC('i', 's', 'o', 'm'); // compatible brands
+        ATOM_WRITE_4CC('i', 's', 'o', '2');
+        ATOM_WRITE_4CC('m', 'p', '4', '1');
         ATOM_WRITE_4CC('a', 'v', 'c', '1');
         *offset = 48;
     } else if (codec == CODEC_MOTION_JPEG) {
+        ATOM_WRITE_4CC('m', 'p', '4', '2'); // major brand
+        ATOM_WRITE_U32(0x00000001); // minor version
+        ATOM_WRITE_4CC('m', 'p', '4', '1');
+        ATOM_WRITE_4CC('m', 'p', '4', '2');
+        ATOM_WRITE_4CC('i', 's', 'o', 'm'); // compatible brands
         *offset = 44;
     }
     retAtom = atomFromData (dataSize, "ftyp", data);
@@ -307,7 +312,7 @@ movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize)
         ATOM_WRITE_4CC('m', 'd', 'a', 't');
         uint32_t sizeNe = htonl ((uint32_t) videoSize);
         ATOM_MEMCOPY (data, &sizeNe, sizeof (uint32_t));
-        retAtom = atomFromData (dataSize, "free", data);
+        retAtom = atomFromData (dataSize, "wide", data);
         retAtom->size = dataSize;
         retAtom->wide = 1;
     }
@@ -326,7 +331,7 @@ movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize)
     }
     return retAtom;
 }
-movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t fps, uint32_t nbFrames, time_t date)
+movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps, uint32_t nbFrames, time_t date)
 {
     uint32_t dataSize = 100;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
@@ -341,8 +346,8 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t fps, uint32_t nbFrames, 
     ATOM_WRITE_U32 (0); /* Version (8) + Flags (24) */
     ATOM_WRITE_U32 (0); /* Creation time */
     ATOM_WRITE_U32 (0); /* Modification time */
-    ATOM_WRITE_U32 (1000); /* Timescale */
-    ATOM_WRITE_U32 (1000u * nbFrames / fps); /* Duration (in timescale units) */
+    ATOM_WRITE_U32 (timescale); /* Timescale */
+    ATOM_WRITE_U32 (timescale * nbFrames / fps); /* Duration (in timescale units) */
 
     ATOM_WRITE_U32 (0x00010000); /* Reserved */
     ATOM_WRITE_U16 (0x0100); /* Reserved */
@@ -374,7 +379,7 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t fps, uint32_t nbFrames, 
 }
 
 
-movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t nbFrames, uint32_t fps, time_t date)
+movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t nbFrames, uint32_t timescale, uint32_t fps, time_t date)
 {
     uint32_t dataSize = 84;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
@@ -391,7 +396,7 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     ATOM_WRITE_U32 (0); /* Modification time */
     ATOM_WRITE_U32 (1); /* Track ID */
     ATOM_WRITE_U32 (0); /* Reserved */
-    ATOM_WRITE_U32 (1000u * nbFrames / fps); /* Duration, in timescale unit */
+    ATOM_WRITE_U32 (timescale * nbFrames / fps); /* Duration, in timescale unit */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
@@ -418,7 +423,7 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     return retAtom;
 }
 
-movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t fps, uint32_t nbFrames, time_t date)
+movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps, uint32_t nbFrames, time_t date)
 {
     uint32_t dataSize = 24;
     uint32_t currentIndex = 0;
@@ -433,10 +438,8 @@ movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t fps, uint32_t nbFrames, 
     ATOM_WRITE_U32 (0); /* Version (8) + Flags (24) */
     ATOM_WRITE_U32 (0); /* Creation time */
     ATOM_WRITE_U32 (0); /* Modification time */
-//    ATOM_WRITE_U32 (fps); /* Frames per second */
-    ATOM_WRITE_U32 (1200000); /* Frames per second */
-//    ATOM_WRITE_U32 (nbFrames); /* Number of Frames */
-    ATOM_WRITE_U32 (1200000 * nbFrames/fps); /* Number of Frames */
+    ATOM_WRITE_U32 (timescale); /* Timescale */
+    ATOM_WRITE_U32 (timescale * nbFrames / fps); /* Duration */
     ATOM_WRITE_U32 (0x55c40000); /* Language code (16) + Quality (16) */
 
     retAtom = atomFromData (24, "mdhd", data);
@@ -515,7 +518,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
     if (CODEC_MPEG4_AVC == codec) {
         dataSize = 128;
     } else if (CODEC_MOTION_JPEG) {
-        dataSize = 138;
+        dataSize = 94; //138;
     } else if (CODEC_MPEG4_VISUAL) {
         dataSize = 187;
     } else {
@@ -573,8 +576,8 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U32(0x00000000);         // 0 - version & flags
         ATOM_WRITE_U32(0x00000001);         // 4 - number of entries
 
-        ATOM_WRITE_U32(0x00000082);         // 8 - size of sample description
-        ATOM_WRITE_4CC('m', 'p', '4', 'v'); // 12 - tag for sample description
+        ATOM_WRITE_U32(0x00000056);         // 8 - size of sample description
+        ATOM_WRITE_4CC('j', 'p', 'e', 'g'); // 12 - tag for sample description
         ATOM_WRITE_U32(0x00000000);         // 16 -
         ATOM_WRITE_U32(0x00000001);         // 20 -
         ATOM_WRITE_U32(0x00000000);         // 24 - version & revision
@@ -598,20 +601,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U16(0x0000);             // 88 - compressor name
         ATOM_WRITE_U16(24);                 // 90 - color depth
         ATOM_WRITE_U16(0xffff);             // 92 - color table (-1 => none)
-
-        ATOM_WRITE_U16(0x0000);             // 94 - size of description extension
-        ATOM_WRITE_U16(0x002c);             // 96 - size of description extension
-        ATOM_WRITE_4CC('e', 's', 'd', 's'); // 98 - tag of description extension
-        ATOM_WRITE_U32(0x00000000);         // 102 - version & flags
-        ATOM_WRITE_U32(0x03808080);         // 106 - elementary stream descriptor
-        ATOM_WRITE_U32(0x1b000100);         // 110 - elementary stream descriptor
-        ATOM_WRITE_U32(0x04808080);         // 114 - elementary stream descriptor
-        ATOM_WRITE_U32(0x0d6c1100);         // 118 - elementary stream descriptor
-        ATOM_WRITE_U32(0x00000000);         // 122 - elementary stream descriptor
-        ATOM_WRITE_U32(0x00000000);         // 126 - elementary stream descriptor
-        ATOM_WRITE_U32(0x00000680);         // 130 - elementary stream descriptor
-        ATOM_WRITE_U32(0x80800102);         // 134 - elementary stream descriptor
-                                            // 138 -- END
+                                            // 96 -- END
     }
     else if (CODEC_MPEG4_VISUAL == codec)
     {
@@ -742,7 +732,7 @@ movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARM
     return retAtom;
 }
 
-movie_atom_t *sttsAtomWithNumFrames (uint32_t nbFrames, uint32_t fps)
+movie_atom_t *sttsAtomWithNumFrames (uint32_t nbFrames, uint32_t timescale, uint32_t fps)
 {
     uint8_t data [16];
     uint32_t currentIndex = 0;
@@ -750,7 +740,7 @@ movie_atom_t *sttsAtomWithNumFrames (uint32_t nbFrames, uint32_t fps)
     ATOM_WRITE_U32(0);
     ATOM_WRITE_U32(1);
     ATOM_WRITE_U32(nbFrames);
-    ATOM_WRITE_U32(1200000/fps);
+    ATOM_WRITE_U32(timescale/fps);
 
     return atomFromData (16, "stts", data);
 }
@@ -805,7 +795,7 @@ movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value)
 movie_atom_t *pvatAtomGen(const char *jsonString) {
     uint32_t dataSize = (uint32_t) strlen(jsonString);
 
-    return atomFromData(dataSize+1, "pvat", jsonString);
+    return atomFromData(dataSize+1, ARMEDIA_VIDEOATOMS_PVAT, jsonString);
 }
 
 /**

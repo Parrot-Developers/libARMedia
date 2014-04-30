@@ -34,6 +34,7 @@ typedef struct ARMEDIA_Video_t ARMEDIA_Video_t;
 struct ARMEDIA_VideoEncapsuler_t
 {
     uint32_t fps;
+    uint32_t timescale;
     ARMEDIA_Video_t* video;
 };
 
@@ -70,7 +71,6 @@ struct ARMEDIA_Video_t
 
     uint32_t lastFrameTimestamp;
 
-    ARSAL_Mutex_t mutex;
     time_t creationTime;
     uint32_t droneVersion;
     ARMEDIA_videoGpsInfos_t videoGpsInfos;
@@ -88,7 +88,7 @@ struct ARMEDIA_Video_t
 
 #define ARMEDIA_ENCAPSULER_TAG      "ARMedia Video Encapsuler"
 
-#if ENCAPSULER_FLUSH_ON_EACH_WRITE || defined USE_ELINUX
+#if ENCAPSULER_FLUSH_ON_EACH_WRITE
 #define ENCAPSULER_FFLUSH fflush
 #else
 #define ENCAPSULER_FFLUSH(...)
@@ -152,11 +152,10 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
     retVideo->video = (ARMEDIA_Video_t*) malloc (sizeof(ARMEDIA_Video_t));
     memset(retVideo->video, 0, sizeof(ARMEDIA_Video_t));
 
-    ARSAL_Mutex_Init(&retVideo->video->mutex);
-    ARSAL_Mutex_Lock(&retVideo->video->mutex);
+    retVideo->fps = (uint32_t)fps;
+    retVideo->timescale = (uint32_t)(fps * 2000);
     retVideo->video->version = ARMEDIA_ENCAPSULER_VERSION_NUMBER;
     retVideo->video->lastFrameNumber = UINT32_MAX;
-    retVideo->fps = (uint32_t)fps;
     retVideo->video->currentFrameSize = 0;
     retVideo->video->height = 0;
     retVideo->video->width = 0;
@@ -178,7 +177,6 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
     {
         ENCAPSULER_ERROR ("Unable to open file %s for writing", retVideo->video->infoFilePath);
         *error = ARMEDIA_ERROR_ENCAPSULER;
-        ARSAL_Mutex_Unlock(&retVideo->video->mutex);
         free (retVideo);
         retVideo = NULL;
         return NULL;
@@ -191,7 +189,6 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
         ENCAPSULER_ERROR ("Unable to open file %s for writing", videoPath);
         *error = ARMEDIA_ERROR_ENCAPSULER;
         fclose (retVideo->video->infoFile);
-        ARSAL_Mutex_Unlock(&retVideo->video->mutex);
         free (retVideo);
         retVideo = NULL;
         return NULL;
@@ -203,7 +200,6 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
     retVideo->video->creationTime = time (NULL);
 
     *error = ARMEDIA_OK;
-    ARSAL_Mutex_Unlock(&retVideo->video->mutex);
 
     return retVideo;
 }
@@ -235,13 +231,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         return ARMEDIA_ERROR_BAD_PARAMETER;
     }
 
-    ARSAL_Mutex_Lock(&video->mutex);
-
     if (!frameHeader->frame_size)
     {
         // Do nothing
         ENCAPSULER_DEBUG ("Empty slice\n");
-        ARSAL_Mutex_Unlock(&video->mutex);
         return ARMEDIA_OK;
     }
 
@@ -255,7 +248,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         if ((CODEC_MPEG4_AVC != frameHeader->video_codec) && (CODEC_MOTION_JPEG != frameHeader->video_codec))
         {
             ENCAPSULER_ERROR ("Only h.264 or mjpeg codec are supported");
-            ARSAL_Mutex_Unlock(&video->mutex);
             return ARMEDIA_ERROR_ENCAPSULER_BAD_CODEC;
         }
 
@@ -270,7 +262,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
             if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME != frameHeader->frame_type)
             {
                 // Wait until we get an IFrame-slice 1 to start the actual recording
-                ARSAL_Mutex_Unlock(&video->mutex);
                 return ARMEDIA_ERROR_ENCAPSULER_WAITING_FOR_IFRAME;
             }
 
@@ -319,7 +310,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
                     free (video->pps);
                     video->pps = NULL;
                 }
-                ARSAL_Mutex_Unlock(&video->mutex);
                 return ARMEDIA_ERROR_ENCAPSULER;
             }
             memcpy (video->sps, data, video->spsSize);
@@ -332,20 +322,17 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         if (NULL == ftypAtom)
         {
             ENCAPSULER_ERROR ("Unable to create ftyp atom");
-            ARSAL_Mutex_Unlock(&video->mutex);
             return ARMEDIA_ERROR_ENCAPSULER;
         }
         if (-1 == writeAtomToFile (&ftypAtom, video->outFile))
         {
             ENCAPSULER_ERROR ("Unable to write ftyp atom");
-            ARSAL_Mutex_Unlock(&video->mutex);
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
 
         if (-1 == fseek (video->outFile, video->framesDataOffset, SEEK_SET))
         {
             ENCAPSULER_ERROR ("Unable to set file write pointer to %d", video->framesDataOffset);
-            ARSAL_Mutex_Unlock(&video->mutex);
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
         video->mdatAtomOffset = video->framesDataOffset - 16;
@@ -358,14 +345,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         if (1 != fwrite (&descriptorSize, sizeof (uint32_t), 1, video->infoFile))
         {
             ENCAPSULER_ERROR ("Unable to write size of video descriptor");
-            ARSAL_Mutex_Unlock (&video->mutex);
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
         // Write video_t info
         if (1 != fwrite (video, sizeof (ARMEDIA_Video_t), 1, video->infoFile))
         {
             ENCAPSULER_ERROR ("Unable to write video descriptor");
-            ARSAL_Mutex_Unlock (&video->mutex);
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
 
@@ -375,14 +360,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
             if (video->spsSize != fwrite (video->sps, sizeof (uint8_t), video->spsSize, video->infoFile))
             {
                 ENCAPSULER_ERROR ("Unable to write sps header");
-                ARSAL_Mutex_Unlock (&video->mutex);
                 return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             }
             // Write PPS
             if (video->ppsSize != fwrite (video->pps, sizeof (uint8_t), video->ppsSize, video->infoFile))
             {
                 ENCAPSULER_ERROR ("Unable to write pps header");
-                ARSAL_Mutex_Unlock (&video->mutex);
                 return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             }
         }
@@ -394,7 +377,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         video->height != frameHeader->video_height)
     {
         ENCAPSULER_ERROR ("New slice don't match the video size/codec");
-        ARSAL_Mutex_Unlock(&video->mutex);
         return ARMEDIA_ERROR_ENCAPSULER_BAD_CODEC;
     }
 
@@ -418,7 +400,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
             if (infoLen != fwrite (infoData, 1, infoLen, video->infoFile))
             {
                 ENCAPSULER_ERROR ("Unable to write frameInfo into info file");
-                ARSAL_Mutex_Unlock(&video->mutex);
                 return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             }
             else
@@ -434,7 +415,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         if (ARMEDIA_ENCAPSULER_FRAMES_COUNT_LIMIT <= video->framesCount)
         {
             ENCAPSULER_ERROR ("Video contains already %d frames, which is the maximum", ARMEDIA_ENCAPSULER_FRAMES_COUNT_LIMIT);
-            ARSAL_Mutex_Unlock(&video->mutex);
             return ARMEDIA_ERROR_ENCAPSULER;
         }
     }
@@ -444,7 +424,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     if (NULL == myData)
     {
         ENCAPSULER_ERROR ("Unable to allocate local data (%d bytes) ", frameHeader->frame_size);
-        ARSAL_Mutex_Unlock(&video->mutex);
         return ARMEDIA_ERROR_ENCAPSULER;
     }
     memcpy (myData, data, frameHeader->frame_size);
@@ -470,7 +449,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     {
         free(myData);
         ENCAPSULER_ERROR ("Unable to write slice into data file");
-        ARSAL_Mutex_Unlock(&video->mutex);
         return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
     }
     else
@@ -481,7 +459,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     video->currentFrameSize += frameHeader->frame_size;
     video->totalsize += frameHeader->frame_size;
     free(myData);
-    ARSAL_Mutex_Unlock(&video->mutex);
 
     return ARMEDIA_OK;
 }
@@ -516,7 +493,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
     if (ARMEDIA_OK == localError)
     {
-        ARSAL_Mutex_Lock(&((*encapsuler)->video->mutex));
         myVideo = (*encapsuler)->video; // ease of reading
 
         if (!myVideo->width)
@@ -549,7 +525,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 if (infoLen != fwrite (infoData, 1, infoLen, myVideo->infoFile))
                 {
                     ENCAPSULER_ERROR ("Unable to write frameInfo into info file");
-                    ARSAL_Mutex_Unlock(&myVideo->mutex);
                     localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
                 }
                 else
@@ -587,7 +562,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             iFrameIndexBuffer = NULL;
             free (frameIsIFrame);
             frameIsIFrame = NULL;
-            ARSAL_Mutex_Unlock(&myVideo->mutex);
             localError = ARMEDIA_ERROR_ENCAPSULER;
         }
     }
@@ -676,17 +650,23 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             }
         }
 
-        // create atoms
-        // Generating Atoms
+        // get time values
         tzset();
         nowTm = localtime (&(myVideo->creationTime));
+        time_t cdate = myVideo->creationTime - timezone;
+        if (nowTm->tm_isdst >= 0) {
+            cdate += (3600 * nowTm->tm_isdst);
+        }
+
+        // create atoms
+        // Generating Atoms
         EMPTY_ATOM(moov);
-        mvhdAtom = mvhdAtomFromFpsNumFramesAndDate ((*encapsuler)->fps, myVideo->framesCount, myVideo->creationTime - timezone + (3600 * nowTm->tm_isdst));
+        mvhdAtom = mvhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, (*encapsuler)->fps, myVideo->framesCount, cdate);
         iodsAtom = iodsAtomGen();
         EMPTY_ATOM(trak);
-        tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (myVideo->width, myVideo->height, myVideo->framesCount, (*encapsuler)->fps, myVideo->creationTime - timezone + (3600 * nowTm->tm_isdst));
+        tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (myVideo->width, myVideo->height, myVideo->framesCount, (*encapsuler)->timescale, (*encapsuler)->fps, cdate);
         EMPTY_ATOM(mdia);
-        mdhdAtom = mdhdAtomFromFpsNumFramesAndDate ((*encapsuler)->fps, myVideo->framesCount, myVideo->creationTime - timezone + (3600 * nowTm->tm_isdst));
+        mdhdAtom = mdhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, (*encapsuler)->fps, myVideo->framesCount, cdate);
         hdlrAtom = hdlrAtomForMdia ();
         EMPTY_ATOM(minf);
         vmhdAtom = vmhdAtomGen ();
@@ -695,7 +675,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         drefAtom = drefAtomGen ();
         EMPTY_ATOM(stbl);
         stsdAtom = stsdAtomWithResolutionCodecSpsAndPps (myVideo->width, myVideo->height, myVideo->videoCodec, &myVideo->sps[4], myVideo->spsSize -4, &myVideo->pps[4], myVideo->ppsSize -4);
-        sttsAtom = sttsAtomWithNumFrames (nbFrames, (*encapsuler)->fps);
+        sttsAtom = sttsAtomWithNumFrames (nbFrames, (*encapsuler)->timescale, (*encapsuler)->fps);
 
         // Generate stss atom from iFramesIndexBuffer and nbIFrames
         stssDataLen = (8 + (nbIFrames * sizeof (uint32_t)));
@@ -810,7 +790,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             myVideo->pps = NULL;
         }
 
-        ARSAL_Mutex_Unlock(&myVideo->mutex);
         free (myVideo);
         myVideo = NULL;
         free ((*encapsuler));
@@ -839,7 +818,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         iFrameIndexBuffer = NULL;
         free (frameIsIFrame);
         frameIsIFrame = NULL;
-        ARSAL_Mutex_Unlock(&myVideo->mutex);
         ARMEDIA_VideoEncapsuler_Cleanup (encapsuler);
     }
     return localError;
@@ -855,7 +833,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
         ENCAPSULER_ERROR ("encapsuler pointer must not be null");
         return ARMEDIA_ERROR_BAD_PARAMETER;
     }
-    ARSAL_Mutex_Lock(&((*encapsuler)->video->mutex));
     myVideo = (*encapsuler)->video; // ease of reading
 
     if(NULL!=myVideo->outFile)  fclose (myVideo->outFile);
@@ -875,7 +852,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
         myVideo->pps = NULL;
     }
 
-    ARSAL_Mutex_Unlock(&myVideo->mutex);
     free (myVideo);
     free (myEncapsuler);
     *encapsuler = NULL;
@@ -1081,7 +1057,6 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
     if (noError)
     {
         video->framesCount = frameNumber;
-        ARSAL_Mutex_Init (&video->mutex);
         rewind (video->infoFile);
         if (ARMEDIA_OK != ARMEDIA_VideoEncapsuler_Finish (&encapsuler))
         {
