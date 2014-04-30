@@ -459,6 +459,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     video->currentFrameSize += frameHeader->frame_size;
     video->totalsize += frameHeader->frame_size;
     free(myData);
+    if ((video->framesCount % 10) == 0) fsync(fileno(video->outFile));
 
     return ARMEDIA_OK;
 }
