@@ -272,7 +272,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 {
     // RETRIEVING ALL ASSETS IN CAMERA ROLL
     __block NSMutableDictionary *tempProjectDictionaries = [NSMutableDictionary dictionary];
-    __block unsigned int productIdInt;
+    __block unsigned int productId;
     for(NSMutableDictionary *tmpProject in _privateProjectsDictionary)
     {
         [tempProjectDictionaries setObject:[NSMutableDictionary dictionary] forKey:tmpProject];
@@ -294,8 +294,16 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                     mediaObject = [projectDictionary objectForKey:stringAsset];
                     if (mediaObject != nil)
                     {
-                        [[tempProjectDictionaries objectForKey:projectID] setValue:[projectDictionary objectForKey:stringAsset] forKey:stringAsset];
-                        [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]];
+                        NSScanner* scanner = [NSScanner scannerWithString:mediaObject.productId];
+                        if([scanner scanHexInt:&productId])
+                        {
+                            [[tempProjectDictionaries objectForKey:projectID] setValue:[projectDictionary objectForKey:stringAsset] forKey:stringAsset];
+                            [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
+                        }
+                        else
+                        {
+                            NSLog(@"Failed to scan hexadecimal product ID");
+                        }
                     }
                     // NO ELSE - We add only existing media from Camera roll
                 }
@@ -310,14 +318,19 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                         stringAsset = [[representation url] absoluteString];
                         
                         NSScanner* scanner = [NSScanner scannerWithString:[atomValue valueForKey:kARMediaManagerPVATProductIdKey]];
-                        [scanner scanHexInt:&productIdInt];
-                        
-                        mediaObject.productId = (NSString *)[atomValue valueForKey:kARMediaManagerPVATProductIdKey];
-                        mediaObject.date = (NSString *)[atomValue valueForKey:kARMediaManagerPVATMediaDateKey];
-                        mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
+                        if([scanner scanHexInt:&productId])
+                        {
+                            mediaObject.productId = (NSString *)[atomValue valueForKey:kARMediaManagerPVATProductIdKey];
+                            mediaObject.date = (NSString *)[atomValue valueForKey:kARMediaManagerPVATMediaDateKey];
+                            mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
 
-                        [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]] setValue:mediaObject forKey:stringAsset];
-                        [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]];
+                            [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
+                            [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
+                        }
+                        else
+                        {
+                            NSLog(@"Failed to scan hexadecimal product ID");
+                        }
                     }
                     // NO ELSE - Ignoring this video - ardt value format not recognized
                 }
@@ -342,14 +355,19 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                 {
                                     
                                     NSScanner* scanner = [NSScanner scannerWithString:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]];
-                                    [scanner scanHexInt:&productIdInt];
-                                    
-                                    mediaObject.productId = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey];
-                                    mediaObject.date = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
-                                    mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
+                                    if([scanner scanHexInt:&productId])
+                                    {
+                                        mediaObject.productId = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey];
+                                        mediaObject.date = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
+                                        mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
 
-                                    [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]] setValue:mediaObject forKey:stringAsset];
-                                    [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]];
+                                        [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
+                                        [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
+                                    }
+                                    else
+                                    {
+                                        NSLog(@"Failed to scan hexadecimal product ID");
+                                    }
                                 }
                             }
                         }
@@ -381,7 +399,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     __block ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
     dispatch_semaphore_t sema = dispatch_semaphore_create(0);
     __block ARMediaObject *mediaObject = [[ARMediaObject alloc]init];
-    __block unsigned int productIdInt;
+    __block unsigned int productId;
     if ([mediaPath.pathExtension isEqualToString:[NSString stringWithUTF8String:ARMEDIA_MP4_EXTENSION]])
     {
         [library writeVideoAtPathToSavedPhotosAlbum:[NSURL URLWithString:mediaPath]  completionBlock:^(NSURL *assetURL, NSError *error)
@@ -406,15 +424,20 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                   stringAsset = [[representation url] absoluteString];
                                   
                                   NSScanner* scanner = [NSScanner scannerWithString:[atomValue valueForKey:kARMediaManagerPVATProductIdKey]];
-                                  [scanner scanHexInt:&productIdInt];
-                                  
-                                  mediaObject.productId = (NSString *)[atomValue valueForKey:kARMediaManagerPVATProductIdKey];
-                                  mediaObject.date = (NSString *)[atomValue valueForKey:kARMediaManagerPVATMediaDateKey];
-                                  mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
+                                  if([scanner scanHexInt:&productId])
+                                  {
+                                      mediaObject.productId = (NSString *)[atomValue valueForKey:kARMediaManagerPVATProductIdKey];
+                                      mediaObject.date = (NSString *)[atomValue valueForKey:kARMediaManagerPVATMediaDateKey];
+                                      mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
 
-                                  [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]] setValue:mediaObject forKey:stringAsset];
-                                  
-                                  [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]];
+                                      [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
+                                      
+                                      [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
+                                  }
+                                  else
+                                  {
+                                      NSLog(@"Failed to scan hexadecimal product ID");
+                                  }
                               }
                               // NO ELSE - Ignoring this video - ardt value format not recognized
                               dispatch_semaphore_signal(sema);
@@ -468,14 +491,19 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                           //if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]] && (jSONerror == nil))
                                           {
                                               NSScanner* scanner = [NSScanner scannerWithString:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]];
-                                              [scanner scanHexInt:&productIdInt];
-                                              
-                                              mediaObject.productId = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey];
-                                              mediaObject.date = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
-                                              mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
-                                              
-                                              [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]] setValue:mediaObject forKey:stringAsset];
-                                              [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productIdInt))]];
+                                              if([scanner scanHexInt:&productId])
+                                              {
+                                                  mediaObject.productId = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey];
+                                                  mediaObject.date = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
+                                                  mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
+                                                  
+                                                  [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
+                                                  [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
+                                              }
+                                              else
+                                              {
+                                                  NSLog(@"Failed to scan hexadecimal product ID");
+                                              }
                                           }
                                       }
                                   }

@@ -54,7 +54,6 @@
     {
         _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
     }
-    
 }
 
 
@@ -85,7 +84,6 @@
             _thumbnail = [[UIImage alloc]initWithCGImage:iref];
         }
         // NO ELSE
-        
     };
     
     ALAssetsLibraryAccessFailureBlock failureblock  = ^(NSError *myerror)
@@ -98,7 +96,7 @@
     });
 }
 
-- (id)initWithCoder: (NSCoder *)coder
+- (id)initWithCoder:(NSCoder *)coder
 {
     self = [super init];
     if (self)
@@ -114,7 +112,7 @@
     return self;
 }
 
-- (void)encodeWithCoder: (NSCoder *)coder
+- (void)encodeWithCoder:(NSCoder *)coder
 {
     [coder encodeObject:_productId forKey:@"productId"];
     [coder encodeObject:_name forKey:@"name"];
