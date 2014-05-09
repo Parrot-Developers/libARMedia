@@ -74,7 +74,6 @@ struct ARMEDIA_Video_t
     time_t creationTime;
     uint32_t droneVersion;
     ARMEDIA_videoGpsInfos_t videoGpsInfos;
-
 };
 
 #define ENCAPSULER_DEBUG_ENABLE (0)
@@ -106,7 +105,7 @@ struct ARMEDIA_Video_t
 #define ENCAPSULER_DEBUG(...)                                           \
     do                                                                  \
     {                                                                   \
-        fprintf (stdout, "ARMedia video encapsuler debug (%s @ %d) : ", __FUNCTION__, __LINE__); \
+        fprintf (stdout, "(%s @ %d) : ", __FUNCTION__, __LINE__); \
         fprintf (stdout, __VA_ARGS__);                                  \
         fprintf (stdout, "\n");                                         \
     } while (0)
@@ -459,7 +458,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     video->currentFrameSize += frameHeader->frame_size;
     video->totalsize += frameHeader->frame_size;
     free(myData);
-    if ((video->framesCount % 10) == 0) fsync(fileno(video->outFile));
+
+    // synchronisation
+    if ((video->framesCount % 10) == 0) {
+        fsync(fileno(video->outFile));
+        fsync(fileno(video->infoFile));
+    }
 
     return ARMEDIA_OK;
 }
@@ -894,6 +898,8 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
             ENCAPSULER_DEBUG ("Unable to alloc video pointer");
         } // No else
         encapsuler->video = video;
+        encapsuler->fps = 30;
+        encapsuler->timescale = 30*2000;
     } // No else
 
     // Open file for reading
@@ -951,38 +957,42 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
     }
 
     // Allocate / copy SPS/PPS pointers
-    if (noError && 0 != video->spsSize && 0 != video->ppsSize)
-    {
-        video->sps = (uint8_t*) malloc (video->spsSize);
-        video->pps = (uint8_t*) malloc (video->ppsSize);
-        if (NULL == video->sps ||
-            NULL == video->pps)
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Unable to allocate video sps/pps");
-            free (video->sps);
-            free (video->pps);
-            video->sps = NULL;
-            video->pps = NULL;
-        }
-        else
-        {
-            if (1 != fread (video->sps, video->spsSize, 1, video->infoFile))
+    if (noError) {
+        if(video->videoCodec == CODEC_MPEG4_AVC) {
+            if (0 != video->spsSize && 0 != video->ppsSize)
             {
-                ENCAPSULER_DEBUG ("Unable to read video SPS");
+                video->sps = (uint8_t*) malloc (video->spsSize);
+                video->pps = (uint8_t*) malloc (video->ppsSize);
+                if (NULL == video->sps ||
+                    NULL == video->pps)
+                {
+                    noError = 0;
+                    ENCAPSULER_DEBUG ("Unable to allocate video sps/pps");
+                    free (video->sps);
+                    free (video->pps);
+                    video->sps = NULL;
+                    video->pps = NULL;
+                }
+                else
+                {
+                    if (1 != fread (video->sps, video->spsSize, 1, video->infoFile))
+                    {
+                        ENCAPSULER_DEBUG ("Unable to read video SPS");
+                        noError = 0;
+                    }
+                    else if (1 != fread (video->pps, video->ppsSize, 1, video->infoFile))
+                    {
+                        ENCAPSULER_DEBUG ("Unable to read video PPS");
+                        noError = 0;
+                    } // No else
+                }
+            }
+            else
+            {
+                ENCAPSULER_DEBUG ("Video SPS/PPS sizes are bad");
                 noError = 0;
             }
-            else if (1 != fread (video->pps, video->ppsSize, 1, video->infoFile))
-            {
-                ENCAPSULER_DEBUG ("Unable to read video PPS");
-                noError = 0;
-            } // No else
         }
-    }
-    else
-    {
-        ENCAPSULER_DEBUG ("Video SPS/PPS sizes are bad");
-        noError = 0;
     }
 
     // Open temp file
@@ -1006,7 +1016,6 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
 
         fseek (video->outFile, 0, SEEK_END);
         tmpvidSize = ftell (video->outFile);
-
 
         while (!endOfSearch)
         {
@@ -1038,6 +1047,8 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
             }
         }
     } // No else
+
+    video->totalsize = dataSize;
 
     if (noError)
     {
@@ -1116,3 +1127,4 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
 
     return noError && finishNoError;
 }
+
