@@ -449,20 +449,6 @@ movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps,
 }
 
 
-
-movie_atom_t *iodsAtomGen ()
-{
-    uint8_t data[16];
-    uint32_t currentIndex = 0;
-
-    ATOM_WRITE_U32(0x00000000);
-    ATOM_WRITE_U32(0x10808080);
-    ATOM_WRITE_U32(0x07004fff);
-    ATOM_WRITE_U32(0xfffffeff);
-
-    return atomFromData(16, "iods", data);
-}
-
 movie_atom_t *hdlrAtomForMdia ()
 {
     uint8_t data [37] =  {0x00, 0x00, 0x00, 0x00,

@@ -581,7 +581,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
         struct tm *nowTm;
         movie_atom_t *mvhdAtom;
-        movie_atom_t *iodsAtom;
         movie_atom_t *tkhdAtom;
         movie_atom_t *mdhdAtom;
         movie_atom_t *hdlrAtom;
@@ -667,7 +666,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         // Generating Atoms
         EMPTY_ATOM(moov);
         mvhdAtom = mvhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, (*encapsuler)->fps, myVideo->framesCount, cdate);
-        iodsAtom = iodsAtomGen();
         EMPTY_ATOM(trak);
         tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (myVideo->width, myVideo->height, myVideo->framesCount, (*encapsuler)->timescale, (*encapsuler)->fps, cdate);
         EMPTY_ATOM(mdia);
