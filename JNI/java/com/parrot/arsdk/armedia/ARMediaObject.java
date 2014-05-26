@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.content.res.AssetManager;
+import android.content.res.Resources;
 
 import com.parrot.arsdk.aracademy.ARAcademyCountry;
 import com.parrot.arsdk.aracademy.ARAcademyProfile;
@@ -47,7 +48,7 @@ public class ARMediaObject implements Cloneable
         mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_MAX;
     }
     
-    public void updateDataTransferMedia (ARDataTransferMedia media)
+    public void updateDataTransferMedia (Resources resources, ARDataTransferMedia media)
     {
         if (media != null)
         {
@@ -58,8 +59,11 @@ public class ARMediaObject implements Cloneable
             product = media.getProduct();
             productId = String.format("%04x", ARDiscoveryService.getProductID(product));
             
-            Bitmap thumbnailBitmap = BitmapFactory.decodeByteArray(media.getThumbnail(), 0, media.getThumbnail().length);
-            thumbnail = new BitmapDrawable(thumbnailBitmap);
+            Bitmap thumbnailBmp = BitmapFactory.decodeByteArray(media.getThumbnail(), 0, media.getThumbnail().length);
+            if(thumbnailBmp != null)
+            {
+                thumbnail = (Drawable) new BitmapDrawable(resources, thumbnailBmp);
+            }
         }
         
         if (name != null)
@@ -77,10 +81,14 @@ public class ARMediaObject implements Cloneable
         }
     }
     
-    public void updateThumbnailWithDataTransferMedia (ARDataTransferMedia media)
+    public void updateThumbnailWithDataTransferMedia (Resources resources, ARDataTransferMedia media)
     {
-        Bitmap thumbnailBitmap = BitmapFactory.decodeByteArray(media.getThumbnail(), 0, media.getThumbnail().length);
-        thumbnail = new BitmapDrawable(thumbnailBitmap);
+        Bitmap thumbnailBmp = BitmapFactory.decodeByteArray(media.getThumbnail(), 0, media.getThumbnail().length);
+        
+        if(thumbnailBmp != null)
+        {
+            thumbnail = (Drawable) new BitmapDrawable(resources, thumbnailBmp);
+        }
     }
     
     public void updateThumbnailWithUrl (AssetManager assetManager, String assetUrl)
@@ -89,7 +97,6 @@ public class ARMediaObject implements Cloneable
         try
         {
             InputStream imgInput = assetManager.open(assetUrl);
-            
             thumbnail = Drawable.createFromStream(imgInput, null);
         }
         catch(final IOException e)
