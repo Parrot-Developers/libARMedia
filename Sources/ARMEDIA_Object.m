@@ -16,6 +16,7 @@
 @synthesize filePath = _filePath;
 @synthesize size = _size;
 @synthesize thumbnail = _thumbnail;
+@synthesize assetUrl = _assetUrl;
 
 - (id)init
 {
@@ -29,6 +30,7 @@
         _productId = nil;
         _thumbnail = nil;
         _runDate = nil;
+        _assetUrl = nil;
         _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_MAX];
     }
     return self;
@@ -90,9 +92,10 @@
     {
         NSLog(@"cant get image - %@",[myerror localizedDescription]);
     };
-    
+    _assetUrl = assetUrl;
+
     dispatch_async(dispatch_get_main_queue(), ^{
-        [assetslibrary assetForURL:assetUrl resultBlock:resultblock failureBlock:failureblock];
+        [assetslibrary assetForURL:_assetUrl resultBlock:resultblock failureBlock:failureblock];
     });
 }
 
@@ -108,6 +111,7 @@
         _size = [coder decodeObjectForKey:@"size"];
         _thumbnail = [coder decodeObjectForKey:@"thumbnail"];
         _mediaType = [coder decodeObjectForKey:@"mediaType"];
+        _assetUrl = [coder decodeObjectForKey:@"assetUrl"];
     }
     return self;
 }
@@ -122,6 +126,7 @@
     [coder encodeObject:_size forKey:@"size"];
     [coder encodeObject:_thumbnail forKey:@"thumbnail"];
     [coder encodeObject:_mediaType forKey:@"mediaType"];
+    [coder encodeObject:_assetUrl forKey:@"assetUrl"];
 }
 
 - (id)copyWithZone:(NSZone *)zone
@@ -137,6 +142,7 @@
         [copy setSize:[_size copyWithZone:zone]];
         [copy setThumbnail:[[UIImage allocWithZone:zone] initWithCGImage:_thumbnail.CGImage]];
         [copy setMediaType:[_mediaType copyWithZone:zone]];
+        [copy setAssetUrl:[_assetUrl copyWithZone:zone]];
     }
     return copy;
 }

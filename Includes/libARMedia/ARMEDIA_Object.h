@@ -23,6 +23,7 @@
 @property (nonatomic, strong) NSNumber *size;
 @property (nonatomic, strong) UIImage *thumbnail;
 @property (nonatomic, strong) NSNumber *mediaType;
+@property (nonatomic, strong) NSString *assetUrl;
 
 - (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media;
 - (void)updateThumbnailWithARDATATRANSFER_Media_t:(ARDATATRANSFER_Media_t *)media;
