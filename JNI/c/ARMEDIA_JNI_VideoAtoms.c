@@ -1,4 +1,5 @@
- #include <jni.h>
+#include <jni.h>
+#include <libARMedia/ARMEDIA_Error.h>
 #include <libARMedia/ARMEDIA_VideoAtoms.h>
 #include <libARMedia/ARMEDIA_VideoEncapsuler.h>
 #include <stdlib.h>
