@@ -98,10 +98,12 @@ movie_atom_t *pvatAtomGen(const char *jsonString);
  * Thid function get the atom data from a video file and convert it to the latest version
  * This function alloc (using vp_os_calloc) the return pointer. Application MUST handle the free of the pointer.
  * @param videoFile Pointer to the video file.
- * @return A new, malloc'd, pointer of pvat data filled with data buffer. In case of failure, returns NULL
- * @note The video FILE* pointer position will be modified by this call
+ * @param atom The name of the atom to extract. If an inner atom is required, use / to separate levels.
+ * @param dataSize Pointer which will hold the size of the returned data.
+ * @return A new, malloc'd, pointer of pvat data filled with data buffer. In case of failure, returns NULL.
+ * @note The video FILE* pointer position will be modified by this call.
  */
-uint8_t *createDataFromFile (FILE *videoFile, const char *atom);
+uint8_t *createDataFromFile (FILE *videoFile, const char *atom, uint32_t *dataSize);
 
 /**
  * @brief Read atom data from atom into a self alloced array

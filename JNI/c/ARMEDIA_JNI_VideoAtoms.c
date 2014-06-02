@@ -4,22 +4,31 @@
 #include <libARMedia/ARMEDIA_VideoEncapsuler.h>
 #include <stdlib.h>
 
-JNIEXPORT jstring JNICALL
-Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeGetPvat(JNIEnv *env, jclass clazz, jstring fileName)
+JNIEXPORT jbyteArray JNICALL
+Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeGetAtom(JNIEnv *env, jclass clazz, jstring fileName, jstring atom)
 {
     const char *fname = (*env)->GetStringUTFChars(env, fileName, NULL);
+    const char *atomName = (*env)->GetStringUTFChars(env, atom, NULL);
+
 
     FILE *file = fopen (fname, "rb");
 
-    uint8_t *data = createDataFromFile (file, "pvat");
+    uint32_t size;
+    uint8_t *data = createDataFromFile (file, atomName, &size);
 
     fclose(file);
 
-    jstring retStr = (*env)->NewStringUTF(env, data);
+    jbyteArray retArray = NULL;
+    if (data != NULL)
+    {
+        retArray = (*env)->NewByteArray(env, size);
+        (*env)->SetByteArrayRegion(env, retArray, 0, size, (jbyte*)data);
 
-    free(data);
+        free(data);
+    }
 
     (*env)->ReleaseStringUTFChars(env, fileName, fname);
+    (*env)->ReleaseStringUTFChars(env, atom, atomName);
 
-    return retStr;
+    return retArray;
 }

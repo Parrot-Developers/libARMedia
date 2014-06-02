@@ -56,13 +56,13 @@
         *DPOINTER = htons((uint16_t)VAL);                       \
     } while (0)
 // Write a 32 bit word into atom data
-#define ATOM_WRITE_U32(VAL)                                     \
-    do                                                          \
-    {                                                           \
-        data[currentIndex++] = (uint8_t)((VAL>>24)&0xff);       \
-        data[currentIndex++] = (uint8_t)((VAL>>16)&0xff);       \
-        data[currentIndex++] = (uint8_t)((VAL>>8)&0xff);        \
-        data[currentIndex++] = (uint8_t)((VAL)&0xff);           \
+#define ATOM_WRITE_U32(VAL)                                 \
+    do                                                      \
+    {                                                       \
+        data[currentIndex++] = (uint8_t)((VAL>>24)&0xff);   \
+        data[currentIndex++] = (uint8_t)((VAL>>16)&0xff);   \
+        data[currentIndex++] = (uint8_t)((VAL>>8)&0xff);    \
+        data[currentIndex++] = (uint8_t)((VAL)&0xff);       \
     } while (0)
 // Write an defined number of bytes into atom data
 //  Usage : ATOM_WRITE_BYTES (pointerToData, sizeToCopy)
@@ -104,12 +104,12 @@
         pBuffer++;                              \
     } while (0)
 
-#define ATOM_READ_BYTES(POINTER, SIZE)                  \
-do                                                      \
-{                                                       \
-    ATOM_MEMCOPY (POINTER, (uint8_t *)pBuffer, SIZE);   \
-    pBuffer += SIZE;                                    \
-} while (0)
+#define ATOM_READ_BYTES(POINTER, SIZE)                      \
+    do                                                      \
+    {                                                       \
+        ATOM_MEMCOPY (POINTER, (uint8_t *)pBuffer, SIZE);   \
+        pBuffer += SIZE;                                    \
+    } while (0)
 
 // Actual read functions
 static void read_uint32 (FILE *fptr, uint32_t *dest)
@@ -882,24 +882,37 @@ static int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t 
     return found;
 }
 
-uint8_t *createDataFromFile (FILE *videoFile, const char* atom)
+uint8_t *createDataFromFile (FILE *videoFile, const char* atom, uint32_t *dataSize)
 {
     uint64_t atomSize = 0;
     uint8_t *atomBuffer = NULL;
     uint8_t *retBuffer = NULL;
     int valid = 1;
+    char *tokSave;
+    char *token;
+    char *localAtom;
+
     // Rewind videoFile
     if (NULL != videoFile)
     {
         rewind (videoFile);
     }
 
-    // Seek to atom
-    int seekRes = seekMediaFileToAtom (videoFile, atom, &atomSize);
-    if (0 == seekRes)
+    localAtom = strdup(atom);
+
+    token = strtok_r(localAtom, "/", &tokSave);
+
+    while (token != NULL)
     {
-        return NULL;
+        // Seek to atom
+        int seekRes = seekMediaFileToAtom (videoFile, token, &atomSize);
+        if (0 == seekRes)
+        {
+            return NULL;
+        }
+        token = strtok_r(NULL, "/", &tokSave);
     }
+    free (localAtom);
 
     atomSize -= 8; // Remove the [size - tag] part, as it was read during seek
 
@@ -920,10 +933,15 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom)
         }
     }
 
-    // Create buffer from prrt atom
+    // Create buffer from atom
     if (1 == valid)
     {
         retBuffer = createDataFromAtom (atomBuffer, atomSize);
+    }
+
+    if (dataSize != NULL)
+    {
+        *dataSize = atomSize;
     }
 
     // Free any allocated resource
@@ -941,29 +959,20 @@ uint8_t *createDataFromAtom(uint8_t *atomBuffer, const int atomSize)
     uint8_t *pBuffer = atomBuffer;
     uint8_t *retVal = NULL;
     // Sanity check : ensure that the buffer we got is not null and long enough
-    if ((NULL == atomBuffer) || (atomSize < 4))
-    {
-        return NULL;
-    }
-
-    // Read data size
-    ATOM_READ_U32 (dataSize);
-
-    // Sanity check : remaining buffer size must be ok with the read totalSize
-    if ((atomSize - 4) < dataSize) /* We already have read 4 bytes */
+    if ((NULL == atomBuffer) || (atomSize < 0))
     {
         return NULL;
     }
 
     // Buffer and size are ok, alloc return pointer
-    retVal = ATOM_CALLOC (1, sizeof(dataSize));
+    retVal = ATOM_CALLOC (1, atomSize);
     if (NULL == retVal)
     {
         return NULL;
     }
 
     // Start reading atom data
-    ATOM_READ_BYTES(retVal, dataSize);
+    ATOM_READ_BYTES(retVal, atomSize);
 
     return retVal;
 }
