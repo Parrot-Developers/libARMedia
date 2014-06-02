@@ -10,11 +10,11 @@ LOCAL_CATEGORY_PATH := dragon/libs
 LOCAL_MODULE := libARMedia
 LOCAL_DESCRIPTION := Library to manage video encapsulation
 
-LOCAL_LIBRARIES := libARSAL libARDiscovery
+LOCAL_LIBRARIES := libARSAL libARDiscovery json
 LOCAL_EXPORT_LDLIBS := -larmedia
 
 #Autotools variables
-LOCAL_AUTOTOOLS_CONFIGURE_ARGS := --with-libARSALInstallDir="" --with-libARDiscoveryInstallDir=""
+LOCAL_AUTOTOOLS_CONFIGURE_ARGS := --with-libARSALInstallDir="" --with-libARDiscoveryInstallDir="" --with-jsonInstallDir=""
 
 ifeq ("$(TARGET_PBUILD_FORCE_STATIC)","1")
 LOCAL_AUTOTOOLS_CONFIGURE_ARGS += --disable-shared

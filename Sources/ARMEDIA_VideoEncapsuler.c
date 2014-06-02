@@ -15,6 +15,8 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <libARMedia/ARMEDIA_VideoEncapsuler.h>
+#include <json/json.h>
+#include <libARDiscovery/ARDiscovery.h>
 
 #define ENCAPSULER_SMALL_STRING_SIZE (30)
 #define ENCAPSULER_INFODATA_MAX_SIZE (256)
@@ -482,6 +484,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
     uint64_t dataTotalSize = 0;
     uint32_t nbFrames = 0;
+    char dateInfoString[ENCAPSULER_SMALL_STRING_SIZE] = {0};
 
     if (NULL == *encapsuler)
     {
@@ -615,8 +618,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t *stcoAtom;
 
         movie_atom_t *swrAtom;
-        char dateInfoString[ENCAPSULER_SMALL_STRING_SIZE] = {0};
-
         movie_atom_t *dayAtom;
 
         // Read info file
@@ -709,7 +710,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         free (stcoBuffer);
 
         EMPTY_ATOM (udta);
-        swrAtom = metadataAtomFromTagAndValue ("swr ", "Jumping Sumo");
+        swrAtom = metadataAtomFromTagAndValue ("swr ", "Parrot Drone");
 
         snprintf (dateInfoString, ENCAPSULER_SMALL_STRING_SIZE, "%04d-%02d-%02dT%02d:%02d:%02d%+03d%02d",
                   nowTm->tm_year + 1900,
@@ -770,6 +771,35 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         {
             ENCAPSULER_ERROR ("Error while writing mdatAtom\n");
             localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+        }
+    }
+
+    /* pvat insertion */
+    if (ARMEDIA_OK == localError)
+    {
+        struct json_object* pvato;
+        pvato = json_object_new_object();
+        if (pvato != NULL) {
+            char prodid[5];
+#ifdef ARDRONE3
+            eARDISCOVERY_PRODUCT prod = ARDISCOVERY_PRODUCT_ARDRONE;
+#endif
+#ifdef JPSUMO
+            eARDISCOVERY_PRODUCT prod = ARDISCOVERY_PRODUCT_JS;
+#endif
+            snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID(prod));
+            json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
+            json_object_object_add(pvato, "run_date", json_object_new_string(dateInfoString));
+            json_object_object_add(pvato, "media_date", json_object_new_string(dateInfoString));
+
+            movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(pvato));
+            fseek (myVideo->outFile, 0, SEEK_END);
+            if (-1 == writeAtomToFile (&pvatAtom, myVideo->outFile))
+            {
+                ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
+                localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            }
+            json_object_put(pvato);
         }
     }
 

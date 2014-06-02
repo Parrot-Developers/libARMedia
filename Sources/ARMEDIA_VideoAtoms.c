@@ -643,7 +643,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U8 (0xb2);               // 170 - elementary stream descriptor
         ATOM_WRITE_4CC('A', 'R', '.', 'D'); // 171 - elementary stream descriptor
         ATOM_WRITE_4CC('r', 'o', 'n', 'e'); // 175 - elementary stream descriptor
-        ATOM_WRITE_4CC('_', '2', 6, 0x80);  // 179 - elementary stream descriptor
+        ATOM_WRITE_4CC('_', '3', 6, 0x80);  // 179 - elementary stream descriptor
         ATOM_WRITE_U32(0x80800102);         // 183 - elementary stream descriptor
                                             // 187 -- END
     }
