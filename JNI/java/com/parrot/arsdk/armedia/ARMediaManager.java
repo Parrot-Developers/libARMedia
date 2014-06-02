@@ -312,7 +312,7 @@ public class ARMediaManager
 
                     do
                     {
-                        String mediaFileAbsolutPath = cursorVideo.getString(cursorPhoto.getColumnIndex("_data"));
+                        String mediaFileAbsolutPath = cursorVideo.getString(cursorVideo.getColumnIndex("_data"));
                         String mediaName = cursorVideo.getString(cursorVideo.getColumnIndex("title"));
                         Log.d(TAG, "mediaFileAbsolutPath :" + mediaFileAbsolutPath);
 
