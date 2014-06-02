@@ -62,7 +62,6 @@ public class ARMediaManager
 
     private String TAG = ARMediaManager.class.getSimpleName();
     private HashMap<String, Intent> arMediaManagerNotificationIntentCache;
-    protected Bundle notificationDictionary = new Bundle();
 
     private Context context;
     private ContentResolver contentResolver;
@@ -135,7 +134,6 @@ public class ARMediaManager
             SharedPreferences settings = context.getSharedPreferences(ARMEDIA_MANAGER_DATABASE_FILENAME, Context.MODE_PRIVATE);
 
             this.valueKARMediaManagerKey = settings.getInt(kARMediaManagerKey, -1);
-            Log.d(TAG, "valueKARMediaManagerKey  : " + valueKARMediaManagerKey);
 
             if (this.valueKARMediaManagerKey > 0)
             {
@@ -172,27 +170,16 @@ public class ARMediaManager
             }
 
             /* dictionary of update */
-            Bundle updateDictionary = new Bundle();
             Bundle notificationBundle = new Bundle();
             notificationBundle.putString(ARMediaManagerNotificationDictionaryIsInitKey, "isInit");
-            updateDictionary.putBundle(ARMediaManagerNotificationDictionaryChanged, notificationBundle);
-
-            /* update the NotificationDictionary */
-            notificationDictionary.putBundle(ARMediaManagerNotificationDictionaryChanged, notificationBundle);
 
             /* send NotificationDictionaryChanged */
             Intent intentDicChanged = new Intent(ARMediaManagerNotificationDictionary);
-            intentDicChanged.putExtras(updateDictionary);
+            intentDicChanged.putExtras(notificationBundle);
             LocalBroadcastManager.getInstance(context).sendBroadcast(intentDicChanged);
-
-            /* send notification dedicated */
-            Intent intent = arMediaManagerNotificationIntentCache.get(ARMediaManagerNotificationDictionaryChanged);
-            intent.putExtras(notificationBundle);
-            LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
 
             isInit = true;
             returnVal = ARMEDIA_ERROR_ENUM.ARMEDIA_OK;
-            Log.d(TAG, " IS INIT !!!");
 
         }
 
@@ -227,7 +214,6 @@ public class ARMediaManager
         // Get all asset
         for (String key : projectsDictionary.keySet())
         {
-            Log.d(TAG, "currentKey : " + key);
 
             String[] requestedColumnsImg = { Images.Media.TITLE, Images.Media.DATA, };
 
@@ -256,7 +242,7 @@ public class ARMediaManager
             {
                 if (!cursorPhoto.moveToFirst())
                 {
-                    Log.d(TAG, "No Photo files for albm: " + key);
+                    Log.d(TAG, "No Photo for : " + key);
                 }
                 else
                 {
@@ -358,9 +344,7 @@ public class ARMediaManager
                 }
             }
 
-            String extStorageDirectory = Environment.getExternalStorageDirectory().toString().concat("/DCIM/");
-            String directoryName = extStorageDirectory.concat(key);
-            Log.d("ADD INGNOREED FILE", "directoryName ---> " + directoryName);
+            String directoryName = Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(key);
 
             File directory = new File(directoryName);
             File[] fList = directory.listFiles();
@@ -372,7 +356,6 @@ public class ARMediaManager
                     if (file.getAbsolutePath().endsWith(ARMEDIA_MANAGER_MP4))
                     {
                         addARMediaVideoToProjectDictionary(file.getAbsolutePath());
-                        Log.d("ADD INGNOREED FILE", "MP4 ---> " + file.getAbsolutePath());
                     }
 
                 }
@@ -397,23 +380,13 @@ public class ARMediaManager
 
         isUpdate = true;
         /* dictionary of update */
-        Bundle updateDictionary = new Bundle();
         Bundle notificationBundle = new Bundle();
         notificationBundle.putString(ARMediaManagerNotificationDictionaryUpdatedKey, "isUpdated");
-        updateDictionary.putBundle(ARMediaManagerNotificationDictionaryChanged, notificationBundle);
-
-        /* update the NotificationDictionary */
-        notificationDictionary.putBundle(ARMediaManagerNotificationDictionaryChanged, notificationBundle);
-
+        
         /* send NotificationDictionaryChanged */
         Intent intentDicChanged = new Intent(ARMediaManagerNotificationDictionary);
-        intentDicChanged.putExtras(updateDictionary);
+        intentDicChanged.putExtras(notificationBundle);
         LocalBroadcastManager.getInstance(context).sendBroadcast(intentDicChanged);
-
-        /* send notification dedicated */
-        Intent intent = arMediaManagerNotificationIntentCache.get(ARMediaManagerNotificationDictionaryChanged);
-        intent.putExtras(notificationBundle);
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
 
         return ARMEDIA_ERROR_ENUM.ARMEDIA_OK;
     }
@@ -602,45 +575,24 @@ public class ARMediaManager
     {
 
         /* dictionary of update */
-        Bundle updateDictionary = new Bundle();
         Bundle notificationBundle = new Bundle();
         notificationBundle.putString(ARMediaManagerNotificationDictionaryMediaAddedKey, mediaPath);
-        updateDictionary.putBundle(ARMediaManagerNotificationDictionaryChanged, notificationBundle);
-
-        /* update the NotificationDictionary */
-        notificationDictionary.putBundle(ARMediaManagerNotificationDictionaryChanged, notificationBundle);
 
         /* send NotificationDictionaryChanged */
         Intent intentDicChanged = new Intent(ARMediaManagerNotificationDictionary);
-        intentDicChanged.putExtras(updateDictionary);
+        intentDicChanged.putExtras(notificationBundle);
         LocalBroadcastManager.getInstance(context).sendBroadcast(intentDicChanged);
-
-        /* send notification dedicated */
-        Intent intent = arMediaManagerNotificationIntentCache.get(ARMediaManagerNotificationDictionaryChanged);
-        intent.putExtras(notificationBundle);
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 
     public void arMediaManagerNotificationUpdating(int percent)
     {
         /* dictionary of update */
-        Bundle updateDictionary = new Bundle();
         Bundle notificationBundle = new Bundle();
         notificationBundle.putInt(ARMediaManagerNotificationDictionaryUpdatingKey, percent);
-        updateDictionary.putBundle(ARMediaManagerNotificationDictionaryChanged, notificationBundle);
-
-        /* update the NotificationDictionary */
-        notificationDictionary.putBundle(ARMediaManagerNotificationDictionaryChanged, notificationBundle);
 
         /* send NotificationDictionaryChanged */
         Intent intentDicChanged = new Intent(ARMediaManagerNotificationDictionary);
-        intentDicChanged.putExtras(updateDictionary);
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intentDicChanged);
-
-        /* send notification dedicated */
-        Intent intent = arMediaManagerNotificationIntentCache.get(ARMediaManagerNotificationDictionaryChanged);
-        intent.putExtras(notificationBundle);
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+        intentDicChanged.putExtras(notificationBundle);
     }
 
     private void saveMediaOnArchive()
