@@ -208,7 +208,6 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Frame_Header_t *frameHeader)
 {
     static uint8_t *myData = NULL;
-    static uint32_t myDataSize = 0;
     uint8_t *data;
     uint8_t searchIndex;
     uint32_t descriptorSize;
@@ -951,7 +950,7 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
         else if (descriptorSize < sizeof (ARMEDIA_Video_t))
         {
             noError = 0;
-            ENCAPSULER_DEBUG ("Descriptor size (%d) is smaller than ARMEDIA_Video_t size (%d)", descriptorSize, sizeof (ARMEDIA_Video_t));
+            ENCAPSULER_DEBUG ("Descriptor size (%d) is smaller than ARMEDIA_Video_t size (%"PRIuPTR")", descriptorSize, sizeof (ARMEDIA_Video_t));
         } // No else
     } // No else
 

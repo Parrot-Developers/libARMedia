@@ -778,10 +778,11 @@ movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value)
     return retAtom;
 }
 
-movie_atom_t *pvatAtomGen(const char *jsonString) {
+movie_atom_t *pvatAtomGen(const char *jsonString)
+{
     uint32_t dataSize = (uint32_t) strlen(jsonString);
 
-    return atomFromData(dataSize+1, ARMEDIA_VIDEOATOMS_PVAT, jsonString);
+    return atomFromData(dataSize+1, ARMEDIA_VIDEOATOMS_PVAT, (const uint8_t *)jsonString);
 }
 
 /**
@@ -955,7 +956,6 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom, uint32_t *dataSi
 
 uint8_t *createDataFromAtom(uint8_t *atomBuffer, const int atomSize)
 {
-    uint32_t dataSize;
     uint8_t *pBuffer = atomBuffer;
     uint8_t *retVal = NULL;
     // Sanity check : ensure that the buffer we got is not null and long enough
@@ -1091,6 +1091,12 @@ uint32_t getVideoFpsFromAtom (uint8_t *mdhdAtom, const int atomSize)
         ATOM_READ_U32 (mdate);
         ATOM_READ_U32 (fps);
     }
+
+    // Remove "unused" warnings
+    (void)vflags;
+    (void)cdate;
+    (void)mdate;
+
     return fps;
 }
 
