@@ -781,11 +781,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         pvato = json_object_new_object();
         if (pvato != NULL) {
             char prodid[5];
-#ifdef ARDRONE3
             eARDISCOVERY_PRODUCT prod = ARDISCOVERY_PRODUCT_ARDRONE;
-#endif
 #ifdef JPSUMO
-            eARDISCOVERY_PRODUCT prod = ARDISCOVERY_PRODUCT_JS;
+            prod = ARDISCOVERY_PRODUCT_JS;
 #endif
             snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID(prod));
             json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
