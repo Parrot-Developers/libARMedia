@@ -128,7 +128,7 @@ struct ARMEDIA_Video_t
         }                                       \
     } while (0)
 
-ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, int fps, eARMEDIA_ERROR *error)
+ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, int fps, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error)
 {
     ARMEDIA_VideoEncapsuler_t *retVideo = NULL;
 

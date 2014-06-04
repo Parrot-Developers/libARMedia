@@ -9,6 +9,7 @@
 #define _ARMEDAI_VIDEOENCAPSULER_H_
 #include <stdio.h>
 #include <dirent.h>
+#include <libARDiscovery/ARDiscovery.h>
 
 #define ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE      (256)
 #define ARMEDIA_ENCAPSULER_FRAMES_COUNT_LIMIT   (131072)
@@ -90,7 +91,7 @@ typedef void (*ARMEDIA_VideoEncapsuler_Callback)(const char *path, int unused);
  * @return Pointer on the new Manager
  * @see ARMEDIA_VideoEncapsuler_Delete()
  */
-ARMEDIA_VideoEncapsuler_t* ARMEDIA_VideoEncapsuler_New(const char *videoPath, int fps, eARMEDIA_ERROR *error, eARDISCOVERY_PRODUCT product);
+ARMEDIA_VideoEncapsuler_t* ARMEDIA_VideoEncapsuler_New(const char *videoPath, int fps, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error);
 
 /**
  * @brief Delete the Manager
