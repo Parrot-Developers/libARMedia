@@ -478,7 +478,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                   NSDictionary *tiffDictionary = [metadata valueForKey:(NSString *)kCGImagePropertyTIFFDictionary];
                                   if(tiffDictionary != nil)
                                   {
-                                      NSString *tiffDescription = [tiffDictionary valueForKey:(NSString *)kCGImagePropertyTIFFImageDescription];
+                                      //NSString *tiffDescription = [tiffDictionary valueForKey:(NSString *)kCGImagePropertyTIFFImageDescription];
                                       stringAsset = [[representation url] absoluteString];
                                       
                                       //NSError *jSONerror = nil;
