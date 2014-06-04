@@ -90,7 +90,7 @@ typedef void (*ARMEDIA_VideoEncapsuler_Callback)(const char *path, int unused);
  * @return Pointer on the new Manager
  * @see ARMEDIA_VideoEncapsuler_Delete()
  */
-ARMEDIA_VideoEncapsuler_t* ARMEDIA_VideoEncapsuler_New(const char *videoPath, int fps, eARMEDIA_ERROR *error);
+ARMEDIA_VideoEncapsuler_t* ARMEDIA_VideoEncapsuler_New(const char *videoPath, int fps, eARMEDIA_ERROR *error, eARDISCOVERY_PRODUCT product);
 
 /**
  * @brief Delete the Manager

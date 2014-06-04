@@ -38,6 +38,7 @@ struct ARMEDIA_VideoEncapsuler_t
     uint32_t fps;
     uint32_t timescale;
     ARMEDIA_Video_t* video;
+    eARDISCOVERY_PRODUCT product;
 };
 
 struct ARMEDIA_Video_t
@@ -780,11 +781,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         pvato = json_object_new_object();
         if (pvato != NULL) {
             char prodid[5];
-            eARDISCOVERY_PRODUCT prod = ARDISCOVERY_PRODUCT_ARDRONE;
-#ifdef JPSUMO
-            prod = ARDISCOVERY_PRODUCT_JS;
-#endif
-            snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID(prod));
+            snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID((*encapsuler)->product));
             json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
             json_object_object_add(pvato, "run_date", json_object_new_string(dateInfoString));
             json_object_object_add(pvato, "media_date", json_object_new_string(dateInfoString));
@@ -924,7 +921,7 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
         } // No else
         encapsuler->video = video;
         encapsuler->fps = 30;
-        encapsuler->timescale = 30*2000;
+        encapsuler->timescale = 30 * 2000;
     } // No else
 
     // Open file for reading
