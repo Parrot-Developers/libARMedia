@@ -25,6 +25,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.MergeCursor;
 import android.graphics.drawable.Drawable;
+import android.media.Image;
 import android.net.Uri;
 import android.nfc.tech.IsoDep;
 import android.os.Bundle;
@@ -71,6 +72,8 @@ public class ARMediaManager
     private static final String ARMEDIA_MANAGER_MP4 = ".mp4";
 
     private static final String kARMediaManagerKey = "kARMediaManagerKey";
+    private static final String kARMediaManagerProjectDicCount = "kARMediaManagerProjectDicCount";
+
 
     // PVAT Keys
     private static final String ARMediaManagerPVATRunDateKey = "run_date";
@@ -110,19 +113,17 @@ public class ARMediaManager
         projectsDictionary = new HashMap<String, Object>();
     }
 
-
     public ARMEDIA_ERROR_ENUM initWithProjectIDs(ArrayList<String> projectIDs)
     {
-
         ARMEDIA_ERROR_ENUM returnVal = ARMEDIA_ERROR_ENUM.ARMEDIA_OK;
         if (!isInit)
         {
             // Get the productList from the saved file
             SharedPreferences settings = context.getSharedPreferences(ARMEDIA_MANAGER_DATABASE_FILENAME, Context.MODE_PRIVATE);
 
-            this.valueKARMediaManagerKey = settings.getInt(kARMediaManagerKey, -1);
+            valueKARMediaManagerKey = settings.getInt(kARMediaManagerKey, -1);
 
-            if (this.valueKARMediaManagerKey > 0)
+            if (valueKARMediaManagerKey > 0)
             {
 
                 byte[] bytes = settings.getString(ARMEDIA_MANAGER_DATABASE_FILENAME, "{}").getBytes();
@@ -158,7 +159,7 @@ public class ARMediaManager
 
             /* dictionary of update */
             Bundle notificationBundle = new Bundle();
-            notificationBundle.putString(ARMediaManagerNotificationDictionaryIsInitKey, "isInit");
+            notificationBundle.putString(ARMediaManagerNotificationDictionaryIsInitKey, "");
 
             /* send NotificationDictionaryChanged */
             Intent intentDicChanged = new Intent(ARMediaManagerNotificationDictionary);
@@ -173,7 +174,7 @@ public class ARMediaManager
         return returnVal;
     }
 
-    public HashMap<String, Object> retreiveProjectsDictionary(String project)
+    public HashMap<String, Object> retrieveProjectsDictionary(String project)
     {
         HashMap<String, Object> retProjectictionary = new HashMap<String, Object>();
 
@@ -197,7 +198,23 @@ public class ARMediaManager
 
         if (!isInit)
             return ARMEDIA_ERROR_ENUM.ARMEDIA_ERROR_MANAGER_NOT_INITIALIZED;
+        
         isUpdate = false;
+        int totalMediaInFoldersCount = 0;
+        for (String key : projectsDictionary.keySet())
+        {
+            int nbrOfFileInFolder = 0;
+            String directoryName = Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(key);
+            File directory = new File(directoryName);
+            
+            if (directory.listFiles() != null)
+            {
+                nbrOfFileInFolder = directory.listFiles().length;
+                totalMediaInFoldersCount += nbrOfFileInFolder;
+            }
+        }
+        Log.d(TAG, "totalMediaInFoldersCount: " + totalMediaInFoldersCount);
+
         // Get all asset
         for (String key : projectsDictionary.keySet())
         {
@@ -221,8 +238,7 @@ public class ARMediaManager
             MergeCursor cursorVideo = new MergeCursor(new Cursor[] { cursorVideoExterne, cursorVideoInterne });
 
             int currentCount = 0;
-            int totalMediaCount = cursorPhoto.getCount() + cursorVideo.getCount();
-
+            arMediaManagerNotificationUpdating((double)currentCount/(double)totalMediaInFoldersCount*100);
             JSONObject jsonReader;
 
             try
@@ -236,7 +252,7 @@ public class ARMediaManager
 
                     do
                     {
-                        
+
                         String mediaFileAbsolutPath = cursorPhoto.getString(cursorPhoto.getColumnIndex("_data"));
                         String mediaFilePath = cursorPhoto.getString(cursorPhoto.getColumnIndex("_data")).substring(Environment.getExternalStorageDirectory().toString().length());
                         String mediaName = cursorPhoto.getString(cursorPhoto.getColumnIndex("title"));
@@ -289,6 +305,7 @@ public class ARMediaManager
                             }
                         }
                         currentCount++;
+                        arMediaManagerNotificationUpdating((double)currentCount/(double)totalMediaInFoldersCount*100);
                     }
                     while (cursorPhoto.moveToNext());
                 }
@@ -321,6 +338,7 @@ public class ARMediaManager
                             addARMediaVideoToProjectDictionary(mediaFileAbsolutPath);
                         }
                         currentCount++;
+                        arMediaManagerNotificationUpdating((double)currentCount/(double)totalMediaInFoldersCount*100);
                     }
                     while (cursorVideo.moveToNext());
                 }
@@ -332,7 +350,7 @@ public class ARMediaManager
                     cursorVideo.close();
                 }
             }
-
+            
             String directoryName = Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(key);
 
             File directory = new File(directoryName);
@@ -351,71 +369,32 @@ public class ARMediaManager
             }
 
         }
-
-        int totalMedia = 0;
+        
+        saveMediaOnArchive();
+        int totalMediaCount = 0;
         for (String key : projectsDictionary.keySet())
         {
-            totalMedia += ((HashMap<String, Object>) projectsDictionary.get(key)).size();
+            int nbrOfMediaInProjectDic = ((HashMap<String, Object>) projectsDictionary.get(key)).size();
+            totalMediaCount += nbrOfMediaInProjectDic;
+            SharedPreferences settings = context.getSharedPreferences(ARMEDIA_MANAGER_DATABASE_FILENAME, context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = settings.edit();
+            editor.putInt(kARMediaManagerProjectDicCount.concat(key), nbrOfMediaInProjectDic);
+            editor.putInt(kARMediaManagerKey, totalMediaCount);
+            editor.commit();
         }
-
-        saveMediaOnArchive();
-
+        
         Log.d(TAG, "projectsDictionary:" + projectsDictionary);
-
-        SharedPreferences settings = context.getSharedPreferences(ARMEDIA_MANAGER_DATABASE_FILENAME, context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putInt(kARMediaManagerKey, totalMedia);
-        editor.commit();
-
-        isUpdate = true;
+        
         /* dictionary of update */
         Bundle notificationBundle = new Bundle();
-        notificationBundle.putString(ARMediaManagerNotificationDictionaryUpdatedKey, "isUpdated");
-        
+        notificationBundle.putBoolean(ARMediaManagerNotificationDictionaryUpdatedKey, true);
+
         /* send NotificationDictionaryChanged */
         Intent intentDicChanged = new Intent(ARMediaManagerNotificationDictionary);
         intentDicChanged.putExtras(notificationBundle);
         LocalBroadcastManager.getInstance(context).sendBroadcast(intentDicChanged);
-
+        isUpdate = true;
         return ARMEDIA_ERROR_ENUM.ARMEDIA_OK;
-    }
-
-    private void addARMediaVideoToProjectDictionary(String mediaFileAbsolutPath)
-    {
-        String mediaFilePath = mediaFileAbsolutPath.substring(Environment.getExternalStorageDirectory().toString().length());
-        String description = com.parrot.arsdk.armedia.ARMediaVideoAtoms.getPvat(mediaFileAbsolutPath);
-        try
-        {
-            // JSONObject jsonReader = new
-            // JSONObject(description);
-
-            JSONObject jsonReader = new JSONObject();
-
-            // Create Json Object using FAKE Data
-            jsonReader.put(ARMediaManagerPVATProductIdKey, "0902");
-            jsonReader.put(ARMediaManagerPVATMediaDateKey, "2013-07-25T160101+0100");
-            jsonReader.put(ARMediaManagerPVATRunDateKey, "2013-07-25T160101+0100");
-
-            String atomProductID = jsonReader.getString(ARMediaManagerPVATProductIdKey);
-            String productName = ARDiscoveryService.getProductName(ARDiscoveryService.getProductFromProductID((int) Long.parseLong(atomProductID, 16)));
-
-            if (projectsDictionary.keySet().contains(productName))
-            {
-                HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(jsonReader.getString(ARMediaManagerPVATProductIdKey));
-                if ((hashMap == null) || (!hashMap.containsKey(mediaFilePath)))
-                {
-                    ARMediaObject mediaObject = new ARMediaObject();
-                    mediaObject.productId = jsonReader.getString(ARMediaManagerPVATProductIdKey);
-                    mediaObject.date = jsonReader.getString(ARMediaManagerPVATMediaDateKey);
-                    mediaObject.runDate = jsonReader.getString(ARMediaManagerPVATRunDateKey);
-                    ((HashMap<String, Object>) projectsDictionary.get(productName)).put(mediaFilePath, mediaObject);
-                }
-            }
-        }
-        catch (JSONException e)
-        {
-            e.printStackTrace();
-        }
     }
 
     public boolean addMedia(File mediaFile)
@@ -433,6 +412,17 @@ public class ARMediaManager
 
         return returnVal;
     }
+
+    public boolean isUpdate()
+    {
+        return isUpdate;
+    }
+
+    /***
+     * 
+     * Private Methods
+     * 
+     */
 
     private boolean saveMedia(File file)
     {
@@ -476,11 +466,19 @@ public class ARMediaManager
                     values.put(Images.Media.DATA, file.getAbsolutePath());
                     values.put(Images.Media.MIME_TYPE, "image/jpg");
                     values.put(Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000);
+                    String urlImage = Images.Media.insertImage(contentResolver, file.getAbsolutePath(), filename, null);
                     Uri uri = contentResolver.insert(Images.Media.EXTERNAL_CONTENT_URI, values);
+                    Log.d(TAG, "VALUES " + values);
+                    Log.d(TAG, "file.getAbsolutePath() " + file.getAbsolutePath());
+                    Log.d(TAG, "BUCKET_DISPLAY_NAME " + productName);
+                    Log.d(TAG, "urlImage " + urlImage);
+                    Log.d(TAG, "uri " + uri);
+                    Log.d(TAG, "urlImage True " + Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(productName).concat("/").concat(filename));
+                    
                     if (uri != null)
                     {
-                        ((HashMap<String, Object>) projectsDictionary.get(productName)).put(uri.getPath(), mediaObject);
-                        arMediaManagerNotificationMediaAdded(uri.getPath());
+                        ((HashMap<String, Object>) projectsDictionary.get(productName)).put(Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(productName).concat("/").concat(filename), mediaObject);
+                        arMediaManagerNotificationMediaAdded(Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(productName).concat("/").concat(filename));
                         added = true;
                     }
 
@@ -525,11 +523,12 @@ public class ARMediaManager
                     values.put(Video.Media.DISPLAY_NAME, filename);
                     values.put(Video.Media.BUCKET_DISPLAY_NAME, productName);
                     values.put(Video.Media.DATA, file.getAbsolutePath());
-                    values.put(Video.Media.MIME_TYPE, "video/mp4");
                     values.put(Video.Media.DATE_ADDED, System.currentTimeMillis() / 1000);
-
                     Uri uri = contentResolver.insert(Video.Media.EXTERNAL_CONTENT_URI, values);
-
+                    Log.d(TAG, "VALUES " + values);
+                    Log.d(TAG, "file.getAbsolutePath() " + file.getAbsolutePath());
+                    Log.d(TAG, "BUCKET_DISPLAY_NAME " + productName);
+                    Log.d(TAG, "uri " + uri);
                     if (uri != null)
                     {
                         ((HashMap<String, Object>) projectsDictionary.get(productName)).put(uri.getPath(), mediaObject);
@@ -556,6 +555,44 @@ public class ARMediaManager
         return added;
     }
 
+    private void addARMediaVideoToProjectDictionary(String mediaFileAbsolutPath)
+    {
+        String mediaFilePath = mediaFileAbsolutPath.substring(Environment.getExternalStorageDirectory().toString().length());
+        String description = com.parrot.arsdk.armedia.ARMediaVideoAtoms.getPvat(mediaFileAbsolutPath);
+        try
+        {
+            // JSONObject jsonReader = new
+            // JSONObject(description);
+
+            JSONObject jsonReader = new JSONObject();
+
+            // Create Json Object using FAKE Data
+            jsonReader.put(ARMediaManagerPVATProductIdKey, "0902");
+            jsonReader.put(ARMediaManagerPVATMediaDateKey, "2013-07-25T160101+0100");
+            jsonReader.put(ARMediaManagerPVATRunDateKey, "2013-07-25T160101+0100");
+
+            String atomProductID = jsonReader.getString(ARMediaManagerPVATProductIdKey);
+            String productName = ARDiscoveryService.getProductName(ARDiscoveryService.getProductFromProductID((int) Long.parseLong(atomProductID, 16)));
+
+            if (projectsDictionary.keySet().contains(productName))
+            {
+                HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(jsonReader.getString(ARMediaManagerPVATProductIdKey));
+                if ((hashMap == null) || (!hashMap.containsKey(mediaFilePath)))
+                {
+                    ARMediaObject mediaObject = new ARMediaObject();
+                    mediaObject.productId = jsonReader.getString(ARMediaManagerPVATProductIdKey);
+                    mediaObject.date = jsonReader.getString(ARMediaManagerPVATMediaDateKey);
+                    mediaObject.runDate = jsonReader.getString(ARMediaManagerPVATRunDateKey);
+                    ((HashMap<String, Object>) projectsDictionary.get(productName)).put(mediaFilePath, mediaObject);
+                }
+            }
+        }
+        catch (JSONException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
     private void arMediaManagerNotificationMediaAdded(String mediaPath)
     {
         /* dictionary of update */
@@ -568,15 +605,16 @@ public class ARMediaManager
         LocalBroadcastManager.getInstance(context).sendBroadcast(intentDicChanged);
     }
 
-    private void arMediaManagerNotificationUpdating(int percent)
+    private void arMediaManagerNotificationUpdating(double percent)
     {
         /* dictionary of update */
         Bundle notificationBundle = new Bundle();
-        notificationBundle.putInt(ARMediaManagerNotificationDictionaryUpdatingKey, percent);
+        notificationBundle.putDouble(ARMediaManagerNotificationDictionaryUpdatingKey, percent);
 
         /* send NotificationDictionaryChanged */
         Intent intentDicChanged = new Intent(ARMediaManagerNotificationDictionary);
         intentDicChanged.putExtras(notificationBundle);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intentDicChanged);
     }
 
     private void saveMediaOnArchive()
@@ -608,12 +646,5 @@ public class ARMediaManager
         {
             e.printStackTrace();
         }
-
     }
-
-    public boolean isUpdate()
-    {
-        return isUpdate;
-    }
-
 }

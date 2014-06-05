@@ -1,5 +1,7 @@
 package com.parrot.arsdk.armedia;
 
+import com.parrot.arsdk.armedia.ARMediaManager;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -22,7 +24,22 @@ public class ARMediaNotificationReceiver extends BroadcastReceiver
         
         if (listener != null)
         {
-            listener.onNotificationDictionaryChanged(dictionary);
+            if (dictionary.containsKey(ARMediaManager.ARMediaManagerNotificationDictionaryIsInitKey))
+            {
+                listener.onNotificationDictionaryIsInit();
+            }
+            else if (dictionary.containsKey(ARMediaManager.ARMediaManagerNotificationDictionaryUpdatedKey))
+            {
+                listener.onNotificationDictionaryIsUpdated((Boolean)dictionary.get(ARMediaManager.ARMediaManagerNotificationDictionaryUpdatedKey));
+            }
+            else if (dictionary.containsKey(ARMediaManager.ARMediaManagerNotificationDictionaryUpdatingKey))
+            {
+                listener.onNotificationDictionaryIsUpdating((Double)dictionary.get(ARMediaManager.ARMediaManagerNotificationDictionaryUpdatingKey));
+            }
+            else if (dictionary.containsKey(ARMediaManager.ARMediaManagerNotificationDictionaryMediaAddedKey))
+            {
+                listener.onNotificationDictionaryMediaAdded((String)dictionary.get(ARMediaManager.ARMediaManagerNotificationDictionaryMediaAddedKey));
+            }
         }
     }
 }
