@@ -1,6 +1,11 @@
 package com.example.armediatestbench;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -78,7 +83,7 @@ public class MainActivity extends Activity implements ARMediaNotificationReceive
             public void onClick(View v)
             {
                 HashMap<String, Object> dico = new HashMap<>();
-                dico = mediaManager.retreiveProjectsDictionary(null);
+                dico = mediaManager.retrieveProjectsDictionary(null);
                 Log.d(TAG, "dico:" + dico);
             }
         });
@@ -112,15 +117,30 @@ public class MainActivity extends Activity implements ARMediaNotificationReceive
                */
                 //File directory = new File(Environment.getExternalStorageDirectory().toString().concat("/Video/AR.Drone_4ACE4FDBCC3D0F40524DD3D46407AEE7_1970-01-01T000222+0000.mp4"));
                 
+                
+                /*try{
+                    InputStream inputStream = getResources().openRawResource(R.drawable.bebop);
+                    File tempFile = File.createTempFile("pre", ".jpg");
+                    copyFile(inputStream, new FileOutputStream(tempFile));
+                    Log.d(TAG, "add file :" + tempFile.getAbsolutePath());
+                    mediaManager.addMedia(tempFile);
+                    // Now some_file is tempFile .. do what you like
+                  } catch (IOException e) {
+                    throw new RuntimeException("Can't create temp file ", e);
+                  }
+                */
                 File directory = new File(Environment.getExternalStorageDirectory().toString().concat("/Video/s.jpg"));
                 if (directory.exists())
                 {
                     Log.d(TAG, "add file :" + directory);
+                    Log.d(TAG, "add file :" + directory.length());
+
                     mediaManager.addMedia(directory);
                 }
             }
         });
     }
+    
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
