@@ -5,8 +5,8 @@ import android.os.Bundle;
 public interface ARMediaNotificationReceiverListener 
 {
     public void onNotificationDictionaryIsInit();
-    public void onNotificationDictionaryIsUpdated(Boolean isUpdated);
-    public void onNotificationDictionaryIsUpdating(Double value);
+    public void onNotificationDictionaryIsUpdated(boolean isUpdated);
+    public void onNotificationDictionaryIsUpdating(double value);
     public void onNotificationDictionaryMediaAdded(String assetUrlPath);
 }
 
