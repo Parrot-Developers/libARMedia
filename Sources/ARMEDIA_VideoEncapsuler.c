@@ -157,6 +157,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
     retVideo->fps = (uint32_t)fps;
     retVideo->timescale = (uint32_t)(fps * 2000);
     retVideo->video->version = ARMEDIA_ENCAPSULER_VERSION_NUMBER;
+    retVideo->product = product;
     retVideo->video->lastFrameNumber = UINT32_MAX;
     retVideo->video->currentFrameSize = 0;
     retVideo->video->height = 0;
