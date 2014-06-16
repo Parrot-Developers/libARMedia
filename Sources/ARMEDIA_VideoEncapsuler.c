@@ -38,14 +38,13 @@ struct ARMEDIA_VideoEncapsuler_t
     uint32_t fps;
     uint32_t timescale;
     ARMEDIA_Video_t* video;
-    eARDISCOVERY_PRODUCT product;
 };
 
 struct ARMEDIA_Video_t
 {
     uint32_t version;
+    eARDISCOVERY_PRODUCT product;
     // Provided to constructor
-    //uint32_t fps;
     // Read from frames frameHeader
     eARMEDIA_ENCAPSULER_CODEC videoCodec;
     uint16_t width;
@@ -157,7 +156,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
     retVideo->fps = (uint32_t)fps;
     retVideo->timescale = (uint32_t)(fps * 2000);
     retVideo->video->version = ARMEDIA_ENCAPSULER_VERSION_NUMBER;
-    retVideo->product = product;
+    retVideo->video->product = product;
     retVideo->video->lastFrameNumber = UINT32_MAX;
     retVideo->video->currentFrameSize = 0;
     retVideo->video->height = 0;
@@ -782,7 +781,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         pvato = json_object_new_object();
         if (pvato != NULL) {
             char prodid[5];
-            snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID((*encapsuler)->product));
+            snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID((*encapsuler)->video->product));
             json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
             json_object_object_add(pvato, "run_date", json_object_new_string(dateInfoString));
             json_object_object_add(pvato, "media_date", json_object_new_string(dateInfoString));
