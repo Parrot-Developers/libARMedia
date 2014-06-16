@@ -782,7 +782,8 @@ movie_atom_t *pvatAtomGen(const char *jsonString)
 {
     uint32_t dataSize = (uint32_t) strlen(jsonString);
 
-    return atomFromData(dataSize+1, ARMEDIA_VIDEOATOMS_PVAT, (const uint8_t *)jsonString);
+    /* Do not include '\0' end character */
+    return atomFromData(dataSize, ARMEDIA_VIDEOATOMS_PVAT, (const uint8_t *)jsonString);
 }
 
 /**
