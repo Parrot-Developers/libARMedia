@@ -20,6 +20,9 @@
 #define ARMEDIA_ENCAPSULER_INFO_PATTERN         "%u:%c|"
 #define ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN    (2)
 
+// File extension for informations files (frame sizes / types)
+#define INFOFILE_EXT ".infovid"
+
 #if COUNT_WAITING_FOR_IFRAME_AS_AN_ERROR
 #define ARMEDIA_ENCAPSULER_FAILED(errCode) ((errCode) != ARMEDIA_OK)
 #define ARMEDIA_ENCAPSULER_SUCCEEDED(errCode) ((errCode) == ARMEDIA_OK)

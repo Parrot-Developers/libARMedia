@@ -84,9 +84,6 @@ struct ARMEDIA_Video_t
 // File extension for temporary files
 #define TEMPFILE_EXT ".tmpvid"
 
-// File extension for informations files (frame sizes / types)
-#define INFOFILE_EXT ".infovid"
-
 #define ARMEDIA_ENCAPSULER_TAG      "ARMedia Video Encapsuler"
 
 #if ENCAPSULER_FLUSH_ON_EACH_WRITE
