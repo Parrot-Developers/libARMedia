@@ -416,8 +416,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                           resultBlock:^(ALAsset *asset) {
 
                               ALAssetRepresentation *representation = [asset defaultRepresentation];
-                             // NSDictionary *atomValue = [representation atomExist:[NSString stringWithUTF8String:ARMEDIA_VIDEOATOMS_PVAT]];
-                              NSDictionary *atomValue = [[NSDictionary alloc] initWithObjectsAndKeys: @"0901",kARMediaManagerPVATProductIdKey,@"2013-07-25T160101+0100",kARMediaManagerPVATRunDateKey,@"2013-07-25T160101+0100",kARMediaManagerPVATMediaDateKey,nil];
+                              NSDictionary *atomValue = [representation atomExist:[NSString stringWithUTF8String:ARMEDIA_VIDEOATOMS_PVAT]];
 
                               if(atomValue != nil)
                               {
@@ -473,32 +472,31 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                               ALAssetRepresentation *representation = [asset defaultRepresentation];
                               
                               NSDictionary *metadata = [representation metadata];
+
                               if(metadata != nil)
                               {
                                   NSDictionary *tiffDictionary = [metadata valueForKey:(NSString *)kCGImagePropertyTIFFDictionary];
                                   if(tiffDictionary != nil)
                                   {
-                                      //NSString *tiffDescription = [tiffDictionary valueForKey:(NSString *)kCGImagePropertyTIFFImageDescription];
+                                      NSString *tiffDescription = [tiffDictionary valueForKey:(NSString *)kCGImagePropertyTIFFImageDescription];
                                       stringAsset = [[representation url] absoluteString];
                                       
-                                      //NSError *jSONerror = nil;
-                                      //NSData *data = [tiffDescription dataUsingEncoding:NSASCIIStringEncoding];
-                                      //if (data != nil)
+                                      NSError *jSONerror = nil;
+                                      NSData *data = [tiffDescription dataUsingEncoding:NSUTF8StringEncoding];
+                                      if (data != nil)
                                       {
-                                          NSDictionary *jSONDataDic = [[NSDictionary alloc] initWithObjectsAndKeys: @"0901",kARMediaManagerPVATProductIdKey,@"2013-07-25T160101+0100",kARMediaManagerPVATRunDateKey,@"2013-07-25T160101+0100",kARMediaManagerPVATMediaDateKey,nil];
-                                          //NSDictionary *jSONDataDic =[NSJSONSerialization  JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
-                                          
-                                          //if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]] && (jSONerror == nil))
+                                          id jSONDataDic =[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
+                                          NSScanner* scanner = [NSScanner scannerWithString:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]];
+                                          if([scanner scanHexInt:&productId])
                                           {
-                                              NSScanner* scanner = [NSScanner scannerWithString:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]];
-                                              if([scanner scanHexInt:&productId])
+                                              if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] && (jSONerror == nil))
                                               {
                                                   mediaObject.productId = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey];
                                                   mediaObject.date = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
                                                   mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
-                                                  
                                                   [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                                   [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
+                                                  
                                               }
                                               else
                                               {
