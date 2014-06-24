@@ -79,18 +79,11 @@ struct ARMEDIA_Video_t
 };
 
 #define ENCAPSULER_DEBUG_ENABLE (0)
-#define ENCAPSULER_FLUSH_ON_EACH_WRITE (0)
 
 // File extension for temporary files
 #define TEMPFILE_EXT ".tmpvid"
 
 #define ARMEDIA_ENCAPSULER_TAG      "ARMedia Video Encapsuler"
-
-#if ENCAPSULER_FLUSH_ON_EACH_WRITE
-#define ENCAPSULER_FFLUSH fflush
-#else
-#define ENCAPSULER_FFLUSH(...)
-#endif
 
 #define ENCAPSULER_ERROR(...)                                           \
     do                                                                  \
@@ -400,10 +393,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
                 ENCAPSULER_ERROR ("Unable to write frameInfo into info file");
                 return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             }
-            else
-            {
-                ENCAPSULER_FFLUSH (video->infoFile);
-            }
         }
         video->currentFrameSize = 0;
         video->lastFrameType = frameHeader->frame_type;
@@ -449,10 +438,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         ENCAPSULER_ERROR ("Unable to write slice into data file");
         return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
     }
-    else
-    {
-        ENCAPSULER_FFLUSH (video->outFile);
-    }
 
     video->currentFrameSize += frameHeader->frame_size;
     video->totalsize += frameHeader->frame_size;
@@ -460,7 +445,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
 
     // synchronisation
     if ((video->framesCount % 10) == 0) {
+        fflush (video->outFile);
         fsync(fileno(video->outFile));
+        fflush (video->infoFile);
         fsync(fileno(video->infoFile));
     }
 
@@ -531,10 +518,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 {
                     ENCAPSULER_ERROR ("Unable to write frameInfo into info file");
                     localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
-                }
-                else
-                {
-                    ENCAPSULER_FFLUSH (myVideo->infoFile);
                 }
             }
         }
