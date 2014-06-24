@@ -350,17 +350,15 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                             NSData * data = [tiffDescription dataUsingEncoding:NSASCIIStringEncoding];
                             if (data != nil)
                             {
-                                NSDictionary *jSONDataDic =[NSJSONSerialization  JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
-                                if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]] && (jSONerror == nil))
+                                id jSONDataDic =[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
+                                NSScanner* scanner = [NSScanner scannerWithString:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]];
+                                if([scanner scanHexInt:&productId])
                                 {
-                                    
-                                    NSScanner* scanner = [NSScanner scannerWithString:[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey]];
-                                    if([scanner scanHexInt:&productId])
+                                    if((jSONDataDic != nil) && [[_privateProjectsDictionary allKeys] containsObject:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] && (jSONerror == nil))
                                     {
                                         mediaObject.productId = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATProductIdKey];
                                         mediaObject.date = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATMediaDateKey];
                                         mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
-
                                         [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                         [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                                     }
