@@ -329,6 +329,7 @@ movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize)
         retAtom->size = 0;
         retAtom->wide = 1;
     }
+    ATOM_FREE(data);
     return retAtom;
 }
 movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps, uint32_t nbFrames, time_t date)
@@ -500,6 +501,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
 {
     uint32_t dataSize;
     uint32_t currentIndex = 0;
+    movie_atom_t *retAtom;
 
     if (CODEC_MPEG4_AVC == codec) {
         dataSize = 128;
@@ -512,7 +514,10 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
     }
 
     uint8_t* data = (uint8_t*) ATOM_MALLOC(dataSize);
-
+    if (NULL == data)
+    {
+        return NULL;
+    }
 
     if (CODEC_MPEG4_AVC == codec)
     {
@@ -647,7 +652,9 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U32(0x80800102);         // 183 - elementary stream descriptor
                                             // 187 -- END
     }
-    return atomFromData (dataSize, "stsd", data);
+    retAtom = atomFromData (dataSize, "stsd", data);
+    ATOM_FREE(data);
+    return retAtom;
 }
 
 movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_CODEC codec, uint8_t *sps, uint32_t spsSize, uint8_t *pps, uint32_t ppsSize)
@@ -655,7 +662,7 @@ movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARM
     uint32_t avcCSize = 19 + spsSize + ppsSize;
     uint32_t vse_size = avcCSize + 86;
     uint32_t dataSize = vse_size + 8;
-    uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
+    uint8_t *data = NULL;
     uint32_t currentIndex = 0;
     movie_atom_t *retAtom;
 
@@ -664,6 +671,7 @@ movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARM
         return stsdAtomWithResolutionAndCodec (w, h, codec);
     }
 
+    data = (uint8_t*) ATOM_MALLOC (dataSize);
     if (NULL == data)
     {
         return NULL;
