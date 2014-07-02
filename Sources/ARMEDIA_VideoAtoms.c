@@ -228,9 +228,14 @@ int writeAtomToFile (movie_atom_t **atom, FILE *file)
         {
             atom_data_size = (*atom)->size - 8;
         }
+        
         if (atom_data_size != fwrite ((*atom)->data, 1, atom_data_size, file))
         {
             return -1;
+        }
+        else
+        {
+            fflush(file);
         }
     }
 

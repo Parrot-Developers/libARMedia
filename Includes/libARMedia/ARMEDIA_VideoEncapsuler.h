@@ -144,4 +144,13 @@ void ARMEDIA_VideoEncapsuler_SetGPSInfos (ARMEDIA_VideoEncapsuler_t* encapsuler,
  */
 int  ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath);
 
+/**
+ * Add atom in file.
+ * @param FILE video file descriptor. The file descriptor MUST BE OPENED WITH APPEND OPTION
+ * @param eARDISCOVERY_PRODUCT for the product to add in Atom
+ * @param const char for the video date to add in Atom
+ * @return 1 on success, 0 on failure
+ */
+int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT product, const char *videoDate);
+
 #endif // _ARDRONE_VIDEO_ENCAPSULER_H_

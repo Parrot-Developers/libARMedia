@@ -199,6 +199,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
             [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationMediaAdded object:assetURLString];
         }
         _isUpdate = YES;
+        [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
     };
     
     if (_isUpdate)

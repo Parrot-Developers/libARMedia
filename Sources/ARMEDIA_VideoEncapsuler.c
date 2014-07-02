@@ -1130,3 +1130,31 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
     return noError && finishNoError;
 }
 
+int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT product, const char *videoDate)
+{
+    int retVal = 0;
+    struct json_object* pvato;
+    struct tm *nowTm;
+    pvato = json_object_new_object();
+    if (pvato != NULL) {
+        char prodid[5];
+        snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID(product));
+        json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
+        json_object_object_add(pvato, "run_date", json_object_new_string(videoDate));
+        json_object_object_add(pvato, "media_date", json_object_new_string(videoDate));
+        
+        movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(pvato));
+        if (-1 == writeAtomToFile (&pvatAtom, videoFile))
+        {
+            ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
+        }
+        else
+        {
+            json_object_put(pvato);
+            retVal = 1;
+        }
+    }
+    return retVal;
+}
+
+
