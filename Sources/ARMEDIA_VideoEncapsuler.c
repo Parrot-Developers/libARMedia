@@ -692,15 +692,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         EMPTY_ATOM (udta);
         swrAtom = metadataAtomFromTagAndValue ("swr ", "Parrot Drone");
 
-        snprintf (dateInfoString, ENCAPSULER_SMALL_STRING_SIZE, "%04d-%02d-%02dT%02d:%02d:%02d%+03d%02d",
-                  nowTm->tm_year + 1900,
-                  nowTm->tm_mon + 1,
-                  nowTm->tm_mday,
-                  nowTm->tm_hour,
-                  nowTm->tm_min,
-                  nowTm->tm_sec,
-                  (int)(-timezone / 3600) + nowTm->tm_isdst,
-                  (int)((-timezone % 3600) / 60));
+        strftime(dateInfoString, ENCAPSULER_SMALL_STRING_SIZE, ARMEDIA_JSON_DESCRIPTION_DATE_FMT, nowTm);
         dayAtom = metadataAtomFromTagAndValue ("day ", dateInfoString);
 
        // Create atom tree
@@ -1141,7 +1133,7 @@ int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT p
         json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
         json_object_object_add(pvato, "run_date", json_object_new_string(videoDate));
         json_object_object_add(pvato, "media_date", json_object_new_string(videoDate));
-        
+
         movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(pvato));
         if (-1 == writeAtomToFile (&pvatAtom, videoFile))
         {
