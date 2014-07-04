@@ -1134,7 +1134,6 @@ int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT p
 {
     int retVal = 0;
     struct json_object* pvato;
-    struct tm *nowTm;
     pvato = json_object_new_object();
     if (pvato != NULL) {
         char prodid[5];
