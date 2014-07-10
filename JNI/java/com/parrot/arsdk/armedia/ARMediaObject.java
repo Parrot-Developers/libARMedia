@@ -6,6 +6,10 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Comparator;
+import java.util.Date;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -26,7 +30,7 @@ import com.parrot.arsdk.armedia.MEDIA_TYPE_ENUM;
 
 import android.graphics.Bitmap;
 
-public class ARMediaObject implements Cloneable, Parcelable, Serializable
+public class ARMediaObject implements Cloneable, Parcelable, Serializable, Comparable<ARMediaObject>
 {
     private static final String TAG = ARMediaObject.class.getSimpleName();
     
@@ -227,7 +231,27 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable
 	}
 	
 	
-
+	public int compareTo(ARMediaObject obj)
+    {
+	    int retVal = 0;
+	    try {
+	        
+	        Date dateObj1 = new SimpleDateFormat("yyyy-MM-dd'T'HHmmss").parse(obj.date);
+	        Date dateObj2 = new SimpleDateFormat("yyyy-MM-dd'T'HHmmss").parse(this.date);
+	        if(dateObj1.after(dateObj2)){
+	            retVal = -1;
+	        } else if (dateObj1.before(dateObj2)){
+	            retVal = 1;
+	        }
+	    }
+	    catch(ParseException e)
+	    {
+	        e.printStackTrace();
+	    }
+	    
+        return retVal;
+    }
+	
 	   private void readObject(
 	     ObjectInputStream aInputStream
 	   ) throws ClassNotFoundException, IOException {
@@ -252,6 +276,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable
 	      ObjectOutputStream aOutputStream
 	    ) throws IOException {
 	        if (runDate != null)
+	        
 	        {
 	            aOutputStream.writeUTF(runDate);  
 	        }
