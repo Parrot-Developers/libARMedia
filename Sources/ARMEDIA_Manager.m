@@ -29,6 +29,7 @@ NSString *const kARMediaManagerNotificationInitialized          = @"kARMediaMana
 NSString *const kARMediaManagerNotificationUpdating             = @"kARMediaManagerNotificationUpdating";
 NSString *const kARMediaManagerNotificationUpdated              = @"kARMediaManagerNotificationUpdated";
 NSString *const kARMediaManagerNotificationMediaAdded           = @"kARMediaManagerNotificationMediaAdded";
+NSString *const kARMediaManagerNotificationAccesDenied          = @"kARMediaManagerNotificationAccesDenied";
 
 // This block is always executed. If failure, an NSError is passed.
 typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
@@ -36,6 +37,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 @interface ARMediaManager ()
 @property (nonatomic, assign) BOOL cancelRefresh;
 @property (nonatomic, assign) BOOL isUpdate;
+@property (nonatomic, assign) BOOL isUpdating;
 @property (nonatomic, assign) BOOL isInit;
 @property (nonatomic, assign) NSUInteger mediaAssetsCount;
 @property (nonatomic, strong) NSMutableDictionary *privateProjectsDictionary;
@@ -64,6 +66,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
          */
         _sharedARMediaManager.isInit = NO;
         _sharedARMediaManager.isUpdate = NO;
+        _sharedARMediaManager.isUpdating = NO;
         _sharedARMediaManager.groupMediaDictionary = [NSMutableDictionary dictionary];
 
     });
@@ -135,8 +138,10 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 
 - (eARMEDIA_MANAGER_ERROR)update
 {
+    __block eARMEDIA_MANAGER_ERROR retVal = ARMEDIA_MANAGER_OK;
+    
     if(!_isInit)
-        return ARMEDIA_MANAGER_NOT_INITIALIZED;
+        retVal = ARMEDIA_MANAGER_NOT_INITIALIZED;
     
     // Get All assets from camera roll
     NSLog(@"Get All assets from camera roll");
@@ -159,7 +164,6 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                 {
                     _projectsDictionary = [_privateProjectsDictionary copy];
                     [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
-                    
                     _isUpdate = YES;
                 }
             }
@@ -169,10 +173,13 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     void (^failureBlock)(NSError *) = ^(NSError *error)
     {
         NSLog(@"Failure : %@", error);
+        if (error.code == ALAssetsLibraryAccessUserDeniedError)
+        {
+            retVal = ARMEDIA_MANAGER_NOT_INITIALIZED;
+            [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationAccesDenied object:nil];
+        }
         _projectsDictionary = [_privateProjectsDictionary copy];
-        [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
-        
-        _isUpdate = YES;
+        _isUpdate = NO;
     };
     
     ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
@@ -181,7 +188,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                            usingBlock:assetGroupEnumerator
                          failureBlock:failureBlock];
     
-    return ARMEDIA_MANAGER_OK;
+    return retVal;
 }
 
 - (BOOL)addMedia:(NSString *)mediaPath
@@ -199,7 +206,6 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
             [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationMediaAdded object:assetURLString];
         }
         _isUpdate = YES;
-        [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
     };
     
     if (_isUpdate)
@@ -214,6 +220,12 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 {
     return _isUpdate;
 }
+
+- (BOOL)isUpdating
+{
+    return _isUpdating;
+}
+
 /*************************************/
 /*      ARMediaManager (private)    */
 /*************************************/
@@ -385,9 +397,11 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
             _projectsDictionary = [_privateProjectsDictionary copy];
             [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
             _isUpdate = YES;
+            _isUpdating = NO;
         }
         *stop = _cancelRefresh;
     };
+    _isUpdating = YES;
     [group enumerateAssetsUsingBlock:assetEnumerator];
 }
 

@@ -25,6 +25,7 @@ UIKIT_EXTERN NSString *const kARMediaManagerNotificationInitialized;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationUpdating;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationUpdated;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationMediaAdded;
+UIKIT_EXTERN NSString *const kARMediaManagerNotificationAccesDenied;
 
 @interface ARMediaManager : NSObject
 /**
@@ -57,4 +58,6 @@ UIKIT_EXTERN NSString *const kARMediaManagerNotificationMediaAdded;
 - (NSDictionary *)getProjectDictionary:(NSString *)project;
 
 - (BOOL)isUpdated;
+
+- (BOOL)isUpdating;
 @end
