@@ -29,7 +29,9 @@ NSString *const kARMediaManagerNotificationInitialized          = @"kARMediaMana
 NSString *const kARMediaManagerNotificationUpdating             = @"kARMediaManagerNotificationUpdating";
 NSString *const kARMediaManagerNotificationUpdated              = @"kARMediaManagerNotificationUpdated";
 NSString *const kARMediaManagerNotificationMediaAdded           = @"kARMediaManagerNotificationMediaAdded";
+NSString *const kARMediaManagerNotificationEndOfMediaAdding     = @"kARMediaManagerNotificationEndOfMediaAdding";
 NSString *const kARMediaManagerNotificationAccesDenied          = @"kARMediaManagerNotificationAccesDenied";
+
 
 // This block is always executed. If failure, an NSError is passed.
 typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
@@ -38,11 +40,13 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 @property (nonatomic, assign) BOOL cancelRefresh;
 @property (nonatomic, assign) BOOL isUpdate;
 @property (nonatomic, assign) BOOL isUpdating;
+@property (nonatomic, assign) BOOL isAdding;
 @property (nonatomic, assign) BOOL isInit;
 @property (nonatomic, assign) NSUInteger mediaAssetsCount;
 @property (nonatomic, strong) NSMutableDictionary *privateProjectsDictionary;
 @property (nonatomic, strong) NSMutableDictionary *groupMediaDictionary;
 @property (nonatomic, strong) NSDictionary *projectsDictionary;
+@property (nonatomic, strong) NSMutableArray *mediaToAdd;
 
 - (BOOL)saveMedia:(NSString *)mediaPath transferingBlock:(ARMediaManagerTranferingBlock)_transferingBlock;
 - (void)addAssetToLibrary:(ALAsset *)asset albumName:(NSString *)albumName;
@@ -67,8 +71,9 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
         _sharedARMediaManager.isInit = NO;
         _sharedARMediaManager.isUpdate = NO;
         _sharedARMediaManager.isUpdating = NO;
+        _sharedARMediaManager.isAdding = NO;
         _sharedARMediaManager.groupMediaDictionary = [NSMutableDictionary dictionary];
-
+        _sharedARMediaManager.mediaToAdd = [NSMutableArray array];
     });
     
     return _sharedARMediaManager;
@@ -191,29 +196,12 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     return retVal;
 }
 
-- (BOOL)addMedia:(NSString *)mediaPath
+- (void)addMediaToQueue:(NSString *)mediaPath
 {
-    BOOL returnVal = NO;
-    if (mediaPath == nil || !_isUpdate)
-        return returnVal;
-    
-    void (^transferingBlock)(NSString *) = ^(NSString *assetURLString)
-    {
-        if(assetURLString != nil)
-        {
-            [self saveMediaOnArchive];
-            _projectsDictionary = [_privateProjectsDictionary copy];
-            [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationMediaAdded object:assetURLString];
-        }
-        _isUpdate = YES;
-    };
-    
+    [_mediaToAdd addObject:mediaPath];
+
     if (_isUpdate)
-    {
-        _isUpdate = NO;
-        returnVal = [self saveMedia:mediaPath transferingBlock:transferingBlock];
-    }
-    return returnVal;
+        [self addMedia];
 }
 
 - (BOOL)isUpdated
@@ -224,6 +212,11 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 - (BOOL)isUpdating
 {
     return _isUpdating;
+}
+
+- (BOOL)isAdding
+{
+    return _isAdding;
 }
 
 /*************************************/
@@ -240,6 +233,45 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     [archiver encodeObject:_privateProjectsDictionary forKey:kARMediaManagerArchiverKey];
     [archiver finishEncoding];
     [data writeToFile:archivePath atomically:YES];
+}
+
+- (void)addMedia
+{
+    if ([_mediaToAdd count] == 0 || !_isUpdate)
+        return;
+    
+    dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+    
+    void (^transferingBlock)(NSString *) = ^(NSString *assetURLString)
+    {
+        if(assetURLString != nil)
+        {
+            [self saveMediaOnArchive];
+            _projectsDictionary = [_privateProjectsDictionary copy];
+            [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationMediaAdded object:[_mediaToAdd objectAtIndex:0]];
+        }
+        [[NSFileManager defaultManager] removeItemAtPath:[_mediaToAdd objectAtIndex:0] error:nil];
+        [_mediaToAdd removeObjectAtIndex:0];
+        
+        if ([_mediaToAdd count] == 0)
+        {
+            _isUpdate = YES;
+            _isAdding = NO;
+            [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationEndOfMediaAdding object:nil];
+        }
+        dispatch_semaphore_signal(sema);
+    };
+    
+    if (_isUpdate)
+    {
+        _isUpdate = NO;
+        while (([_mediaToAdd count] != 0))
+        {
+            _isAdding = YES;
+            [self saveMedia:[_mediaToAdd objectAtIndex:0] transferingBlock:transferingBlock];
+            dispatch_semaphore_wait(sema, DISPATCH_TIME_FOREVER);
+        }
+    }
 }
 
 - (void)addAssetToLibrary:(ALAsset *)asset albumName:(NSString *)albumName

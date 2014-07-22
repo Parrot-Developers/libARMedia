@@ -25,6 +25,7 @@ UIKIT_EXTERN NSString *const kARMediaManagerNotificationInitialized;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationUpdating;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationUpdated;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationMediaAdded;
+UIKIT_EXTERN NSString *const kARMediaManagerNotificationEndOfMediaAdding;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationAccesDenied;
 
 @interface ARMediaManager : NSObject
@@ -45,19 +46,25 @@ UIKIT_EXTERN NSString *const kARMediaManagerNotificationAccesDenied;
  */
 - (eARMEDIA_MANAGER_ERROR)update;
 /**
- add a media in ARMedia_Manager.
+ add a media in a queue ARMedia_Manager.
  @param NSString for mediaPath.
- @return BOOL for result of the add.
  */
-- (BOOL)addMedia:(NSString *)mediaPath;
+- (void)addMediaToQueue:(NSString *)mediaPath;
 /**
  retreive the refresh project media dictionary.
  @param NSString for project to get, if nil all project are get.
  @return NSDictionary who containt media projectDictionary.
  */
 - (NSDictionary *)getProjectDictionary:(NSString *)project;
-
+/**
+ @return Boolean if the ARMedia_Manager is update or not.
+ */
 - (BOOL)isUpdated;
-
+/**
+ @return Boolean if the ARMedia_Manager is updating or not.
+ */
 - (BOOL)isUpdating;
+
+- (BOOL)isAdding;
+
 @end
