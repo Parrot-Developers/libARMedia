@@ -32,3 +32,28 @@ Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeGetAtom(JNIEnv *env, jclas
 
     return retArray;
 }
+
+JNIEXPORT void JNICALL
+Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeWritePvat(JNIEnv *env, jclass clazz, jstring fileName, int product, jstring date)
+{
+    const char *fname = (*env)->GetStringUTFChars(env, fileName, NULL);
+    const char *videoDate = (*env)->GetStringUTFChars(env, date, NULL);
+
+    FILE *videoFile = fopen(fname, "ab");
+
+    if (videoFile != NULL)
+    {
+        ARMEDIA_VideoEncapsuler_addPVATAtom(videoFile, product, videoDate);
+    }
+
+    if (fileName != NULL && fname != NULL)
+    {
+        (*env)->ReleaseStringUTFChars(env, fileName, fname);    
+    }
+    
+    if (date != NULL && videoDate != NULL)
+    {
+        (*env)->ReleaseStringUTFChars(env, date, videoDate);    
+    }
+    
+}

@@ -1,12 +1,15 @@
 package com.parrot.arsdk.armedia;
 
 import com.parrot.arsdk.arsal.ARSALPrint;
+import com.parrot.arsdk.ardiscovery.ARDISCOVERY_PRODUCT_ENUM;
 
 import java.io.UnsupportedEncodingException;
 
 public class ARMediaVideoAtoms {
 
     private static native byte [] nativeGetAtom(String path, String atom);
+
+    private static native void nativeWritePvat(String path, int discoveryProduct, String videoDate);
 
     private static final String TAG = "toto";
     //private static final String TAG = ARMediaVideoAtoms.class.getSimpleName();
@@ -35,5 +38,10 @@ public class ARMediaVideoAtoms {
     public static byte[] getAtom(String path, String atom)
     {
         return nativeGetAtom(path, atom);
+    }
+
+    public static void writePvat(String path, ARDISCOVERY_PRODUCT_ENUM discoveryProduct, String videoDate)
+    {
+        nativeWritePvat(path, discoveryProduct.getValue(), videoDate);
     }
 }
