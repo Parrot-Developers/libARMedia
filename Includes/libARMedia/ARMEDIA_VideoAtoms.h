@@ -152,4 +152,6 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag);
 */
 uint64_t swap_uint64(uint64_t value);
 
+char* ARMEDIA_VideoAtom_GetPVATString(eARDISCOVERY_PRODUCT id, char* uuid, char* runDate, struct tm* mediaDate);
+
 #endif // _ARMEDIA_VIDEO_ATOMS_H_

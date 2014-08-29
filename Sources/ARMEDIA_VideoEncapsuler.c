@@ -43,8 +43,10 @@ struct ARMEDIA_VideoEncapsuler_t
 struct ARMEDIA_Video_t
 {
     uint32_t version;
-    eARDISCOVERY_PRODUCT product;
     // Provided to constructor
+    eARDISCOVERY_PRODUCT product;
+    char uuid[UUID_MAXLENGTH];
+    char runDate[DATETIME_MAXLENGTH];
     // Read from frames frameHeader
     eARMEDIA_ENCAPSULER_CODEC videoCodec;
     uint16_t width;
@@ -117,7 +119,7 @@ struct ARMEDIA_Video_t
         }                                       \
     } while (0)
 
-ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, int fps, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error)
+ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, int fps, char* uuid, char* runDate, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error)
 {
     ARMEDIA_VideoEncapsuler_t *retVideo = NULL;
 
@@ -161,6 +163,8 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
     retVideo->video->videoGpsInfos.longitude = 500.0;
     retVideo->video->videoGpsInfos.altitude = 500.0;
     retVideo->video->lastFrameType = ARMEDIA_ENCAPSULER_FRAME_TYPE_UNKNNOWN;
+    strncpy  (retVideo->video->uuid, uuid, UUID_MAXLENGTH);
+    strncpy  (retVideo->video->runDate, runDate, DATETIME_MAXLENGTH);
     snprintf (retVideo->video->infoFilePath, ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s%s", videoPath, INFOFILE_EXT);
     snprintf (retVideo->video->tempFilePath, ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s%s", videoPath, TEMPFILE_EXT);
     snprintf (retVideo->video->outFilePath,  ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s", videoPath);
@@ -466,6 +470,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     uint32_t *iFrameIndexBuffer = NULL;
     uint8_t *frameIsIFrame      = NULL;
 
+    struct tm *nowTm;
     uint64_t dataTotalSize = 0;
     uint32_t nbFrames = 0;
     char dateInfoString[ENCAPSULER_SMALL_STRING_SIZE] = {0};
@@ -562,7 +567,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t frameOffset = myVideo->framesDataOffset;
         uint32_t descriptorSize = 0;
 
-        struct tm *nowTm;
         movie_atom_t *mvhdAtom;
         movie_atom_t *tkhdAtom;
         movie_atom_t *mdhdAtom;
@@ -749,23 +753,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     /* pvat insertion */
     if (ARMEDIA_OK == localError)
     {
-        struct json_object* pvato;
-        pvato = json_object_new_object();
-        if (pvato != NULL) {
-            char prodid[5];
-            snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID((*encapsuler)->video->product));
-            json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
-            json_object_object_add(pvato, "run_date", json_object_new_string(dateInfoString));
-            json_object_object_add(pvato, "media_date", json_object_new_string(dateInfoString));
-
-            movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(pvato));
-            fseek (myVideo->outFile, 0, SEEK_END);
-            if (-1 == writeAtomToFile (&pvatAtom, myVideo->outFile))
-            {
-                ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
-                localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
-            }
-            json_object_put(pvato);
+        movie_atom_t *pvatAtom = pvatAtomGen(ARMEDIA_VideoAtom_GetPVATString((*encapsuler)->video->product, (*encapsuler)->video->uuid, (*encapsuler)->video->runDate, nowTm));
+        fseek (myVideo->outFile, 0, SEEK_END);
+        if (-1 == writeAtomToFile (&pvatAtom, myVideo->outFile))
+        {
+            ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
+            localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
     }
 

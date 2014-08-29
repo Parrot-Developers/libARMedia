@@ -228,7 +228,7 @@ int writeAtomToFile (movie_atom_t **atom, FILE *file)
         {
             atom_data_size = (*atom)->size - 8;
         }
-        
+
         if (atom_data_size != fwrite ((*atom)->data, 1, atom_data_size, file))
         {
             return -1;
@@ -1158,3 +1158,41 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag)
 
     return retVal;
 }
+
+
+char* ARMEDIA_VideoAtom_GetPVATString(eARDISCOVERY_PRODUCT id, char* uuid, char* runDate, struct tm* mediaDate)
+{
+    struct json_object* pvato = json_object_new_object();
+
+    if (pvato != NULL) {
+        char dateBuff[DATETIME_MAXLENGTH];
+        char prodid[5];
+
+        snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID(id));
+        json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
+
+        if (uuid != NULL) {
+            json_object_object_add(pvato, "uuid", json_object_new_string(uuid));
+        }
+
+        if (runDate != NULL) {
+            json_object_object_add(pvato, "run_date", json_object_new_string(runDate));
+        }
+
+        if (mediaDate != NULL) {
+            strftime(dateBuff, DATETIME_MAXLENGTH, ARMEDIA_JSON_DESCRIPTION_DATE_FMT, mediaDate);
+            json_object_object_add(pvato, "media_date", json_object_new_string(dateBuff));
+        }
+
+        char buff[ARMEDIA_JSON_DESCRIPTION_MAXLENGTH];
+
+        strncpy(buff, json_object_to_json_string(pvato), ARMEDIA_JSON_DESCRIPTION_MAXLENGTH);
+        buff[ARMEDIA_JSON_DESCRIPTION_MAXLENGTH-1] = '\0';
+
+        json_object_put(pvato);
+
+        return buff;
+    }
+    return NULL;
+}
+
