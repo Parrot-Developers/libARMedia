@@ -439,6 +439,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     if (frameHeader->frame_size != fwrite (myData, 1, frameHeader->frame_size, video->outFile))
     {
         free(myData);
+        free(frameHeader);
         ENCAPSULER_ERROR ("Unable to write slice into data file");
         return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
     }
@@ -446,6 +447,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     video->currentFrameSize += frameHeader->frame_size;
     video->totalsize += frameHeader->frame_size;
     free(myData);
+    free(frameHeader);
 
     // synchronisation
     if ((video->framesCount % 10) == 0) {
