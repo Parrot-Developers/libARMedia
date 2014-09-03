@@ -337,7 +337,8 @@ movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize)
     ATOM_FREE(data);
     return retAtom;
 }
-movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps, uint32_t nbFrames, time_t date)
+
+movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date)
 {
     uint32_t dataSize = 100;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
@@ -353,7 +354,7 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps,
     ATOM_WRITE_U32 (0); /* Creation time */
     ATOM_WRITE_U32 (0); /* Modification time */
     ATOM_WRITE_U32 (timescale); /* Timescale */
-    ATOM_WRITE_U32 (timescale * nbFrames / fps); /* Duration (in timescale units) */
+    ATOM_WRITE_U32 (duration); /* Duration (in timescale units) */
 
     ATOM_WRITE_U32 (0x00010000); /* Reserved */
     ATOM_WRITE_U16 (0x0100); /* Reserved */
@@ -384,8 +385,7 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps,
     return retAtom;
 }
 
-
-movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t nbFrames, uint32_t timescale, uint32_t fps, time_t date)
+movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date)
 {
     uint32_t dataSize = 84;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
@@ -402,7 +402,7 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     ATOM_WRITE_U32 (0); /* Modification time */
     ATOM_WRITE_U32 (1); /* Track ID */
     ATOM_WRITE_U32 (0); /* Reserved */
-    ATOM_WRITE_U32 (timescale * nbFrames / fps); /* Duration, in timescale unit */
+    ATOM_WRITE_U32 (duration); /* Duration, in timescale unit */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
@@ -429,7 +429,7 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     return retAtom;
 }
 
-movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps, uint32_t nbFrames, time_t date)
+movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date)
 {
     uint32_t dataSize = 24;
     uint32_t currentIndex = 0;
@@ -445,7 +445,7 @@ movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps,
     ATOM_WRITE_U32 (0); /* Creation time */
     ATOM_WRITE_U32 (0); /* Modification time */
     ATOM_WRITE_U32 (timescale); /* Timescale */
-    ATOM_WRITE_U32 (timescale * nbFrames / fps); /* Duration */
+    ATOM_WRITE_U32 (duration); /* Duration */
     ATOM_WRITE_U32 (0x55c40000); /* Language code (16) + Quality (16) */
 
     retAtom = atomFromData (24, "mdhd", data);
@@ -453,7 +453,6 @@ movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps,
     data = NULL;
     return retAtom;
 }
-
 
 movie_atom_t *hdlrAtomForMdia ()
 {
@@ -729,19 +728,6 @@ movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARM
     ATOM_FREE (data);
     data = NULL;
     return retAtom;
-}
-
-movie_atom_t *sttsAtomWithNumFrames (uint32_t nbFrames, uint32_t timescale, uint32_t fps)
-{
-    uint8_t data [16];
-    uint32_t currentIndex = 0;
-
-    ATOM_WRITE_U32(0);
-    ATOM_WRITE_U32(1);
-    ATOM_WRITE_U32(nbFrames);
-    ATOM_WRITE_U32(timescale/fps);
-
-    return atomFromData (16, "stts", data);
 }
 
 movie_atom_t *stscAtomGen ()
@@ -1162,7 +1148,7 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag)
 
 char* ARMEDIA_VideoAtom_GetPVATString(eARDISCOVERY_PRODUCT id, char* uuid, char* runDate, struct tm* mediaDate)
 {
-    struct json_object* pvato = json_object_new_object();
+    struct json_object* pvato = (struct json_object*) json_object_new_object();
 
     if (pvato != NULL) {
         char dateBuff[DATETIME_MAXLENGTH];
@@ -1186,7 +1172,7 @@ char* ARMEDIA_VideoAtom_GetPVATString(eARDISCOVERY_PRODUCT id, char* uuid, char*
 
         char buff[ARMEDIA_JSON_DESCRIPTION_MAXLENGTH];
 
-        strncpy(buff, json_object_to_json_string(pvato), ARMEDIA_JSON_DESCRIPTION_MAXLENGTH);
+        strncpy(buff, (const char*) json_object_to_json_string(pvato), ARMEDIA_JSON_DESCRIPTION_MAXLENGTH);
         buff[ARMEDIA_JSON_DESCRIPTION_MAXLENGTH-1] = '\0';
 
         json_object_put(pvato);

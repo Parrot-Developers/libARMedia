@@ -56,7 +56,7 @@ moov -> empty
  |           |   \- dref -> specific
  |           \- stbl -> empty
  |               |- stsd -> specific
- |               |- stts -> specific
+ |               |- stts -> from data
  |               |- stss -> from data (i frame positions as uint32_t network endian)
  |               |- stsc -> specific
  |               |- stsz -> from data (frames sizes as uint32_t network endian)
@@ -79,16 +79,15 @@ void freeAtom (movie_atom_t **atom);
 /* SPECIFIC */
 movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_CODEC codec, uint32_t *offset);
 movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize);
-movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps, uint32_t nbFrames, time_t date);
-movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t nbFrames, uint32_t timescale, uint32_t fps, time_t date);
-movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t fps, uint32_t nbFrames, time_t date);
+movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date);
+movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date);
+movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date);
 movie_atom_t *hdlrAtomForMdia ();
 movie_atom_t *vmhdAtomGen ();
 movie_atom_t *hdlrAtomForMinf ();
 movie_atom_t *drefAtomGen ();
 movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_CODEC codec);
 movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_CODEC codec, uint8_t *sps, uint32_t spsSize, uint8_t *pps, uint32_t ppsSize);
-movie_atom_t *sttsAtomWithNumFrames (uint32_t nbFrames, uint32_t timescale, uint32_t fps);
 movie_atom_t *stscAtomGen ();
 movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value);
 movie_atom_t *pvatAtomGen(const char *jsonString);

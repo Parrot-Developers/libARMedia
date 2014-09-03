@@ -17,8 +17,8 @@
 #define COUNT_WAITING_FOR_IFRAME_AS_AN_ERROR    (0)
 
 #define ARMEDIA_ENCAPSULER_VERSION_NUMBER       (4)
-#define ARMEDIA_ENCAPSULER_INFO_PATTERN         "%u:%c|"
-#define ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN    (2)
+#define ARMEDIA_ENCAPSULER_INFO_PATTERN         "%u:%c:%u|"
+#define ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN    (3)
 
 // File extension for informations files (frame sizes / types)
 #define INFOFILE_EXT ".infovid"
@@ -73,7 +73,7 @@ typedef struct {
     uint32_t frame_number;             /* frame position inside the current stream */
     uint16_t video_width;
     uint16_t video_height;
-    uint32_t timestamp;                /* in milliseconds */
+    uint32_t timestamp;                /* in microseconds */
     uint8_t  frame_type;               /* I-frame, P-frame, JPEG-frame */
     uint8_t* frame;
 } ARMEDIA_Frame_Header_t;

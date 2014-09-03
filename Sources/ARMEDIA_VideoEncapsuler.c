@@ -21,6 +21,8 @@
 #define ENCAPSULER_SMALL_STRING_SIZE (30)
 #define ENCAPSULER_INFODATA_MAX_SIZE (256)
 
+#define ENCAPSULER_DDT_TOLERANCE_PCT (15)
+
 /* The structure is initialised to an invalid value
    so we won't set any position in videos unless we got a
    valid ARMEDIA_Videoset_gps_infos() call */
@@ -47,6 +49,7 @@ struct ARMEDIA_Video_t
     eARDISCOVERY_PRODUCT product;
     char uuid[UUID_MAXLENGTH];
     char runDate[DATETIME_MAXLENGTH];
+    uint32_t defaultFrameDuration;
     // Read from frames frameHeader
     eARMEDIA_ENCAPSULER_CODEC videoCodec;
     uint16_t width;
@@ -149,6 +152,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
     retVideo->timescale = (uint32_t)(fps * 2000);
     retVideo->video->version = ARMEDIA_ENCAPSULER_VERSION_NUMBER;
     retVideo->video->product = product;
+    retVideo->video->defaultFrameDuration = 1000000 / fps;
     retVideo->video->lastFrameNumber = UINT32_MAX;
     retVideo->video->currentFrameSize = 0;
     retVideo->video->height = 0;
@@ -376,9 +380,14 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     }
 
     // New frame, write all infos about last one
-    // Use lastFrameType to check that we don't write infos about a null frame
     if (video->lastFrameNumber != frameHeader->frame_number)
     {
+        // if frame TS is null, set it as last TS + default duration (from fps)
+        if (frameHeader->timestamp == 0) {
+            frameHeader->timestamp = video->lastFrameTimestamp + video->defaultFrameDuration;
+        }
+
+        // Use lastFrameType to check that we don't write infos about a null frame
         if (ARMEDIA_ENCAPSULER_FRAME_TYPE_UNKNNOWN != video->lastFrameType)
         {
             uint32_t infoLen;
@@ -390,7 +399,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
             {
                 fTypeChar = 'i';
             }
-            snprintf (infoData, ENCAPSULER_INFODATA_MAX_SIZE, ARMEDIA_ENCAPSULER_INFO_PATTERN, video->currentFrameSize, fTypeChar);
+            snprintf (infoData, ENCAPSULER_INFODATA_MAX_SIZE, ARMEDIA_ENCAPSULER_INFO_PATTERN,
+                    video->currentFrameSize,
+                    fTypeChar,
+                    frameHeader->timestamp - video->lastFrameTimestamp); // frame duration
             infoLen = strlen (infoData);
             if (infoLen != fwrite (infoData, 1, infoLen, video->infoFile))
             {
@@ -466,11 +478,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     ARMEDIA_Video_t *myVideo = NULL;
 
     // Create internal buffers
-    uint32_t *frameSizeBuffer   = NULL;
-    uint32_t *frameSizeBufferNE = NULL;
-    uint32_t *frameOffsetBuffer = NULL;
-    uint32_t *iFrameIndexBuffer = NULL;
-    uint8_t *frameIsIFrame      = NULL;
+    uint32_t *frameSizeBufferNE   = NULL;
+    uint32_t *frameOffsetBuffer   = NULL;
+    uint32_t *frameTimeSyncBuffer = NULL;
+    uint32_t *iFrameIndexBuffer   = NULL;
 
     struct tm *nowTm;
     uint64_t dataTotalSize = 0;
@@ -518,7 +529,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 {
                     fTypeChar = 'i';
                 }
-                snprintf (infoData, ENCAPSULER_INFODATA_MAX_SIZE, ARMEDIA_ENCAPSULER_INFO_PATTERN, myVideo->currentFrameSize, fTypeChar);
+                snprintf (infoData, ENCAPSULER_INFODATA_MAX_SIZE, ARMEDIA_ENCAPSULER_INFO_PATTERN,
+                        myVideo->currentFrameSize,
+                        fTypeChar,
+                        myVideo->defaultFrameDuration);
 
                 infoLen = strlen (infoData);
                 if (infoLen != fwrite (infoData, 1, infoLen, myVideo->infoFile))
@@ -534,29 +548,25 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     if (ARMEDIA_OK == localError)
     {
         // Init internal buffers
-        frameSizeBuffer   = calloc (myVideo->framesCount, sizeof (uint32_t));
-        frameSizeBufferNE = calloc (myVideo->framesCount, sizeof (uint32_t));
-        frameOffsetBuffer = calloc (myVideo->framesCount, sizeof (uint32_t));
-        iFrameIndexBuffer = calloc (myVideo->framesCount, sizeof (uint32_t));
-        frameIsIFrame     = calloc (myVideo->framesCount, sizeof (uint8_t) );
+        frameSizeBufferNE   = calloc (myVideo->framesCount, sizeof (uint32_t));
+        frameOffsetBuffer   = calloc (myVideo->framesCount, sizeof (uint32_t));
+        frameTimeSyncBuffer = calloc (2*myVideo->framesCount, sizeof (uint32_t));
+        iFrameIndexBuffer   = calloc (myVideo->framesCount, sizeof (uint32_t));
 
-        if (NULL == frameSizeBuffer   ||
-            NULL == frameSizeBufferNE ||
-            NULL == frameOffsetBuffer ||
-            NULL == iFrameIndexBuffer ||
-            NULL == frameIsIFrame)
+        if (NULL == frameSizeBufferNE   ||
+            NULL == frameOffsetBuffer   ||
+            NULL == frameTimeSyncBuffer ||
+            NULL == iFrameIndexBuffer )
         {
             ENCAPSULER_ERROR ("Unable to allocate buffers for video finish");
-            free (frameSizeBuffer);
-            frameSizeBuffer = NULL;
             free (frameSizeBufferNE);
             frameSizeBufferNE = NULL;
             free (frameOffsetBuffer);
             frameOffsetBuffer = NULL;
+            free (frameTimeSyncBuffer);
+            frameTimeSyncBuffer = NULL;
             free (iFrameIndexBuffer);
             iFrameIndexBuffer = NULL;
-            free (frameIsIFrame);
-            frameIsIFrame = NULL;
             localError = ARMEDIA_ERROR_ENCAPSULER;
         }
     }
@@ -568,6 +578,13 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t nbIFrames = 0;
         uint32_t frameOffset = myVideo->framesDataOffset;
         uint32_t descriptorSize = 0;
+        // Time management
+        uint32_t sttsNentries = 0;
+        uint32_t groupSumDT = 0;
+        uint32_t groupMeanDT = 0;
+        uint32_t groupNframes = 0;
+        uint32_t totalDuration = 0;
+        uint32_t vtimescale = (*encapsuler)->timescale;
 
         movie_atom_t *mvhdAtom;
         movie_atom_t *tkhdAtom;
@@ -577,7 +594,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t *hdlr2Atom;
         movie_atom_t *drefAtom;
         movie_atom_t *stsdAtom;
-        movie_atom_t *sttsAtom;
         DEF_ATOM(moov);
         DEF_ATOM(trak);
         DEF_ATOM(mdia);
@@ -592,7 +608,13 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t *stscAtom;
         movie_atom_t *stssAtom;
 
-        // Generate stsz atom from frameSizeBufferLE and nbFrames
+        // Generate stts atom from frameTimeSyncBuffer
+        uint32_t sttsDataLen;
+        uint8_t *sttsBuffer;
+        uint32_t sttsNentriesNE;
+        movie_atom_t *sttsAtom;
+
+        // Generate stsz atom from frameSizeBufferNE and nbFrames
         uint32_t stszDataLen;
         uint8_t *stszBuffer;
         uint32_t nenbFrames;
@@ -619,27 +641,57 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         {
             fseek (myVideo->infoFile, descriptorSize, SEEK_CUR);
         }
+
         while (! feof (myVideo->infoFile) && nbFrames < myVideo->framesCount)
         {
-            uint32_t fSize = -1;
+            uint32_t fSize = 0;
             char fType = 'a';
+            uint32_t interframeDT = 0;
+            uint64_t tmpinterframeDT = 0;
             if (ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN ==
-                fscanf (myVideo->infoFile, ARMEDIA_ENCAPSULER_INFO_PATTERN, &fSize, &fType))
+                fscanf (myVideo->infoFile, ARMEDIA_ENCAPSULER_INFO_PATTERN, &fSize, &fType, &interframeDT))
             {
-                frameSizeBuffer   [nbFrames] = fSize;
                 frameSizeBufferNE [nbFrames] = htonl (fSize);
                 frameOffsetBuffer [nbFrames] = htonl (frameOffset);
+
+                // from microseconds to time units
+                tmpinterframeDT = ((uint64_t)vtimescale) * ((uint64_t) interframeDT);
+                interframeDT = (uint32_t)(tmpinterframeDT / 1000000);
+                // Time sync mgmt
+                if ((interframeDT < (groupMeanDT * (100 - ENCAPSULER_DDT_TOLERANCE_PCT) / 100))
+                ||  (interframeDT > (groupMeanDT * (100 + ENCAPSULER_DDT_TOLERANCE_PCT) / 100))) {
+                    // out tolerance
+                    if (groupMeanDT != 0) { // not first frame
+                        frameTimeSyncBuffer[2*sttsNentries] = htonl(groupNframes);
+                        frameTimeSyncBuffer[2*sttsNentries+1] = htonl(groupMeanDT);
+                        totalDuration += groupNframes * groupMeanDT;
+                        ENCAPSULER_DEBUG("STTS Entry | %04u | %08u |", groupNframes, groupMeanDT);
+                        sttsNentries++;
+                    }
+                    groupNframes = 1;
+                    groupSumDT = interframeDT;
+                    groupMeanDT = interframeDT;
+                } else {
+                    // in tolerance
+                    groupSumDT += interframeDT;
+                    groupNframes++;
+                    groupMeanDT = groupSumDT / groupNframes;
+                }
 
                 frameOffset += fSize;
                 if ('i' == fType)
                 {
-                    frameIsIFrame [nbFrames] = 1;
                     iFrameIndexBuffer [nbIFrames++] = htonl (nbFrames+1);
                 }
                 nbFrames ++;
                 dataTotalSize += (uint64_t) fSize;
             }
         }
+        frameTimeSyncBuffer[2*sttsNentries] = htonl(groupNframes);
+        frameTimeSyncBuffer[2*sttsNentries+1] = htonl(groupMeanDT);
+        totalDuration += groupNframes * groupMeanDT;
+        ENCAPSULER_DEBUG("STTS Entry | %04u | %08u |", groupNframes, groupMeanDT);
+        sttsNentries++;
 
         // get time values
         tzset();
@@ -652,11 +704,11 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         // create atoms
         // Generating Atoms
         EMPTY_ATOM(moov);
-        mvhdAtom = mvhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, (*encapsuler)->fps, myVideo->framesCount, cdate);
+        mvhdAtom = mvhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, totalDuration, cdate);
         EMPTY_ATOM(trak);
-        tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (myVideo->width, myVideo->height, myVideo->framesCount, (*encapsuler)->timescale, (*encapsuler)->fps, cdate);
+        tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (myVideo->width, myVideo->height, (*encapsuler)->timescale, totalDuration, cdate);
         EMPTY_ATOM(mdia);
-        mdhdAtom = mdhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, (*encapsuler)->fps, myVideo->framesCount, cdate);
+        mdhdAtom = mdhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, totalDuration, cdate);
         hdlrAtom = hdlrAtomForMdia ();
         EMPTY_ATOM(minf);
         vmhdAtom = vmhdAtomGen ();
@@ -665,7 +717,16 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         drefAtom = drefAtomGen ();
         EMPTY_ATOM(stbl);
         stsdAtom = stsdAtomWithResolutionCodecSpsAndPps (myVideo->width, myVideo->height, myVideo->videoCodec, &myVideo->sps[4], myVideo->spsSize -4, &myVideo->pps[4], myVideo->ppsSize -4);
-        sttsAtom = sttsAtomWithNumFrames (nbFrames, (*encapsuler)->timescale, (*encapsuler)->fps);
+
+        // Generate stts atom from frameTimeSyncBuffer
+        sttsDataLen = (8 + 2 * sttsNentries * sizeof(uint32_t));
+        sttsBuffer = (uint8_t*) calloc (sttsDataLen, 1);
+        sttsNentriesNE = htonl(sttsNentries);
+        memcpy (&sttsBuffer[4], &sttsNentriesNE, sizeof(uint32_t));
+        memcpy (&sttsBuffer[8], frameTimeSyncBuffer, 2 * sttsNentries * sizeof(uint32_t));
+        sttsAtom = atomFromData (sttsDataLen, "stts", sttsBuffer);
+        //sttsAtom = sttsAtomWithNumFrames (nbFrames, (*encapsuler)->timescale, (*encapsuler)->fps);
+        free(sttsBuffer);
 
         // Generate stss atom from iFramesIndexBuffer and nbIFrames
         stssDataLen = (8 + (nbIFrames * sizeof (uint32_t)));
@@ -678,7 +739,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
         stscAtom = stscAtomGen ();
 
-        // Generate stsz atom from frameSizeBufferLE and nbFrames
+        // Generate stsz atom from frameSizeBufferNE and nbFrames
         stszDataLen = (12 + (nbFrames * sizeof (uint32_t)));
         stszBuffer = (uint8_t*) calloc (stszDataLen, 1);
         nenbFrames = htonl (nbFrames);
@@ -789,29 +850,21 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         free ((*encapsuler));
         *encapsuler = NULL;
 
-        free (frameSizeBuffer);
-        frameSizeBuffer = NULL;
         free (frameSizeBufferNE);
         frameSizeBufferNE = NULL;
         free (frameOffsetBuffer);
         frameOffsetBuffer = NULL;
         free (iFrameIndexBuffer);
         iFrameIndexBuffer = NULL;
-        free (frameIsIFrame);
-        frameIsIFrame = NULL;
     }
     else
     {
-        free (frameSizeBuffer);
-        frameSizeBuffer = NULL;
         free (frameSizeBufferNE);
         frameSizeBufferNE = NULL;
         free (frameOffsetBuffer);
         frameOffsetBuffer = NULL;
         free (iFrameIndexBuffer);
         iFrameIndexBuffer = NULL;
-        free (frameIsIFrame);
-        frameIsIFrame = NULL;
         ARMEDIA_VideoEncapsuler_Cleanup (encapsuler);
     }
     return localError;
@@ -1000,6 +1053,7 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
     {
         int endOfSearch = 0;
         uint32_t frameSize = 0;
+        uint32_t frameTstp = 0;
         char fType = 'a';
         size_t prevInfoIndex = 0;
 
@@ -1011,7 +1065,7 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
             prevInfoIndex = ftell (video->infoFile);
             if (! feof (video->infoFile) &&
                 ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN ==
-                fscanf (video->infoFile, ARMEDIA_ENCAPSULER_INFO_PATTERN, &frameSize, &fType))
+                fscanf (video->infoFile, ARMEDIA_ENCAPSULER_INFO_PATTERN, &frameSize, &fType, &frameTstp))
             {
                 if ((dataSize + video->framesDataOffset + frameSize) > tmpvidSize)
                 {
