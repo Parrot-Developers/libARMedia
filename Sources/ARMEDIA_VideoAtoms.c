@@ -9,6 +9,7 @@
 
 #include <libARMedia/ARMedia.h>
 #include <libARMedia/ARMEDIA_VideoEncapsuler.h>
+#include <json/json.h>
 
 #include <string.h>
 #include <arpa/inet.h>
