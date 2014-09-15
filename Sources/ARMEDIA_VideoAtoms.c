@@ -510,9 +510,9 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
 
     if (CODEC_MPEG4_AVC == codec) {
         dataSize = 128;
-    } else if (CODEC_MOTION_JPEG) {
+    } else if (CODEC_MOTION_JPEG == codec) {
         dataSize = 94; //138;
-    } else if (CODEC_MPEG4_VISUAL) {
+    } else if (CODEC_MPEG4_VISUAL == codec) {
         dataSize = 187;
     } else {
         return NULL;
