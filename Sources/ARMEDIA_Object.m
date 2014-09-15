@@ -17,6 +17,7 @@
 @synthesize size = _size;
 @synthesize thumbnail = _thumbnail;
 @synthesize assetUrl = _assetUrl;
+@synthesize uuid = _uuid;
 
 - (id)init
 {
@@ -31,6 +32,7 @@
         _thumbnail = nil;
         _runDate = nil;
         _assetUrl = nil;
+        _uuid = nil;
         _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_MAX];
     }
     return self;
@@ -46,6 +48,7 @@
         _size = [NSNumber numberWithDouble:media->size];
         _productId = [NSString stringWithFormat:@"%04x",ARDISCOVERY_getProductID(media->product)];
         _thumbnail = [UIImage imageWithData:[NSData dataWithBytes:media->thumbnail length:media->thumbnailSize]];
+        _uuid = [NSString stringWithUTF8String:media->uuid];
     }
     
     if([[[NSString stringWithUTF8String:media->name] pathExtension] isEqual:[NSString stringWithUTF8String:ARMEDIA_JPG_EXTENSION]])
@@ -108,10 +111,12 @@
         _name = [coder decodeObjectForKey:@"name"];
         _date = [coder decodeObjectForKey:@"date"];
         _filePath = [coder decodeObjectForKey:@"filePath"];
+        _runDate = [coder decodeObjectForKey:@"runDate"];
         _size = [coder decodeObjectForKey:@"size"];
         _thumbnail = [coder decodeObjectForKey:@"thumbnail"];
         _mediaType = [coder decodeObjectForKey:@"mediaType"];
         _assetUrl = [coder decodeObjectForKey:@"assetUrl"];
+        _uuid = [coder decodeObjectForKey:@"uuid"];
     }
     return self;
 }
@@ -127,6 +132,8 @@
     [coder encodeObject:_thumbnail forKey:@"thumbnail"];
     [coder encodeObject:_mediaType forKey:@"mediaType"];
     [coder encodeObject:_assetUrl forKey:@"assetUrl"];
+    [coder encodeObject:_uuid forKey:@"uuid"];
+    
 }
 
 - (id)copyWithZone:(NSZone *)zone
@@ -143,6 +150,7 @@
         [copy setThumbnail:[[UIImage allocWithZone:zone] initWithCGImage:_thumbnail.CGImage]];
         [copy setMediaType:[_mediaType copyWithZone:zone]];
         [copy setAssetUrl:[_assetUrl copyWithZone:zone]];
+        [copy setUuid:[_uuid copyWithZone:zone]];
     }
     return copy;
 }
