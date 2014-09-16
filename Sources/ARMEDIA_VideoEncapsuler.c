@@ -76,7 +76,7 @@ struct ARMEDIA_Video_t
     eARMEDIA_ENCAPSULER_FRAME_TYPE lastFrameType;
     uint32_t currentFrameSize;
 
-    uint32_t lastFrameTimestamp;
+    uint64_t lastFrameTimestamp;
 
     time_t creationTime;
     uint32_t droneVersion;
@@ -402,7 +402,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
             snprintf (infoData, ENCAPSULER_INFODATA_MAX_SIZE, ARMEDIA_ENCAPSULER_INFO_PATTERN,
                     video->currentFrameSize,
                     fTypeChar,
-                    frameHeader->timestamp - video->lastFrameTimestamp); // frame duration
+                    (uint32_t)(frameHeader->timestamp - video->lastFrameTimestamp)); // frame duration
             infoLen = strlen (infoData);
             if (infoLen != fwrite (infoData, 1, infoLen, video->infoFile))
             {

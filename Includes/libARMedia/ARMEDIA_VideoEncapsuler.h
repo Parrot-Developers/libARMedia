@@ -73,7 +73,7 @@ typedef struct {
     uint32_t frame_number;             /* frame position inside the current stream */
     uint16_t video_width;
     uint16_t video_height;
-    uint32_t timestamp;                /* in microseconds */
+    uint64_t timestamp;                /* in microseconds */
     uint8_t  frame_type;               /* I-frame, P-frame, JPEG-frame */
     uint8_t* frame;
 } ARMEDIA_Frame_Header_t;
