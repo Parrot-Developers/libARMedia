@@ -916,7 +916,12 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom, uint32_t *dataSi
     }
     free (localAtom);
 
-    atomSize -= 8; // Remove the [size - tag] part, as it was read during seek
+    if (atomSize > 8) {
+        atomSize -= 8; // Remove the [size - tag] part, as it was read during seek
+    } else {
+        // atomSize is minimum 8; if not -> problem
+        return NULL;
+    }
 
     // Alloc local buffer
     atomBuffer = ATOM_MALLOC (atomSize);
