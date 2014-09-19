@@ -816,12 +816,18 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     /* pvat insertion */
     if (ARMEDIA_OK == localError)
     {
-        movie_atom_t *pvatAtom = pvatAtomGen(ARMEDIA_VideoAtom_GetPVATString((*encapsuler)->video->product, (*encapsuler)->video->uuid, (*encapsuler)->video->runDate, nowTm));
-        fseek (myVideo->outFile, 0, SEEK_END);
-        if (-1 == writeAtomToFile (&pvatAtom, myVideo->outFile))
-        {
-            ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
-            localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+        char* pvatstr = ARMEDIA_VideoAtom_GetPVATString((*encapsuler)->video->product, (*encapsuler)->video->uuid, (*encapsuler)->video->runDate, nowTm);
+        if (pvatstr != NULL) {
+            movie_atom_t *pvatAtom = pvatAtomGen(pvatstr);
+            fseek (myVideo->outFile, 0, SEEK_END);
+            if (-1 == writeAtomToFile (&pvatAtom, myVideo->outFile))
+            {
+                ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
+                localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            }
+            free(pvatstr);
+        } else {
+            ENCAPSULER_ERROR ("Error Json Pvat string empty\n");
         }
     }
 

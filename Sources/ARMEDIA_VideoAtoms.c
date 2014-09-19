@@ -1171,10 +1171,12 @@ char* ARMEDIA_VideoAtom_GetPVATString(eARDISCOVERY_PRODUCT id, char* uuid, char*
             json_object_object_add(pvato, "media_date", json_object_new_string(dateBuff));
         }
 
-        char buff[ARMEDIA_JSON_DESCRIPTION_MAXLENGTH];
+        char *buff = malloc(ARMEDIA_JSON_DESCRIPTION_MAXLENGTH);
 
-        strncpy(buff, (const char*) json_object_to_json_string(pvato), ARMEDIA_JSON_DESCRIPTION_MAXLENGTH);
-        buff[ARMEDIA_JSON_DESCRIPTION_MAXLENGTH-1] = '\0';
+        if (buff != NULL) {
+            strncpy(buff, (const char*) json_object_to_json_string(pvato), ARMEDIA_JSON_DESCRIPTION_MAXLENGTH);
+            buff[ARMEDIA_JSON_DESCRIPTION_MAXLENGTH-1] = '\0'; // safety
+        }
 
         json_object_put(pvato);
 
