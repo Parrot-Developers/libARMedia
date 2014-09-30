@@ -10,6 +10,7 @@ LOCAL_CATEGORY_PATH := dragon/libs
 LOCAL_MODULE := libARMedia
 LOCAL_DESCRIPTION := Library to manage video encapsulation
 
+LOCAL_CFLAGS := -D_FILE_OFFSET_BITS=64
 LOCAL_LIBRARIES := libARSAL libARDiscovery json
 LOCAL_EXPORT_LDLIBS := -larmedia
 

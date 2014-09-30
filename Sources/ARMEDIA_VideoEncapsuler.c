@@ -172,7 +172,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
     snprintf (retVideo->video->infoFilePath, ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s%s", videoPath, INFOFILE_EXT);
     snprintf (retVideo->video->tempFilePath, ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s%s", videoPath, TEMPFILE_EXT);
     snprintf (retVideo->video->outFilePath,  ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s", videoPath);
-    retVideo->video->infoFile = fopen (retVideo->video->infoFilePath, "w+b");
+    retVideo->video->infoFile = fopen(retVideo->video->infoFilePath, "w+b");
     if (NULL == retVideo->video->infoFile)
     {
         ENCAPSULER_ERROR ("Unable to open file %s for writing", retVideo->video->infoFilePath);
@@ -182,7 +182,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
         return NULL;
     }
 
-    retVideo->video->outFile = fopen (retVideo->video->tempFilePath, "w+b");
+    retVideo->video->outFile = fopen64(retVideo->video->tempFilePath, "w+b");
 
     if (NULL == retVideo->video->outFile)
     {

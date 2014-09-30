@@ -311,7 +311,7 @@ movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize)
 
     uint32_t currentIndex = 0;
     movie_atom_t *retAtom = NULL;
-    if (videoSize <= INT32_MAX)
+    if (videoSize <= UINT32_MAX)
     {
         // Free/wide atom + mdat
         ATOM_WRITE_U32(0x00000000);
@@ -325,14 +325,14 @@ movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize)
     else
     {
         // 64bit wide mdat atom
-        uint32_t highSize = (videoSize >> 32);
-        uint32_t lowSize = (videoSize & 0xffffffff);
+        uint32_t highSize = ((videoSize+8) >> 32);
+        uint32_t lowSize = ((videoSize+8) & 0xffffffff);
         uint32_t highSizeNe = htonl (highSize);
         uint32_t lowSizeNe = htonl (lowSize);
         ATOM_MEMCOPY (data, &highSizeNe, sizeof (uint32_t));
         ATOM_MEMCOPY (&data[4], &lowSizeNe, sizeof (uint32_t));
         retAtom = atomFromData (dataSize, "mdat", data);
-        retAtom->size = 0;
+        retAtom->size = 1;
         retAtom->wide = 1;
     }
     ATOM_FREE(data);
