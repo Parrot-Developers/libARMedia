@@ -34,6 +34,19 @@ fi
 AM_CONDITIONAL([DEBUG_MODE], [test "$debugit" = "yes"])
 
 ##########################################################################
+# Disable VideoEncapsuler compilation
+##########################################################################
+AC_MSG_CHECKING([whether to build ARMEDIA_VideoEncapsuler.c])
+AC_ARG_ENABLE([videoenc],
+    [AS_HELP_STRING([--enable-videoenc],
+    [enable video encapsuler (def=yes)])],
+    [videoencit="$enableval"],
+    [videoencit=yes])
+AC_MSG_RESULT([$videoencit])
+
+AM_CONDITIONAL([VIDEOENC], [test "$videoencit" = "yes"])
+
+##########################################################################
 # Non versionned .so compilation support (for Android)
 ##########################################################################
 AC_MSG_CHECKING([whether to put version number in .so files])
@@ -147,4 +160,5 @@ echo "
   C Compiler.....: $CC $CFLAGS
   Linker.........: $LD $LDFLAGS $LIBS
   Doxygen........: ${DOXYGEN:-NONE}
+  VideoEncapsuler: $videoencit
 "
