@@ -44,7 +44,9 @@ AC_ARG_ENABLE([videoenc],
     [videoencit=yes])
 AC_MSG_RESULT([$videoencit])
 
-AM_CONDITIONAL([VIDEOENC], [test "$videoencit" = "yes"])
+if test x"$videoencit" = x"yes"; then
+    AC_DEFINE([AC_VIDEOENC],[],[VideoEncapsuler])
+fi
 
 ##########################################################################
 # Non versionned .so compilation support (for Android)

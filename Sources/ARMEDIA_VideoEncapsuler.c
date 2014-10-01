@@ -122,6 +122,7 @@ struct ARMEDIA_Video_t
         }                                       \
     } while (0)
 
+#ifdef AC_VIDEOENC
 ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, int fps, char* uuid, char* runDate, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error)
 {
     ARMEDIA_VideoEncapsuler_t *retVideo = NULL;
@@ -203,6 +204,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
 
     return retVideo;
 }
+#endif
 
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Frame_Header_t *frameHeader)
 {

@@ -8,6 +8,7 @@ ACLOCAL_AMFLAGS                                     =   -I m4
 # The iOS dependency sources
 HEADER_FILES                                        = ../Includes/libARMedia/ARMEDIA_VideoAtoms.h       \
                                                       ../Includes/libARMedia/ARMEDIA_Error.h            \
+                                                      ../Includes/libARMedia/ARMEDIA_VideoEncapsuler.h  \
                                                       ../Includes/libARMedia/ARMedia.h
 if HAVE_UIKIT
 HEADER_FILES                                        += ../Includes/libARMedia/ARMEDIA_Manager.h     \
@@ -18,12 +19,8 @@ endif
 # The sources to add to the library and to add to the source distribution
 SOURCE_FILES                                        =  $(HEADER_FILES)                                  \
                                                        ../Sources/ARMEDIA_Error.c    				\
+                                                       ../Sources/ARMEDIA_VideoEncapsuler.c    			\
                                                        ../Sources/ARMEDIA_VideoAtoms.c
-
-if VIDEOENC
-HEADER_FILES                                        += ../Includes/libARMedia/ARMEDIA_VideoEncapsuler.h
-SOURCE_FILES                                        += ../Sources/ARMEDIA_VideoEncapsuler.c
-endif
 
 
 # The iOS dependency sources
