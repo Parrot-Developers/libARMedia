@@ -714,7 +714,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         hdlrAtom = hdlrAtomForMdia ();
         EMPTY_ATOM(minf);
         vmhdAtom = vmhdAtomGen ();
-        hdlr2Atom = hdlrAtomForMinf ();
+        if (CODEC_MPEG4_AVC == myVideo->videoCodec)
+            hdlr2Atom = hdlrAtomForMinf ();
         EMPTY_ATOM(dinf);
         drefAtom = drefAtomGen ();
         EMPTY_ATOM(stbl);
@@ -730,14 +731,16 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         //sttsAtom = sttsAtomWithNumFrames (nbFrames, (*encapsuler)->timescale, (*encapsuler)->fps);
         free(sttsBuffer);
 
-        // Generate stss atom from iFramesIndexBuffer and nbIFrames
-        stssDataLen = (8 + (nbIFrames * sizeof (uint32_t)));
-        stssBuffer = (uint8_t*) calloc (stssDataLen, 1);
-        nenbIFrames = htonl (nbIFrames);
-        memcpy (&stssBuffer[4], &nenbIFrames, sizeof (uint32_t));
-        memcpy (&stssBuffer[8], iFrameIndexBuffer, nbIFrames * sizeof (uint32_t));
-        stssAtom = atomFromData (stssDataLen, "stss", stssBuffer);
-        free (stssBuffer);
+        if (CODEC_MPEG4_AVC == myVideo->videoCodec) {
+            // Generate stss atom from iFramesIndexBuffer and nbIFrames
+            stssDataLen = (8 + (nbIFrames * sizeof (uint32_t)));
+            stssBuffer = (uint8_t*) calloc (stssDataLen, 1);
+            nenbIFrames = htonl (nbIFrames);
+            memcpy (&stssBuffer[4], &nenbIFrames, sizeof (uint32_t));
+            memcpy (&stssBuffer[8], iFrameIndexBuffer, nbIFrames * sizeof (uint32_t));
+            stssAtom = atomFromData (stssDataLen, "stss", stssBuffer);
+            free (stssBuffer);
+        }
 
         stscAtom = stscAtomGen ();
 
@@ -862,6 +865,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         frameSizeBufferNE = NULL;
         free (frameOffsetBuffer);
         frameOffsetBuffer = NULL;
+        free (frameTimeSyncBuffer);
+        frameTimeSyncBuffer = NULL;
         free (iFrameIndexBuffer);
         iFrameIndexBuffer = NULL;
     }
@@ -871,6 +876,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         frameSizeBufferNE = NULL;
         free (frameOffsetBuffer);
         frameOffsetBuffer = NULL;
+        free (frameTimeSyncBuffer);
+        frameTimeSyncBuffer = NULL;
         free (iFrameIndexBuffer);
         iFrameIndexBuffer = NULL;
         ARMEDIA_VideoEncapsuler_Cleanup (encapsuler);
@@ -880,7 +887,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler)
 {
-    ARMEDIA_VideoEncapsuler_t *myEncapsuler;
     ARMEDIA_Video_t *myVideo;
 
     if (NULL == (*encapsuler))
@@ -908,7 +914,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
     }
 
     free (myVideo);
-    free (myEncapsuler);
     *encapsuler = NULL;
 
     return ARMEDIA_OK;
