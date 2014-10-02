@@ -44,7 +44,7 @@ struct ARMEDIA_VideoEncapsuler_t
 
 struct ARMEDIA_Video_t
 {
-    uint32_t version;
+    uint8_t version;
     // Provided to constructor
     eARDISCOVERY_PRODUCT product;
     char uuid[UUID_MAXLENGTH];
@@ -79,7 +79,7 @@ struct ARMEDIA_Video_t
     uint64_t lastFrameTimestamp;
 
     time_t creationTime;
-    uint32_t droneVersion;
+    uint16_t droneVersion;
     ARMEDIA_videoGpsInfos_t videoGpsInfos;
 };
 
@@ -183,7 +183,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
         return NULL;
     }
 
-    retVideo->video->outFile = fopen64(retVideo->video->tempFilePath, "w+b");
+    retVideo->video->outFile = (FILE*)fopen64(retVideo->video->tempFilePath, "w+b");
 
     if (NULL == retVideo->video->outFile)
     {
@@ -318,18 +318,22 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         }
 
         // Start to write file
-        rewind (video->outFile);
+        rewind(video->outFile);
         ftypAtom = ftypAtomForFormatAndCodecWithOffset (video->videoCodec, &(video->framesDataOffset));
         if (NULL == ftypAtom)
         {
             ENCAPSULER_ERROR ("Unable to create ftyp atom");
             return ARMEDIA_ERROR_ENCAPSULER;
         }
+
         if (-1 == writeAtomToFile (&ftypAtom, video->outFile))
         {
             ENCAPSULER_ERROR ("Unable to write ftyp atom");
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
+
+        // Add an offset for PVAT at beginning
+        video->framesDataOffset += ARMEDIA_JSON_DESCRIPTION_MAXLENGTH+8;
 
         if (-1 == fseek (video->outFile, video->framesDataOffset, SEEK_SET))
         {
@@ -818,18 +822,34 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         }
     }
 
-    /* pvat insertion */
+    /* pvat insertion at the benning of the file */
     if (ARMEDIA_OK == localError)
     {
         char* pvatstr = ARMEDIA_VideoAtom_GetPVATString((*encapsuler)->video->product, (*encapsuler)->video->uuid, (*encapsuler)->video->runDate, nowTm);
         if (pvatstr != NULL) {
+            size_t len = strlen(pvatstr);
             movie_atom_t *pvatAtom = pvatAtomGen(pvatstr);
-            fseek (myVideo->outFile, 0, SEEK_END);
+            fseek (myVideo->outFile, myVideo->mdatAtomOffset - (ARMEDIA_JSON_DESCRIPTION_MAXLENGTH+8), SEEK_SET);
             if (-1 == writeAtomToFile (&pvatAtom, myVideo->outFile))
             {
                 ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
                 localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             }
+            // fill leaving space with a free atom until the mdatom
+            uint32_t emptydatasize = ARMEDIA_JSON_DESCRIPTION_MAXLENGTH-(len+8);
+            uint8_t *emptydata = calloc(emptydatasize, sizeof(uint8_t));
+            if (emptydata == NULL) {
+                ENCAPSULER_ERROR ("Error allocating freedata\n");
+                localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            } else {
+                movie_atom_t *fillatom = atomFromData(emptydatasize, "free", emptydata);
+                if (-1 == writeAtomToFile (&fillatom, myVideo->outFile))
+                {
+                    ENCAPSULER_ERROR ("Error while writing fillatom\n");
+                    localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+                }
+            }
+
             free(pvatstr);
         } else {
             ENCAPSULER_ERROR ("Error Json Pvat string empty\n");
