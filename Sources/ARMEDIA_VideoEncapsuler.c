@@ -208,7 +208,6 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
 
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Frame_Header_t *frameHeader)
 {
-    static uint8_t *myData = NULL;
     uint8_t *data;
     uint8_t searchIndex;
     uint32_t descriptorSize;
@@ -240,6 +239,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
     }
 
     // get frame data
+    if (NULL == frameHeader->frame)
+    {
+        ENCAPSULER_ERROR ("Unable to allocate local data (%d bytes) ", frameHeader->frame_size);
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+
     data = frameHeader->frame;
 
     // First slice
@@ -428,15 +433,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
         }
     }
 
-    myData = (uint8_t*) malloc(frameHeader->frame_size);
-
-    if (NULL == myData)
-    {
-        ENCAPSULER_ERROR ("Unable to allocate local data (%d bytes) ", frameHeader->frame_size);
-        return ARMEDIA_ERROR_ENCAPSULER;
-    }
-    memcpy (myData, data, frameHeader->frame_size);
-
     if (video->videoCodec == CODEC_MPEG4_AVC) {
         // Modify slices before writing
         if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME == frameHeader->frame_type) {
@@ -444,28 +440,24 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSlice (ARMEDIA_VideoEncapsuler_t *enca
             uint32_t sps_size_NE = htonl (video->spsSize - 4);
             uint32_t pps_size_NE = htonl (video->ppsSize - 4);
             uint32_t f_size_NE   = htonl (frameHeader->frame_size - (video->spsSize + video->ppsSize + 4));
-            memcpy ( myData                                 , &sps_size_NE, sizeof (uint32_t));
-            memcpy (&myData[video->spsSize]                 , &pps_size_NE, sizeof (uint32_t));
-            memcpy (&myData[video->spsSize + video->ppsSize], &f_size_NE  , sizeof (uint32_t));
+            memcpy ( data                                 , &sps_size_NE, sizeof (uint32_t));
+            memcpy (&data[video->spsSize]                 , &pps_size_NE, sizeof (uint32_t));
+            memcpy (&data[video->spsSize + video->ppsSize], &f_size_NE  , sizeof (uint32_t));
         } else if (ARMEDIA_ENCAPSULER_FRAME_TYPE_P_FRAME == frameHeader->frame_type) {
             // set correct size for frame
             uint32_t f_size_NE = htonl (frameHeader->frame_size - 4);
-            memcpy (myData, &f_size_NE, sizeof (uint32_t));
+            memcpy (data, &f_size_NE, sizeof (uint32_t));
         }
     }
 
-    if (frameHeader->frame_size != fwrite (myData, 1, frameHeader->frame_size, video->outFile))
+    if (frameHeader->frame_size != fwrite (data, 1, frameHeader->frame_size, video->outFile))
     {
-        free(myData);
-        free(frameHeader);
         ENCAPSULER_ERROR ("Unable to write slice into data file");
         return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
     }
 
     video->currentFrameSize += frameHeader->frame_size;
     video->totalsize += frameHeader->frame_size;
-    free(myData);
-    free(frameHeader);
 
     // synchronisation
     if ((video->framesCount % 10) == 0) {
