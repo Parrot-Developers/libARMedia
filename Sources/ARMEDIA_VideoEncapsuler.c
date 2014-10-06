@@ -840,6 +840,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     ENCAPSULER_ERROR ("Error while writing fillatom\n");
                     localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
                 }
+                free(emptydata);
             }
 
             free(pvatstr);
