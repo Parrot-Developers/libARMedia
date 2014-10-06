@@ -81,9 +81,8 @@
             _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_PHOTO];
         }
         // NO ELSE -
+        CGImageRef iref = [myasset thumbnail];
         
-        ALAssetRepresentation *rep = [myasset defaultRepresentation];
-        CGImageRef iref = [rep fullResolutionImage];
         if (iref != nil)
         {
             _thumbnail = [[UIImage alloc]initWithCGImage:iref];
