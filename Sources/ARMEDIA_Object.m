@@ -18,12 +18,13 @@
 @synthesize thumbnail = _thumbnail;
 @synthesize assetUrl = _assetUrl;
 @synthesize uuid = _uuid;
-
+@synthesize delegate = _delegate;
 - (id)init
 {
     self = [super init];
     if (self)
     {
+        _index = NSNotFound;
         _name = nil;
         _filePath = nil;
         _date = nil;
@@ -38,16 +39,23 @@
     return self;
 }
 
-- (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media
+- (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media withIndex:(int)index
 {
+    BOOL thumbnailHasChanged = NO;
     if(media != NULL)
     {
+        _index = index;
         _name = [NSString stringWithUTF8String:media->name];
         _filePath = [NSString stringWithUTF8String:media->filePath];
         _date = [NSString stringWithUTF8String:media->date];
         _size = [NSNumber numberWithDouble:media->size];
         _productId = [NSString stringWithFormat:@"%04x",ARDISCOVERY_getProductID(media->product)];
-        _thumbnail = [UIImage imageWithData:[NSData dataWithBytes:media->thumbnail length:media->thumbnailSize]];
+        UIImage *newThumbnail = [UIImage imageWithData:[NSData dataWithBytes:media->thumbnail length:media->thumbnailSize]];
+        if (![newThumbnail isEqual:_thumbnail])
+        {
+            thumbnailHasChanged = YES;
+        }
+        _thumbnail = newThumbnail;
         _uuid = [NSString stringWithUTF8String:media->uuid];
     }
     
@@ -59,12 +67,32 @@
     {
         _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
     }
+    
+    if (thumbnailHasChanged && _delegate && [_delegate respondsToSelector:@selector(mediaObjectDidUpdateThumbnail:)])
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [_delegate mediaObjectDidUpdateThumbnail:self];
+        });
+    }
 }
 
 
 - (void)updateThumbnailWithARDATATRANSFER_Media_t:(ARDATATRANSFER_Media_t *)media
 {
-    _thumbnail = [UIImage imageWithData:[NSData dataWithBytes:media->thumbnail length:media->thumbnailSize]];
+    BOOL thumbnailHasChanged = NO;
+    UIImage *newThumbnail = [UIImage imageWithData:[NSData dataWithBytes:media->thumbnail length:media->thumbnailSize]];
+    if (![newThumbnail isEqual:_thumbnail])
+    {
+        thumbnailHasChanged = YES;
+    }
+    _thumbnail = newThumbnail;
+    
+    if (thumbnailHasChanged && _delegate && [_delegate respondsToSelector:@selector(mediaObjectDidUpdateThumbnail:)])
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [_delegate mediaObjectDidUpdateThumbnail:self];
+        });
+    }
 }
 
 - (void)updateThumbnailWithNSUrl:(NSURL *)assetUrl
@@ -72,6 +100,8 @@
     ALAssetsLibrary *assetslibrary = [[ALAssetsLibrary alloc] init];
     ALAssetsLibraryAssetForURLResultBlock resultblock = ^(ALAsset *myasset)
     {
+        BOOL thumbnailHasChanged = NO;
+        
         if ([[myasset valueForProperty:ALAssetPropertyType]isEqualToString:ALAssetTypeVideo])
         {
             _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
@@ -85,9 +115,21 @@
         
         if (iref != nil)
         {
-            _thumbnail = [[UIImage alloc]initWithCGImage:iref];
+            UIImage *newThumbnail = [[UIImage alloc]initWithCGImage:iref];
+            if (![newThumbnail isEqual:_thumbnail])
+            {
+                thumbnailHasChanged = YES;
+            }
+            _thumbnail = newThumbnail;
         }
         // NO ELSE
+        
+        if (thumbnailHasChanged && _delegate && [_delegate respondsToSelector:@selector(mediaObjectDidUpdateThumbnail:)])
+        {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [_delegate mediaObjectDidUpdateThumbnail:self];
+            });
+        }
     };
     
     ALAssetsLibraryAccessFailureBlock failureblock  = ^(NSError *myerror)
@@ -106,6 +148,7 @@
     self = [super init];
     if (self)
     {
+        _index = [coder decodeIntForKey:@"index"];
         _productId = [coder decodeObjectForKey:@"productId"];
         _name = [coder decodeObjectForKey:@"name"];
         _date = [coder decodeObjectForKey:@"date"];
@@ -122,6 +165,7 @@
 
 - (void)encodeWithCoder:(NSCoder *)coder
 {
+    [coder encodeInt:_index forKey:@"index"];
     [coder encodeObject:_productId forKey:@"productId"];
     [coder encodeObject:_name forKey:@"name"];
     [coder encodeObject:_date forKey:@"date"];
@@ -140,6 +184,7 @@
     ARMediaObject *copy = [[ARMediaObject alloc] init];
     if (copy)
     {
+        [copy setIndex:_index];
         [copy setProductId:[_productId copyWithZone:zone]];
         [copy setName:[_name copyWithZone:zone]];
         [copy setDate:[_date copyWithZone:zone]];

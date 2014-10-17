@@ -13,8 +13,18 @@
 #import <libARDataTransfer/ARDataTransfer.h>
 #import <libARMedia/ARMedia.h>
 
+@class ARMediaObject;
+
+@protocol ARMediaObjectDelegate <NSObject>
+
+- (void)mediaObjectDidUpdateThumbnail:(ARMediaObject*)mediaObject;
+
+@end
+
 @interface ARMediaObject : NSObject <NSCoding, NSCopying>
 
+@property (nonatomic, weak)   id<ARMediaObjectDelegate> delegate;
+@property (nonatomic, assign) int index;
 @property (nonatomic, strong) NSString *runDate;
 @property (nonatomic, strong) NSString *productId;
 @property (nonatomic, strong) NSString *name;
@@ -26,7 +36,7 @@
 @property (nonatomic, strong) NSURL *assetUrl;
 @property (nonatomic, strong) NSString *uuid;
 
-- (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media;
+- (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media withIndex:(int)index;
 - (void)updateThumbnailWithARDATATRANSFER_Media_t:(ARDATATRANSFER_Media_t *)media;
 - (void)updateThumbnailWithNSUrl:(NSURL *)assetUrl;
 @end
