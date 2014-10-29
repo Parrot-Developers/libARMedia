@@ -6,7 +6,6 @@
  * Copyright 2011 Parrot SA. All rights reserved.
  *
  */
-#include <libARMedia/ARMedia.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <time.h>
@@ -14,14 +13,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <libARMedia/ARMEDIA_VideoEncapsuler.h>
 #include <json/json.h>
 #include <libARDiscovery/ARDiscovery.h>
+#include <libARMedia/ARMedia.h>
+#include <libARSAL/ARSAL_Print.h>
+#include <libARMedia/ARMEDIA_VideoEncapsuler.h>
 
-#define ENCAPSULER_SMALL_STRING_SIZE (30)
-#define ENCAPSULER_INFODATA_MAX_SIZE (256)
-
-#define ENCAPSULER_DDT_TOLERANCE_PCT (15)
+#define ENCAPSULER_SMALL_STRING_SIZE    (30)
+#define ENCAPSULER_INFODATA_MAX_SIZE    (256)
+#define ENCAPSULER_DDT_TOLERANCE_PCT    (15)
+#define ARMEDIA_ENCAPSULER_TAG          "ARMEDIA Encapsuler"
 
 /* The structure is initialised to an invalid value
    so we won't set any position in videos unless we got a
@@ -91,20 +92,14 @@ struct ARMEDIA_Video_t
 #define ARMEDIA_ENCAPSULER_TAG      "ARMedia Video Encapsuler"
 
 #define ENCAPSULER_ERROR(...)                                           \
-    do                                                                  \
-    {                                                                   \
-        fprintf (stderr, "ARMedia video encapsuler error (%s @ %d) : ", __FUNCTION__, __LINE__); \
-        fprintf (stderr, __VA_ARGS__);                                  \
-        fprintf (stderr, "\n");                                         \
+    do {                                                                \
+        ARSAL_PRINT (ARSAL_PRINT_ERROR, ARMEDIA_ENCAPSULER_TAG, "error: " __VA_ARGS__); \
     } while (0)
 
-#if defined (DEBUG) || ENCAPSULER_DEBUG_ENABLE
-#define ENCAPSULER_DEBUG(...)                                           \
-    do                                                                  \
-    {                                                                   \
-        fprintf (stdout, "(%s @ %d) : ", __FUNCTION__, __LINE__); \
-        fprintf (stdout, __VA_ARGS__);                                  \
-        fprintf (stdout, "\n");                                         \
+#ifdef ENCAPSULER_DEBUG_ENABLE
+#define ENCAPSULER_DEBUG(...)                                                                               \
+    do {                                                                                                    \
+        ARSAL_PRINT (ARSAL_PRINT_DEBUG, ARMEDIA_ENCAPSULER_TAG, "debug > " __VA_ARGS__);                    \
     } while (0)
 #else
 #define ENCAPSULER_DEBUG(...)
@@ -598,7 +593,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         DEF_ATOM(minf);
         DEF_ATOM(dinf);
         DEF_ATOM(stbl);
-        DEF_ATOM(udta);
 
         uint32_t stssDataLen;
         uint8_t *stssBuffer;
@@ -622,9 +616,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t stcoDataLen;
         uint8_t *stcoBuffer;
         movie_atom_t *stcoAtom;
-
-        movie_atom_t *swrAtom;
-        movie_atom_t *dayAtom;
 
         // Read info file
         rewind (myVideo->infoFile);
@@ -757,16 +748,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         stcoAtom = atomFromData (stcoDataLen, "stco", stcoBuffer);
         free (stcoBuffer);
 
-        EMPTY_ATOM (udta);
-        swrAtom = metadataAtomFromTagAndValue ("swr ", "Parrot Drone");
-
-        strftime(dateInfoString, ENCAPSULER_SMALL_STRING_SIZE, ARMEDIA_JSON_DESCRIPTION_DATE_FMT, nowTm);
-        dayAtom = metadataAtomFromTagAndValue ("day ", dateInfoString);
-
        // Create atom tree
-        insertAtomIntoAtom (udtaAtom, &swrAtom);
-        insertAtomIntoAtom (udtaAtom, &dayAtom);
-
         insertAtomIntoAtom (stblAtom, &stsdAtom);
         insertAtomIntoAtom (stblAtom, &sttsAtom);
         if (CODEC_MPEG4_AVC == myVideo->videoCodec)
@@ -793,11 +775,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
         insertAtomIntoAtom (moovAtom, &mvhdAtom);
         insertAtomIntoAtom (moovAtom, &trakAtom);
-        insertAtomIntoAtom (moovAtom, &udtaAtom);
 
         if (-1 == writeAtomToFile (&moovAtom, myVideo->outFile))
         {
-            ENCAPSULER_ERROR ("Error while writing moovAtom\n");
+            ENCAPSULER_ERROR ("Error while writing moovAtom");
             localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
     }
@@ -809,7 +790,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         fseek (myVideo->outFile, myVideo->mdatAtomOffset, SEEK_SET);
         if (-1 == writeAtomToFile (&mdatAtom, myVideo->outFile))
         {
-            ENCAPSULER_ERROR ("Error while writing mdatAtom\n");
+            ENCAPSULER_ERROR ("Error while writing mdatAtom");
             localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
     }
@@ -824,20 +805,20 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             fseek (myVideo->outFile, myVideo->mdatAtomOffset - (ARMEDIA_JSON_DESCRIPTION_MAXLENGTH+8), SEEK_SET);
             if (-1 == writeAtomToFile (&pvatAtom, myVideo->outFile))
             {
-                ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
+                ENCAPSULER_ERROR ("Error while writing pvatAtom");
                 localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             }
             // fill leaving space with a free atom until the mdatom
             uint32_t emptydatasize = ARMEDIA_JSON_DESCRIPTION_MAXLENGTH-(len+8);
             uint8_t *emptydata = calloc(emptydatasize, sizeof(uint8_t));
             if (emptydata == NULL) {
-                ENCAPSULER_ERROR ("Error allocating freedata\n");
+                ENCAPSULER_ERROR ("Error allocating freedata");
                 localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             } else {
                 movie_atom_t *fillatom = atomFromData(emptydatasize, "free", emptydata);
                 if (-1 == writeAtomToFile (&fillatom, myVideo->outFile))
                 {
-                    ENCAPSULER_ERROR ("Error while writing fillatom\n");
+                    ENCAPSULER_ERROR ("Error while writing fillatom");
                     localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
                 }
                 free(emptydata);
@@ -845,7 +826,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
             free(pvatstr);
         } else {
-            ENCAPSULER_ERROR ("Error Json Pvat string empty\n");
+            ENCAPSULER_ERROR ("Error Json Pvat string empty");
         }
     }
 
@@ -1212,7 +1193,7 @@ int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT p
         movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(pvato));
         if (-1 == writeAtomToFile (&pvatAtom, videoFile))
         {
-            ENCAPSULER_ERROR ("Error while writing pvatAtom\n");
+            ENCAPSULER_ERROR ("Error while writing pvatAtom");
         }
         else
         {
