@@ -89,8 +89,6 @@ struct ARMEDIA_Video_t
 // File extension for temporary files
 #define TEMPFILE_EXT ".tmpvid"
 
-#define ARMEDIA_ENCAPSULER_TAG      "ARMedia Video Encapsuler"
-
 #define ENCAPSULER_ERROR(...)                                           \
     do {                                                                \
         ARSAL_PRINT (ARSAL_PRINT_ERROR, ARMEDIA_ENCAPSULER_TAG, "error: " __VA_ARGS__); \
