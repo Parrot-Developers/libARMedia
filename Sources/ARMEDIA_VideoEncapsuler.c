@@ -652,7 +652,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                         frameTimeSyncBuffer[2*sttsNentries] = htonl(groupNframes);
                         frameTimeSyncBuffer[2*sttsNentries+1] = htonl(groupMeanDT);
                         totalDuration += groupNframes * groupMeanDT;
-                        ENCAPSULER_DEBUG("STTS Entry | %04u | %08u |", groupNframes, groupMeanDT);
                         sttsNentries++;
                     }
                     groupNframes = 1;
@@ -677,7 +676,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         frameTimeSyncBuffer[2*sttsNentries] = htonl(groupNframes);
         frameTimeSyncBuffer[2*sttsNentries+1] = htonl(groupMeanDT);
         totalDuration += groupNframes * groupMeanDT;
-        ENCAPSULER_DEBUG("STTS Entry | %04u | %08u |", groupNframes, groupMeanDT);
         sttsNentries++;
 
         // get time values
@@ -779,6 +777,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             ENCAPSULER_ERROR ("Error while writing moovAtom");
             localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
+        fflush(myVideo->outFile);
+        fsync(fileno(myVideo->outFile));
     }
 
     if (ARMEDIA_OK == localError)
@@ -791,6 +791,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             ENCAPSULER_ERROR ("Error while writing mdatAtom");
             localError = ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
+        fflush(myVideo->outFile);
+        fsync(fileno(myVideo->outFile));
     }
 
     /* pvat insertion at the benning of the file */
@@ -826,6 +828,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         } else {
             ENCAPSULER_ERROR ("Error Json Pvat string empty");
         }
+        fflush(myVideo->outFile);
+        fsync(fileno(myVideo->outFile));
     }
 
     if (ARMEDIA_OK == localError)
