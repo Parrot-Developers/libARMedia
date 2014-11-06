@@ -69,8 +69,10 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
             productId = String.format("%04x", ARDiscoveryService.getProductID(product));
             
             Bitmap thumbnailBmp = BitmapFactory.decodeByteArray(media.getThumbnail(), 0, media.getThumbnail().length);
+            
             if(thumbnailBmp != null)
             {
+                thumbnailBmp = Exif2Interface.handleOrientation(thumbnailBmp, media.getThumbnail());
                 thumbnail = (Drawable) new BitmapDrawable(resources, thumbnailBmp);
             }
         }
@@ -96,6 +98,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
         
         if(thumbnailBmp != null)
         {
+            thumbnailBmp = Exif2Interface.handleOrientation(thumbnailBmp, media.getThumbnail());
             thumbnail = (Drawable) new BitmapDrawable(resources, thumbnailBmp);
         }
     }

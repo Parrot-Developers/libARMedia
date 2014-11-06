@@ -2,12 +2,14 @@ package com.parrot.arsdk.armedia;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.Integer;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
@@ -29,6 +31,8 @@ import org.apache.sanselan.formats.tiff.write.TiffOutputDirectory;
 import org.apache.sanselan.formats.tiff.write.TiffOutputField;
 import org.apache.sanselan.formats.tiff.write.TiffOutputSet;
 
+import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.util.Log;
 
 /**
@@ -38,12 +42,26 @@ import android.util.Log;
  */
 public class Exif2Interface
 {
+    // Constants used for the Orientation Exif tag.
+    // Taken from ExifInterface.java in AOSP
+    public static final int ORIENTATION_UNDEFINED = 0;
+    public static final int ORIENTATION_NORMAL = 1;
+    public static final int ORIENTATION_FLIP_HORIZONTAL = 2;  // left right reversed mirror
+    public static final int ORIENTATION_ROTATE_180 = 3;
+    public static final int ORIENTATION_FLIP_VERTICAL = 4;  // upside down mirror
+    public static final int ORIENTATION_TRANSPOSE = 5;  // flipped about top-left <--> bottom-right axis
+    public static final int ORIENTATION_ROTATE_90 = 6;  // rotate 90 cw to right it
+    public static final int ORIENTATION_TRANSVERSE = 7;  // flipped about top-right <--> bottom-left axis
+    public static final int ORIENTATION_ROTATE_270 = 8;  // rotate 270 to right it
+
     public enum Tag {
         /** Type is String */
         IMAGE_DESCRIPTION ("ImageDescription", ExifTagConstants.EXIF_TAG_IMAGE_DESCRIPTION, TiffFieldTypeConstants.FIELD_TYPE_ASCII),
         
         /** Type is String */
-        MAKE("Make", ExifTagConstants.EXIF_TAG_MAKE, TiffFieldTypeConstants.FIELD_TYPE_ASCII);
+        MAKE("Make", ExifTagConstants.EXIF_TAG_MAKE, TiffFieldTypeConstants.FIELD_TYPE_ASCII),
+        
+        ORIENTATION("Orientation", ExifTagConstants.EXIF_TAG_ORIENTATION, TiffFieldTypeConstants.FIELD_TYPE_SHORT);
         
         private final String mTagName;
         private final TagInfo mTagInfo;
@@ -66,11 +84,21 @@ public class Exif2Interface
     
     private String mFilename;
     private Map<Tag, String> mAttributes;
+    private byte[] mArray;
     
  
     public Exif2Interface(String filename) throws IOException
     {
         this.mFilename = filename;
+        this.mArray = null;
+        mAttributes = new HashMap<Tag, String>();
+        loadAttributes();
+    }
+
+    public Exif2Interface(byte array[]) throws IOException
+    {
+        this.mFilename = null;
+        this.mArray = array;
         mAttributes = new HashMap<Tag, String>();
         loadAttributes();
     }
@@ -86,14 +114,21 @@ public class Exif2Interface
     {
         InputStream  is = null;
         
-        if (mFilename.startsWith("http")) {
-            URLConnection connection = null;
-            URL url = new URL(mFilename);
-            connection = url.openConnection();
-            is = new BufferedInputStream(connection.getInputStream());
-        } else {
-            File srcFile = new File(mFilename);           
-            is = new BufferedInputStream(new FileInputStream(srcFile));
+        if (mFilename != null)
+        {
+            if (mFilename.startsWith("http")) {
+                URLConnection connection = null;
+                URL url = new URL(mFilename);
+                connection = url.openConnection();
+                is = new BufferedInputStream(connection.getInputStream());
+            } else {
+                File srcFile = new File(mFilename);
+                is = new BufferedInputStream(new FileInputStream(srcFile));
+            }
+        }
+        else if (mArray != null)
+        {
+            is = new ByteArrayInputStream(mArray);
         }
         
         return is;
@@ -107,6 +142,7 @@ public class Exif2Interface
             is = openInputStream();
             metadata = (JpegImageMetadata) Sanselan.getMetadata(is, null);
         } catch (ImageReadException e1) {
+            e1.printStackTrace();
             throw new IOException(e1.getMessage());
         } finally {
             if (is != null) {
@@ -123,7 +159,16 @@ public class Exif2Interface
                 TiffField field = metadata.findEXIFValue(tag.mTagInfo);
                 if (field != null) {
                     try {
-                        mAttributes.put(tag, field.getStringValue());
+                        String value = null;
+                        if (tag.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_SHORT)
+                        {
+                            value = String.valueOf(field.getIntValue());
+                        }
+                        else if (tag.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_ASCII)
+                        {
+                            value = field.getStringValue();
+                        }
+                        mAttributes.put(tag, value);
                     } catch (ImageReadException e) {
                         Log.w(TAG, "Error extracting Exif tag " + tag);
                         e.printStackTrace();
@@ -167,6 +212,11 @@ public class Exif2Interface
      */
     public synchronized void saveAttributes() throws IOException
     {
+        if (mFilename == null)
+        {
+            return;
+        }
+
         File srcFile = new File(mFilename);
         OutputStream os = null;
         
@@ -223,5 +273,72 @@ public class Exif2Interface
                 os.close();
             }
         }
+    }
+
+    private static Bitmap rotate(Bitmap bmp, int orientation)
+    {
+        Matrix matrix = null;
+        switch (orientation)
+        {
+            case ORIENTATION_UNDEFINED:
+            case ORIENTATION_NORMAL:
+            case ORIENTATION_FLIP_HORIZONTAL:
+            case ORIENTATION_FLIP_VERTICAL:
+            case ORIENTATION_TRANSPOSE:
+            case ORIENTATION_TRANSVERSE:
+                // do nothing
+                return bmp;
+            case ORIENTATION_ROTATE_90:
+                matrix = new Matrix();
+                matrix.postRotate(90);
+                return Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true);
+            case ORIENTATION_ROTATE_180:
+                matrix = new Matrix();
+                matrix.postRotate(180);
+                return Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true);
+            case ORIENTATION_ROTATE_270:
+                matrix = new Matrix();
+                matrix.postRotate(270);
+                return Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true);
+            default:
+                // do nothing
+                return bmp;
+        }
+    }
+
+    public static Bitmap handleOrientation(Bitmap bmp, String path)
+    {
+        int orientation = ORIENTATION_UNDEFINED;
+        try {
+            Exif2Interface exif = new Exif2Interface(path);
+            String orientationstr = exif.getAttribute(Exif2Interface.Tag.ORIENTATION);
+            if ((orientationstr != null) && !orientationstr.equals(""))
+            {
+                orientation = Integer.parseInt(orientationstr);
+            }
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+
+        return rotate(bmp, orientation);
+    }
+
+    public static Bitmap handleOrientation(Bitmap bmp, byte array[])
+    {
+        int orientation = ORIENTATION_UNDEFINED;
+        try {
+            Exif2Interface exif = new Exif2Interface(array);
+            String orientationstr = exif.getAttribute(Exif2Interface.Tag.ORIENTATION);
+            if ((orientationstr != null) && !orientationstr.equals(""))
+            {
+                orientation = Integer.parseInt(orientationstr);
+            }
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+
+        return rotate(bmp, orientation);
     }
 }
