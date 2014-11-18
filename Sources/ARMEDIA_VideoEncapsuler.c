@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <time.h>
+#include <utime.h>
 #include <string.h>
 #include <stdlib.h>
 #include <string.h>
@@ -840,6 +841,11 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         remove (myVideo->infoFilePath);
         rename (myVideo->tempFilePath, myVideo->outFilePath);
 
+        // change date creation in file system
+        struct utimbuf fsys_time;
+        fsys_time.actime = myVideo->creationTime;
+        fsys_time.modtime = myVideo->creationTime;
+        utime(myVideo->outFilePath, &fsys_time);
 
         if (myVideo->sps)
         {
