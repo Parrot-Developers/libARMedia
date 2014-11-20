@@ -20,9 +20,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
 
-import com.parrot.arsdk.aracademy.ARAcademyCountry;
-import com.parrot.arsdk.aracademy.ARAcademyProfile;
-import com.parrot.arsdk.aracademy.ARAcademyUser;
 import com.parrot.arsdk.ardatatransfer.ARDataTransferMedia;
 import com.parrot.arsdk.ardiscovery.ARDiscoveryService;
 import com.parrot.arsdk.ardiscovery.ARDISCOVERY_PRODUCT_ENUM;
