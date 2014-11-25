@@ -132,6 +132,12 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *videoPath, i
         *error = ARMEDIA_ERROR_BAD_PARAMETER;
         return NULL;
     }
+    if ('\0' == *videoPath)
+    {
+        ENCAPSULER_ERROR ("videoPath must not be empty");
+        *error = ARMEDIA_ERROR_BAD_PARAMETER;
+        return NULL;
+    }
 
     retVideo = (ARMEDIA_VideoEncapsuler_t*) malloc (sizeof(ARMEDIA_VideoEncapsuler_t));
     if (NULL == retVideo)
