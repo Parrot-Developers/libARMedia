@@ -167,12 +167,13 @@ uint32_t getVideoFpsFromAtom (uint8_t *mdhdAtom, const int atomSize);
 /**
  * @brief Read size and atomName from a given buffer of atom
  * This function get the size and the name of a given buffer atom
- * @param buffer Pointer to the buffer atom
- * @param offset Pointer of number of bytes offset in the video
- * @param tag char Pointer of the wanted atom Name
+ * @param[in] buffer Pointer to the buffer atom
+ * @param[in|out] offset Pointer of number of bytes offset in the video
+ * @param[in] size for the number of bytes of the video
+ * @param[in] tag char Pointer of the wanted atom Name
  * @return int return 0 if the tag is not found and increment the off with the atom size else return 1 if success
  */
-int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag);
+int seekMediaBufferToAtom (uint8_t *buff, long long *offset,long long size, const char *tag);
 
 /**
  * @brief This function reversed the byte order of a uint64_t

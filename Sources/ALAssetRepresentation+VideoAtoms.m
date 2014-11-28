@@ -62,7 +62,7 @@
         do
         {
             bytesRead = [self getBytes:buff fromOffset:offset length:size error:&error];
-            result = seekMediaBufferToAtom(buff, &offset, [atomName UTF8String]);
+            result = seekMediaBufferToAtom(buff, &offset, [self size], [atomName UTF8String]);
         }
         while ((error == nil) && !result && bytesRead !=0);
         

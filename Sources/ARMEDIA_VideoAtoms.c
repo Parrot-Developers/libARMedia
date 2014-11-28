@@ -1149,7 +1149,7 @@ uint64_t swap_uint64(uint64_t value)
     return ((uint64_t)atomSizeLow) << 32 | atomSizeHigh;
 }
 
-int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag)
+int seekMediaBufferToAtom (uint8_t *buff, long long *offset,long long size, const char *tag)
 {
     int retVal = 0;
 
@@ -1160,6 +1160,11 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag)
     atomSize = (uint64_t)ntohl(atomSize32);
     memcpy(&atomTag, buff + sizeof(uint32_t), sizeof(uint32_t));
 
+    if (atomSize == 0)
+    {
+        *offset += size - *offset;
+    }
+    
     if(atomSize == 1)
     {
         memcpy(&atomSize, buff + (2 * sizeof(uint32_t)), sizeof(uint64_t));
