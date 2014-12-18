@@ -65,6 +65,7 @@
 @property (nonatomic, strong) NSNumber *mediaType;
 @property (nonatomic, strong) NSURL *assetUrl;
 @property (nonatomic, strong) NSString *uuid;
+@property (nonatomic, assign) BOOL cloud;
 
 - (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media withIndex:(int)index;
 - (void)updateThumbnailWithARDATATRANSFER_Media_t:(ARDATATRANSFER_Media_t *)media;
