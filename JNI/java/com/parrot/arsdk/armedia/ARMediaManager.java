@@ -276,7 +276,7 @@ public class ARMediaManager
                                         HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(jsonReader.getString(ARMediaManagerPVATProductIdKey));
                                         if ((hashMap == null) || (!hashMap.containsKey(mediaFilePath)))
                                         {
-                                            ARMediaObject mediaObject = createMediaObjectFromJson(jsonReader);
+                                            ARMediaObject mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
                                             if(mediaObject != null)
                                             {
                                                 mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
@@ -404,6 +404,8 @@ public class ARMediaManager
         JSONObject jsonReader;
         String filename = file.getName();
 
+        String mediaFilePath = file.getAbsolutePath().substring(Environment.getExternalStorageDirectory().toString().length());
+        
         if (filename.endsWith(ARMEDIA_MANAGER_JPG))
         {
             Exif2Interface exif;
@@ -420,7 +422,7 @@ public class ARMediaManager
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
-                        mediaObject = createMediaObjectFromJson(jsonReader);
+                        mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
                         if(mediaObject != null)
                             mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
                         toAdd = true;
@@ -451,7 +453,7 @@ public class ARMediaManager
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
-                        mediaObject = createMediaObjectFromJson(jsonReader);
+                        mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
                         if(mediaObject != null)
                             mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_VIDEO;
                         toAdd = true;
@@ -537,7 +539,7 @@ public class ARMediaManager
                     HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(jsonReader.getString(ARMediaManagerPVATProductIdKey));
                     if ((hashMap == null) || (!hashMap.containsKey(mediaFilePath)))
                     {
-                        ARMediaObject mediaObject = createMediaObjectFromJson(jsonReader);
+                        ARMediaObject mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
                         if (mediaObject != null)
                         {
                             mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_VIDEO;
@@ -553,7 +555,7 @@ public class ARMediaManager
         }
     }
 
-    private ARMediaObject createMediaObjectFromJson(JSONObject jsonReader)
+    private ARMediaObject createMediaObjectFromJson(String mediaPath, JSONObject jsonReader)
     {
         ARMediaObject mediaObject = null;
 
@@ -563,12 +565,14 @@ public class ARMediaManager
             try
             {
                 mediaObject.productId = jsonReader.getString(ARMediaManagerPVATProductIdKey);
+                mediaObject.product = ARDiscoveryService.getProductFromProductID((int) Long.parseLong(mediaObject.productId, 16));
                 if (jsonReader.has(ARMediaManagerPVATMediaDateKey))
                     mediaObject.date = jsonReader.getString(ARMediaManagerPVATMediaDateKey);
                 if (jsonReader.has(ARMediaManagerPVATRunDateKey))
                     mediaObject.runDate = jsonReader.getString(ARMediaManagerPVATRunDateKey);
                 if (jsonReader.has(ARMediaManagerPVATuuidKey))
                     mediaObject.uuid = jsonReader.getString(ARMediaManagerPVATuuidKey);
+                mediaObject.filePath = mediaPath;
             }
             catch (JSONException e)
             {
