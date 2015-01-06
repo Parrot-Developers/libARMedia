@@ -508,7 +508,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     struct tm *nowTm;
     uint64_t dataTotalSize = 0;
     uint32_t nbFrames = 0;
-    char dateInfoString[ENCAPSULER_SMALL_STRING_SIZE] = {0};
 
     if (NULL == *encapsuler)
     {
