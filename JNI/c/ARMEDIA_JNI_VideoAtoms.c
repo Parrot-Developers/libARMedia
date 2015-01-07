@@ -33,6 +33,7 @@
 #include <libARMedia/ARMEDIA_VideoAtoms.h>
 #include <libARMedia/ARMEDIA_VideoEncapsuler.h>
 #include <stdlib.h>
+#include <sys/file.h>
 
 JNIEXPORT jbyteArray JNICALL
 Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeGetAtom(JNIEnv *env, jclass clazz, jstring fileName, jstring atom)
@@ -40,21 +41,26 @@ Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeGetAtom(JNIEnv *env, jclas
     const char *fname = (*env)->GetStringUTFChars(env, fileName, NULL);
     const char *atomName = (*env)->GetStringUTFChars(env, atom, NULL);
 
+    jbyteArray retArray = NULL;
 
     FILE *file = fopen (fname, "rb");
-
-    uint32_t size;
-    uint8_t *data = createDataFromFile (file, atomName, &size);
-
-    fclose(file);
-
-    jbyteArray retArray = NULL;
-    if (data != NULL)
+    if (file != NULL)
     {
-        retArray = (*env)->NewByteArray(env, size);
-        (*env)->SetByteArrayRegion(env, retArray, 0, size, (jbyte*)data);
+        int ret = flock(fileno(file), LOCK_EX);
 
-        free(data);
+        uint32_t size;
+        uint8_t *data = createDataFromFile (file, atomName, &size);
+
+        ret = flock(fileno(file), LOCK_UN);
+        fclose(file);
+
+        if (data != NULL)
+        {
+            retArray = (*env)->NewByteArray(env, size);
+            (*env)->SetByteArrayRegion(env, retArray, 0, size, (jbyte*)data);
+
+            free(data);
+        }
     }
 
     (*env)->ReleaseStringUTFChars(env, fileName, fname);

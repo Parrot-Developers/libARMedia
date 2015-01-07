@@ -404,7 +404,6 @@ public class ARMediaManager
         JSONObject jsonReader;
         String filename = file.getName();
 
-        String mediaFilePath = file.getAbsolutePath().substring(Environment.getExternalStorageDirectory().toString().length());
         
         if (filename.endsWith(ARMEDIA_MANAGER_JPG))
         {
@@ -422,7 +421,7 @@ public class ARMediaManager
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
-                        mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
+                        mediaObject = createMediaObjectFromJson("/DCIM/".concat(productName).concat("/").concat(filename), jsonReader);
                         if(mediaObject != null)
                             mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
                         toAdd = true;
@@ -453,7 +452,7 @@ public class ARMediaManager
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
-                        mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
+                        mediaObject = createMediaObjectFromJson("/DCIM/".concat(productName).concat("/").concat(filename), jsonReader);
                         if(mediaObject != null)
                             mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_VIDEO;
                         toAdd = true;
