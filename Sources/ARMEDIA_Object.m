@@ -80,6 +80,7 @@
         _date = [NSString stringWithUTF8String:media->date];
         _size = [NSNumber numberWithDouble:media->size];
         _productId = [NSString stringWithFormat:@"%04x",ARDISCOVERY_getProductID(media->product)];
+        _name = [NSString stringWithUTF8String:media->name];
         UIImage *newThumbnail = [UIImage imageWithData:[NSData dataWithBytes:media->thumbnail length:media->thumbnailSize]];
         if (![newThumbnail isEqual:_thumbnail])
         {
