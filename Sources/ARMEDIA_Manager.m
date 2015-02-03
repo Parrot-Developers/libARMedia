@@ -511,7 +511,6 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                       mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
                                       mediaObject.uuid = (NSString *) [atomValue valueForKey:kARMediaManagerPVATUUID];
                                       mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
-                                      mediaObject.name = [[mediaPath componentsSeparatedByString:@"/"]  lastObject];
                                       [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                       
                                       [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
@@ -579,7 +578,6 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                                   mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
                                                   mediaObject.uuid = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATUUID];
                                                   mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_PHOTO];
-                                                  mediaObject.name = [[mediaPath componentsSeparatedByString:@"/"] lastObject];
                                                   [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                                   [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                                                   
