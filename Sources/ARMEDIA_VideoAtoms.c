@@ -8,7 +8,7 @@
       notice, this list of conditions and the following disclaimer.
     * Redistributions in binary form must reproduce the above copyright
       notice, this list of conditions and the following disclaimer in
-      the documentation and/or other materials provided with the 
+      the documentation and/or other materials provided with the
       distribution.
     * Neither the name of Parrot nor the names
       of its contributors may be used to endorse or promote products
@@ -22,7 +22,7 @@
     COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
     INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
     BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
     AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
     OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
     OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
@@ -1187,7 +1187,7 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset,long long size, cons
 }
 
 
-char* ARMEDIA_VideoAtom_GetPVATString(eARDISCOVERY_PRODUCT id, char* uuid, char* runDate, struct tm* mediaDate)
+char* ARMEDIA_VideoAtom_GetPVATString(const eARDISCOVERY_PRODUCT id, const char* uuid, const char* runDate, const char* filepath, const struct tm* mediaDate)
 {
     struct json_object* pvato = (struct json_object*) json_object_new_object();
 
@@ -1204,6 +1204,15 @@ char* ARMEDIA_VideoAtom_GetPVATString(eARDISCOVERY_PRODUCT id, char* uuid, char*
 
         if (runDate != NULL) {
             json_object_object_add(pvato, "run_date", json_object_new_string(runDate));
+        }
+
+        if (filepath != NULL) {
+            // get filename from full path
+            char* filename = strrchr(filepath, '/');
+            if (filename == NULL) // '/' not found in path
+                json_object_object_add(pvato, "filename", json_object_new_string(filepath));
+            else
+                json_object_object_add(pvato, "filename", json_object_new_string(filename + 1));
         }
 
         if (mediaDate != NULL) {
