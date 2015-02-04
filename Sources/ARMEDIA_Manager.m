@@ -50,6 +50,7 @@ NSString *const kARMediaManagerPVATRunDateKey                   = @"run_date";
 NSString *const kARMediaManagerPVATMediaDateKey                 = @"media_date";
 NSString *const kARMediaManagerPVATProductIdKey                 = @"product_id";
 NSString *const kARMediaManagerPVATUUID                         = @"uuid";
+NSString *const kARMediaManagerPVATFileName                     = @"filename";
 
 // Archive keys
 NSString *const kARMediaManagerArchiverKey                      = @"kARMediaManagerArchiverKey";
@@ -401,7 +402,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                             mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
                             mediaObject.uuid = (NSString *) [atomValue valueForKey:kARMediaManagerPVATUUID];
                             mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
-                            
+                            mediaObject.name = (NSString *) [atomValue valueForKey:kARMediaManagerPVATFileName];
                             [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                             [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                         }
@@ -439,7 +440,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                         mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
                                         mediaObject.uuid = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATUUID];
                                         mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_PHOTO];
-                                        
+                                        mediaObject.name = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATFileName];
                                         [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                         [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                                     }
@@ -511,6 +512,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                       mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
                                       mediaObject.uuid = (NSString *) [atomValue valueForKey:kARMediaManagerPVATUUID];
                                       mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
+                                      mediaObject.name = (NSString *) [atomValue valueForKey:kARMediaManagerPVATFileName];
                                       [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                       
                                       [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
@@ -578,6 +580,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                                   mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
                                                   mediaObject.uuid = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATUUID];
                                                   mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_PHOTO];
+                                                  mediaObject.name = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATFileName];
                                                   [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                                   [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                                                   
