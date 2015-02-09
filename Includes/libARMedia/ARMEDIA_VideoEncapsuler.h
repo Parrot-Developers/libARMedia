@@ -185,4 +185,13 @@ int  ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath);
  */
 int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT product, const char *videoDate);
 
+/**
+ * Change run_date and media_date atom in file.
+ * @param FILE video file descriptor. The file descriptor MUST BE OPENED WITH READING AND WRITING OPTION
+ * @param const char for the date set on run_date and media_date in Atom
+ * @return 1 on success, 0 on failure
+ */
+int ARMEDIA_VideoEncapsuler_changePVATAtomDate (FILE *videoFile, const char *videoDate);
+
+
 #endif // _ARDRONE_VIDEO_ENCAPSULER_H_

@@ -64,6 +64,7 @@ NSString *const kARMediaManagerNotificationMediaAdded           = @"kARMediaMana
 NSString *const kARMediaManagerNotificationEndOfMediaAdding     = @"kARMediaManagerNotificationEndOfMediaAdding";
 NSString *const kARMediaManagerNotificationAccesDenied          = @"kARMediaManagerNotificationAccesDenied";
 
+NSString *const kARMediaManagerDefaultSkyControllerDateKey      = @"2014-01-01";
 
 // This block is always executed. If failure, an NSError is passed.
 typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
@@ -319,7 +320,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
              dispatch_semaphore_signal(sema);
              
          }
-                                failureBlock:^(NSError *error)
+        failureBlock:^(NSError *error)
          {
              NSLog(@"Failure : %@", error);
              dispatch_semaphore_signal(sema);
@@ -581,6 +582,23 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                                   mediaObject.uuid = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATUUID];
                                                   mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_PHOTO];
                                                   mediaObject.name = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATFileName];
+                                                  
+                                                  if (asset.editable && [[[mediaObject.date componentsSeparatedByString:@"T"] firstObject] isEqualToString:kARMediaManagerDefaultSkyControllerDateKey])
+                                                  {
+                                                      uint8_t *buffer = (uint8_t *)malloc(representation.size);
+                                                      NSError *error = nil;
+                                                      NSUInteger buffered = [representation getBytes:buffer fromOffset:0.0 length:representation.size error:&error];
+                                                      if (error == nil)
+                                                      {
+                                                          NSData *data = [NSData dataWithBytesNoCopy:buffer length:buffered freeWhenDone:YES];
+                                                          [asset setImageData:data metadata:[self setDateInTiffDictionary:metadata] completionBlock:nil];
+                                                      }
+                                                      else
+                                                      {
+                                                          free(buffer);
+                                                      }
+                                                  }
+                                                  
                                                   [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                                   [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                                                   
@@ -616,4 +634,38 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     return added;
 }
 
+
+- (NSDictionary *)setDateInTiffDictionary:(NSDictionary *)metadata
+{
+    NSMutableDictionary *retVal = [metadata mutableCopy];
+
+    NSString *tiffDescription = [[retVal objectForKey:(NSString *)kCGImagePropertyTIFFDictionary] objectForKey:(NSString *)kCGImagePropertyTIFFImageDescription];
+    NSData *data = [tiffDescription dataUsingEncoding:NSUTF8StringEncoding];
+    
+    if (data != nil)
+    {
+        NSError *jSONerror = nil;
+        NSString *updatedTiffDescription = nil;
+        id jSONDataDic =[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
+        if (jSONerror == nil)
+        {
+            NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+            [dateFormatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:@"UTC"]];
+            [dateFormatter setDateFormat:@"yyyy-MM-dd'T'HHmmss+0000"];
+            
+            NSDate *currentDate = [[NSDate alloc] init];
+            NSString *dateString = [dateFormatter stringFromDate:currentDate];
+            
+            [jSONDataDic setValue:dateString forKey:(NSString *)kARMediaManagerPVATMediaDateKey];
+            [jSONDataDic setValue:dateString forKey:(NSString *)kARMediaManagerPVATRunDateKey];
+            data = [NSJSONSerialization dataWithJSONObject:jSONDataDic options:0 error:&jSONerror];
+        }
+        if (jSONerror == nil)
+        {
+            updatedTiffDescription = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            [[retVal objectForKey:(NSString *)kCGImagePropertyTIFFDictionary] setObject:updatedTiffDescription forKey:(NSString *)kCGImagePropertyTIFFImageDescription];
+        }
+    }
+    return (NSDictionary *)retVal;
+}
 @end

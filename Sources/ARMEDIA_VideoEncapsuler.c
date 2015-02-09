@@ -1215,19 +1215,63 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
     return noError && finishNoError;
 }
 
+
+int ARMEDIA_VideoEncapsuler_changePVATAtomDate (FILE *videoFile, const char *videoDate)
+{
+    int result = 0;
+    int retVal = 0;
+    
+    long offset = 0;
+    uint8_t *atomBuffer = NULL;
+
+    uint64_t atomSize = 0;
+    result = seekMediaFileToAtom (videoFile, "pvat", &atomSize);
+
+    if(result)
+    {
+        offset = ftell(videoFile);
+        atomSize -= (2 * sizeof(uint32_t)); // Remove [size - tag] as it was read by seek
+        atomBuffer = (uint8_t *)calloc(atomSize, sizeof(uint8_t));
+
+        if (atomSize == fread(atomBuffer, sizeof (uint8_t), atomSize, videoFile))
+        {
+            json_object *jobj = json_tokener_parse((char *)atomBuffer);
+            json_object *jstringVideoDate = json_object_new_string(videoDate);
+            json_object_object_add(jobj, "media_date", jstringVideoDate);
+            json_object_object_add(jobj, "run_date", jstringVideoDate);
+            
+            movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(jobj));
+            fseek(videoFile, offset - 8, SEEK_SET);
+            
+            if (-1 == writeAtomToFile(&pvatAtom, videoFile))
+            {
+                ENCAPSULER_ERROR ("Error while writing pvatAtom");
+            }
+            else
+            {
+                retVal = 1;
+            }
+        }
+        free(atomBuffer);
+    }
+
+    return retVal;
+}
+
 int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT product, const char *videoDate)
 {
     int retVal = 0;
     struct json_object* pvato;
     pvato = json_object_new_object();
-    if (pvato != NULL) {
+    if (pvato != NULL)
+    {
         char prodid[5];
         snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID(product));
         json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
         json_object_object_add(pvato, "run_date", json_object_new_string(videoDate));
         json_object_object_add(pvato, "media_date", json_object_new_string(videoDate));
-
         movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(pvato));
+        
         if (-1 == writeAtomToFile (&pvatAtom, videoFile))
         {
             ENCAPSULER_ERROR ("Error while writing pvatAtom");

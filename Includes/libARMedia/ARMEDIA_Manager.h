@@ -57,6 +57,7 @@ UIKIT_EXTERN NSString *const kARMediaManagerNotificationUpdated;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationMediaAdded;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationEndOfMediaAdding;
 UIKIT_EXTERN NSString *const kARMediaManagerNotificationAccesDenied;
+UIKIT_EXTERN NSString *const kARMediaManagerDefaultSkyControllerDateKey;
 
 @interface ARMediaManager : NSObject
 /**

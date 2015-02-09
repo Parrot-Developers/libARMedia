@@ -861,7 +861,7 @@ movie_atom_t *pvatAtomGen(const char *jsonString)
    }
 */
 
-static int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAtomSize)
+int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAtomSize)
 {
     uint32_t atomSize = 0;
     char fourCCTag [5] = {0};
