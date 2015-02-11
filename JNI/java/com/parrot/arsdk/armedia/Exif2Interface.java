@@ -45,10 +45,13 @@ import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
+import java.lang.ClassCastException;
 
 import org.apache.sanselan.ImageReadException;
 import org.apache.sanselan.Sanselan;
 import org.apache.sanselan.SanselanException;
+import org.apache.sanselan.common.BinaryOutputStream;
 import org.apache.sanselan.formats.jpeg.JpegImageMetadata;
 import org.apache.sanselan.formats.jpeg.exifRewrite.ExifRewriter;
 import org.apache.sanselan.formats.tiff.TiffField;
@@ -163,7 +166,11 @@ public class Exif2Interface
         
         return is;
     }
-    
+
+    /**
+     * Load a set of tags from the metadata of the jpg image.
+     * @throws IOException
+     */
     private synchronized void loadAttributes() throws IOException
     {
         JpegImageMetadata metadata;
@@ -190,17 +197,27 @@ public class Exif2Interface
                 if (field != null) {
                     try {
                         String value = null;
+
                         if (tag.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_SHORT)
                         {
-                            value = String.valueOf(field.getIntValue());
+                            try {
+                                value = String.valueOf(field.getIntValue());
+                            }
+                            catch (ClassCastException integerException) {
+                                try {
+                                    // if the numeric value wasn't stored as a simple Integer, it
+                                    // might has been saved at the first index of an array.
+                                    value = String.valueOf(field.getIntArrayValue()[0]);
+                                }
+                                catch (ClassCastException arrayException) {}
+                            }
                         }
-                        else if (tag.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_ASCII)
-                        {
+                        else if (tag.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_ASCII) {
                             value = field.getStringValue();
                         }
-                        mAttributes.put(tag, value);
+                        if (value != null)
+                            mAttributes.put(tag, value);
                     } catch (ImageReadException e) {
-                        Log.w(TAG, "Error extracting Exif tag " + tag);
                         e.printStackTrace();
                     }
                 }
@@ -242,8 +259,7 @@ public class Exif2Interface
      */
     public synchronized void saveAttributes() throws IOException
     {
-        if (mFilename == null)
-        {
+        if (mFilename == null) {
             return;
         }
 
@@ -264,41 +280,49 @@ public class Exif2Interface
           if (outputSet == null) {
               outputSet = new TiffOutputSet();
           }
-          
+
           if (mAttributes.size() > 0) {
+              TiffOutputDirectory rootDirectory = outputSet.getRootDirectory();
               Set<Tag> keys = mAttributes.keySet();
-              for (Tag key:keys) {
-                  String data = mAttributes.get(key);                  
-                   byte[] bytes = key.mTagInfo.encodeValue(key.mFieldType, data, outputSet.byteOrder); 
-                   
-                   TiffOutputField outputField = new TiffOutputField(key.mTagInfo, key.mFieldType, bytes.length, bytes);                        
-                   TiffOutputDirectory exifDirectory = outputSet.getOrCreateExifDirectory();
-                          
-                  // make sure to remove old value if present (this method will
-                  // not fail if the tag does not exist).
-                  exifDirectory.removeField(key.mTagInfo);
-                  exifDirectory.add(outputField);
-                  
-                  Log.v(TAG, "Saving tag " + key + " with value " + data);
+              for (Tag key : keys) {
+
+                  TiffOutputField field = outputSet.findField(key.mTagInfo);
+                  if (field != null) {
+                      outputSet.removeField(key.mTagInfo);
+                  }
+
+                  String data = mAttributes.get(key);
+                  byte[] bytes = null;
+                  if (key.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_SHORT) {
+                      bytes = key.mTagInfo.encodeValue(key.mFieldType, Integer.parseInt(data), outputSet.byteOrder);
+                  } else if (key.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_ASCII) {
+                      bytes = key.mTagInfo.encodeValue(key.mFieldType, data, outputSet.byteOrder);
+                  }
+
+                  if (bytes != null) {
+                      TiffOutputField outputField = new TiffOutputField(key.mTagInfo, key.mFieldType, bytes.length, bytes);
+                      rootDirectory.removeField(key.mTagInfo);
+                      rootDirectory.add(outputField);
+                  }
               }
-              
-              File outFile = File.createTempFile("exif", null, srcFile.getParentFile());
-              outFile.createNewFile();
-              
-              os = new BufferedOutputStream(new FileOutputStream(outFile));
-            
+              File metadataFile = File.createTempFile("exif", null, srcFile.getParentFile());
+              metadataFile.createNewFile();
+
+              os = new BufferedOutputStream(new FileOutputStream(metadataFile));
               new ExifRewriter().updateExifMetadataLossless(srcFile, os, outputSet);
-            
               os.close();
               os = null;
-            
+
               srcFile.delete();
-              outFile.renameTo(srcFile);
-          }          
+              metadataFile.renameTo(srcFile);
+          }
         } catch (SanselanException e) {
             e.printStackTrace();
             throw new IOException();
-        } finally {
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        finally {
             if (os != null) {
                 os.close();
             }

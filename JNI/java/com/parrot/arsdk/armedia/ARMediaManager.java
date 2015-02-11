@@ -104,17 +104,17 @@ public class ARMediaManager
 
     private static final String ARMEDIA_MANAGER_DATABASE_FILENAME = "ARMediaDB";
 
-    private static final String ARMEDIA_MANAGER_JPG = ".jpg";
-    private static final String ARMEDIA_MANAGER_MP4 = ".mp4";
+    public static final String ARMEDIA_MANAGER_JPG = ".jpg";
+    public static final String ARMEDIA_MANAGER_MP4 = ".mp4";
 
     private static final String kARMediaManagerKey = "kARMediaManagerKey";
     private static final String kARMediaManagerProjectDicCount = "kARMediaManagerProjectDicCount";
 
     // PVAT Keys
-    private static final String ARMediaManagerPVATRunDateKey = "run_date";
-    private static final String ARMediaManagerPVATMediaDateKey = "media_date";
-    private static final String ARMediaManagerPVATProductIdKey = "product_id";
-    private static final String ARMediaManagerPVATuuidKey = "uuid";
+    public static final String ARMediaManagerPVATRunDateKey = "run_date";
+    public static final String ARMediaManagerPVATMediaDateKey = "media_date";
+    public static final String ARMediaManagerPVATProductIdKey = "product_id";
+    public static final String ARMediaManagerPVATuuidKey = "uuid";
 
     public final static String ARMediaManagerNotificationDictionary = "ARMediaManagerNotificationDictionary";
     public final static String ARMediaManagerNotificationDictionaryIsInitKey = "ARMediaManagerNotificationDictionaryIsInitKey";
