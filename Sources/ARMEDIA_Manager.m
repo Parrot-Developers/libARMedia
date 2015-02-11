@@ -650,6 +650,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
         if (jSONerror == nil)
         {
             NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+            [dateFormatter setTimeZone:[NSTimeZone systemTimeZone]];
             [dateFormatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:@"UTC"]];
             [dateFormatter setDateFormat:@"yyyy-MM-dd'T'HHmmss+0000"];
             
