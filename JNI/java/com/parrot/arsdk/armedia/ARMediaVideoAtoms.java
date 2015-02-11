@@ -41,6 +41,8 @@ public class ARMediaVideoAtoms {
 
     private static native void nativeWritePvat(String path, int discoveryProduct, String videoDate);
 
+    private static native void nativeChangePvatDate(String path, String videoDate);
+
     private static final String TAG = "toto";
     //private static final String TAG = ARMediaVideoAtoms.class.getSimpleName();
 
@@ -73,5 +75,10 @@ public class ARMediaVideoAtoms {
     public static void writePvat(String path, ARDISCOVERY_PRODUCT_ENUM discoveryProduct, String videoDate)
     {
         nativeWritePvat(path, discoveryProduct.getValue(), videoDate);
+    }
+
+    public static void changePvatDate(String path, String videoDate)
+    {
+        nativeChangePvatDate(path, videoDate);
     }
 }

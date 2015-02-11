@@ -70,6 +70,31 @@ Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeGetAtom(JNIEnv *env, jclas
 }
 
 JNIEXPORT void JNICALL
+Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeChangePvatDate(JNIEnv *env, jclass clazz, jstring fileName, jstring date)
+{
+    const char *fname = (*env)->GetStringUTFChars(env, fileName, NULL);
+    const char *videoDate = (*env)->GetStringUTFChars(env, date, NULL);
+
+    FILE *videoFile = fopen(fname, "r+");
+
+    if (videoFile != NULL)
+    {
+      ARMEDIA_VideoEncapsuler_changePVATAtomDate(videoFile, videoDate);
+      fclose(videoFile);
+    }
+
+    if (fileName != NULL && fname != NULL)
+    {
+        (*env)->ReleaseStringUTFChars(env, fileName, fname);
+    }
+
+    if (date != NULL && videoDate != NULL)
+    {
+        (*env)->ReleaseStringUTFChars(env, date, videoDate);
+    }
+}
+
+JNIEXPORT void JNICALL
 Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeWritePvat(JNIEnv *env, jclass clazz, jstring fileName, int product, jstring date)
 {
     const char *fname = (*env)->GetStringUTFChars(env, fileName, NULL);
@@ -80,16 +105,16 @@ Java_com_parrot_arsdk_armedia_ARMediaVideoAtoms_nativeWritePvat(JNIEnv *env, jcl
     if (videoFile != NULL)
     {
         ARMEDIA_VideoEncapsuler_addPVATAtom(videoFile, product, videoDate);
+	fclose(videoFile);
     }
 
     if (fileName != NULL && fname != NULL)
     {
-        (*env)->ReleaseStringUTFChars(env, fileName, fname);    
+        (*env)->ReleaseStringUTFChars(env, fileName, fname);
     }
     
     if (date != NULL && videoDate != NULL)
     {
-        (*env)->ReleaseStringUTFChars(env, date, videoDate);    
+        (*env)->ReleaseStringUTFChars(env, date, videoDate);
     }
-    
 }
