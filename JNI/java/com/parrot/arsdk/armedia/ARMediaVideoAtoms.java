@@ -43,8 +43,7 @@ public class ARMediaVideoAtoms {
 
     private static native void nativeChangePvatDate(String path, String videoDate);
 
-    private static final String TAG = "toto";
-    //private static final String TAG = ARMediaVideoAtoms.class.getSimpleName();
+    private static final String TAG = "ARMediaVideoAtoms";
 
     public static String getPvat(String path)
     {
