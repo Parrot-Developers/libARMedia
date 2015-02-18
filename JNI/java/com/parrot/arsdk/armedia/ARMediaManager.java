@@ -482,7 +482,7 @@ public class ARMediaManager
                 directoryFolder.mkdir();
             }
             File destination = new File(directory.concat("/").concat(filename));
-            if (copy(file, destination) && mediaObject != null)
+            if (mediaObject != null)
             {
                 context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(destination)));
                 ((HashMap<String, Object>) projectsDictionary.get(productName)).put(destination.getPath().substring(Environment.getExternalStorageDirectory().toString().length()), mediaObject);
@@ -492,31 +492,6 @@ public class ARMediaManager
         }
 
         isUpdate = true;
-        return added;
-    }
-
-    private boolean copy(File src, File dst) 
-    {
-        boolean added = false;
-        try 
-        {
-            InputStream in = new FileInputStream(src);
-            OutputStream out = new FileOutputStream(dst);
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) > 0)
-            {
-                out.write(buf, 0, len);
-            }
-            out.flush();
-            in.close();
-            out.close();
-            added = true;
-        }
-        catch(Exception e)
-        {
-            e.printStackTrace();
-        }
         return added;
     }
 
