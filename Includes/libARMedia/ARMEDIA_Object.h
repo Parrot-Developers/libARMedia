@@ -54,7 +54,7 @@
 @interface ARMediaObject : NSObject <NSCoding, NSCopying>
 
 @property (nonatomic, weak)   id<ARMediaObjectDelegate> delegate;
-@property (nonatomic, assign) int index;
+@property (nonatomic, assign) NSUInteger index;
 @property (nonatomic, strong) NSString *runDate;
 @property (nonatomic, strong) NSString *productId;
 @property (nonatomic, strong) NSString *name;
@@ -67,7 +67,7 @@
 @property (nonatomic, strong) NSString *uuid;
 @property (nonatomic, assign) BOOL cloud;
 
-- (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media withIndex:(int)index;
+- (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media withIndex:(NSUInteger)index;
 - (void)updateThumbnailWithARDATATRANSFER_Media_t:(ARDATATRANSFER_Media_t *)media;
 - (void)updateThumbnailWithNSUrl:(NSURL *)assetUrl;
 @end

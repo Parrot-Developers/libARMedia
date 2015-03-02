@@ -69,7 +69,7 @@
     return self;
 }
 
-- (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media withIndex:(int)index
+- (void)updateDataTransferMedia:(ARDATATRANSFER_Media_t *)media withIndex:(NSUInteger)index
 {
     BOOL thumbnailHasChanged = NO;
     if(media != NULL)

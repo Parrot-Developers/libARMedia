@@ -122,7 +122,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
         NSString *documentsDirectory = [paths objectAtIndex:0];
         NSString *path = [documentsDirectory stringByAppendingPathComponent:ARMEDIA_MANAGER_DATABASE_FILENAME];
         NSData *data = [[NSData alloc] initWithContentsOfFile:path];
-        int valueKARMediaManagerKey = [[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] intValue];
+        NSUInteger valueKARMediaManagerKey = [[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] integerValue];
         
         if(valueKARMediaManagerKey > 0)
         {
@@ -193,7 +193,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                 // Get count of assets
                 _mediaAssetsCount = [group numberOfAssets];
                 
-                NSLog(@"mediaAssetCount : %d",[group numberOfAssets]);
+                NSLog(@"mediaAssetCount : %d",(int)[group numberOfAssets]);
                 if(_mediaAssetsCount > 0)
                 {
                     [self retrieveAssetsWithGroup:group];
@@ -461,7 +461,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
         }
         else
         {
-            [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithFormat:@"%d",index]  forKey:kARMediaManagerKey];
+            [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithFormat:@"%lu",(unsigned long)index]  forKey:kARMediaManagerKey];
             [_privateProjectsDictionary setDictionary:tempProjectDictionaries];
             [self saveMediaOnArchive];
             _projectsDictionary = [_privateProjectsDictionary copy];
