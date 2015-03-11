@@ -1,4 +1,34 @@
 /*
+    Copyright (C) 2014 Parrot SA
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the
+      distribution.
+    * Neither the name of Parrot nor the names
+      of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written
+      permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+    AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+    OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+*/
+/*
  * ARMEDIA_Videoencapsuler.c
  * ARDroneLib
  *
@@ -484,7 +514,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     struct tm *nowTm;
     uint64_t dataTotalSize = 0;
     uint32_t nbFrames = 0;
-    char dateInfoString[ENCAPSULER_SMALL_STRING_SIZE] = {0};
 
     if (NULL == *encapsuler)
     {
@@ -805,7 +834,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     /* pvat insertion at the benning of the file */
     if (ARMEDIA_OK == localError)
     {
-        char* pvatstr = ARMEDIA_VideoAtom_GetPVATString((*encapsuler)->video->product, (*encapsuler)->video->uuid, (*encapsuler)->video->runDate, nowTm);
+        char* pvatstr = ARMEDIA_VideoAtom_GetPVATString((*encapsuler)->video->product, (*encapsuler)->video->uuid, (*encapsuler)->video->runDate, (*encapsuler)->video->outFilePath, nowTm);
         if (pvatstr != NULL) {
             size_t len = strlen(pvatstr);
             movie_atom_t *pvatAtom = pvatAtomGen(pvatstr);
@@ -1192,19 +1221,63 @@ int ARMEDIA_VideoEncapsuler_TryFixInfoFile (const char *infoFilePath)
     return noError && finishNoError;
 }
 
+
+int ARMEDIA_VideoEncapsuler_changePVATAtomDate (FILE *videoFile, const char *videoDate)
+{
+    int result = 0;
+    int retVal = 0;
+    
+    long offset = 0;
+    uint8_t *atomBuffer = NULL;
+
+    uint64_t atomSize = 0;
+    result = seekMediaFileToAtom (videoFile, "pvat", &atomSize);
+
+    if(result)
+    {
+        offset = ftell(videoFile);
+        atomSize -= (2 * sizeof(uint32_t)); // Remove [size - tag] as it was read by seek
+        atomBuffer = (uint8_t *)calloc(atomSize, sizeof(uint8_t));
+
+        if (atomSize == fread(atomBuffer, sizeof (uint8_t), atomSize, videoFile))
+        {
+            json_object *jobj = json_tokener_parse((char *)atomBuffer);
+            json_object *jstringVideoDate = json_object_new_string(videoDate);
+            json_object_object_add(jobj, "media_date", jstringVideoDate);
+            json_object_object_add(jobj, "run_date", jstringVideoDate);
+            
+            movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(jobj));
+            fseek(videoFile, offset - 8, SEEK_SET);
+            
+            if (-1 == writeAtomToFile(&pvatAtom, videoFile))
+            {
+                ENCAPSULER_ERROR ("Error while writing pvatAtom");
+            }
+            else
+            {
+                retVal = 1;
+            }
+        }
+        free(atomBuffer);
+    }
+
+    return retVal;
+}
+
 int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT product, const char *videoDate)
 {
     int retVal = 0;
     struct json_object* pvato;
     pvato = json_object_new_object();
-    if (pvato != NULL) {
+    if (pvato != NULL)
+    {
         char prodid[5];
         snprintf(prodid, 5, "%04X", ARDISCOVERY_getProductID(product));
         json_object_object_add(pvato, "product_id", json_object_new_string(prodid));
         json_object_object_add(pvato, "run_date", json_object_new_string(videoDate));
         json_object_object_add(pvato, "media_date", json_object_new_string(videoDate));
-
         movie_atom_t *pvatAtom = pvatAtomGen(json_object_to_json_string(pvato));
+        
         if (-1 == writeAtomToFile (&pvatAtom, videoFile))
         {
             ENCAPSULER_ERROR ("Error while writing pvatAtom");

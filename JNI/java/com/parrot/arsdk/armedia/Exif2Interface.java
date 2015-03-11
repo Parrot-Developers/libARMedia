@@ -1,3 +1,33 @@
+/*
+    Copyright (C) 2014 Parrot SA
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the 
+      distribution.
+    * Neither the name of Parrot nor the names
+      of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written
+      permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+    AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+    OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+*/
 package com.parrot.arsdk.armedia;
 
 import java.io.BufferedInputStream;
@@ -15,10 +45,13 @@ import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
+import java.lang.ClassCastException;
 
 import org.apache.sanselan.ImageReadException;
 import org.apache.sanselan.Sanselan;
 import org.apache.sanselan.SanselanException;
+import org.apache.sanselan.common.BinaryOutputStream;
 import org.apache.sanselan.formats.jpeg.JpegImageMetadata;
 import org.apache.sanselan.formats.jpeg.exifRewrite.ExifRewriter;
 import org.apache.sanselan.formats.tiff.TiffField;
@@ -133,7 +166,11 @@ public class Exif2Interface
         
         return is;
     }
-    
+
+    /**
+     * Load a set of tags from the metadata of the jpg image.
+     * @throws IOException
+     */
     private synchronized void loadAttributes() throws IOException
     {
         JpegImageMetadata metadata;
@@ -160,17 +197,27 @@ public class Exif2Interface
                 if (field != null) {
                     try {
                         String value = null;
+
                         if (tag.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_SHORT)
                         {
-                            value = String.valueOf(field.getIntValue());
+                            try {
+                                value = String.valueOf(field.getIntValue());
+                            }
+                            catch (ClassCastException integerException) {
+                                try {
+                                    // if the numeric value wasn't stored as a simple Integer, it
+                                    // might has been saved at the first index of an array.
+                                    value = String.valueOf(field.getIntArrayValue()[0]);
+                                }
+                                catch (ClassCastException arrayException) {}
+                            }
                         }
-                        else if (tag.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_ASCII)
-                        {
+                        else if (tag.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_ASCII) {
                             value = field.getStringValue();
                         }
-                        mAttributes.put(tag, value);
+                        if (value != null)
+                            mAttributes.put(tag, value);
                     } catch (ImageReadException e) {
-                        Log.w(TAG, "Error extracting Exif tag " + tag);
                         e.printStackTrace();
                     }
                 }
@@ -212,8 +259,7 @@ public class Exif2Interface
      */
     public synchronized void saveAttributes() throws IOException
     {
-        if (mFilename == null)
-        {
+        if (mFilename == null) {
             return;
         }
 
@@ -234,41 +280,49 @@ public class Exif2Interface
           if (outputSet == null) {
               outputSet = new TiffOutputSet();
           }
-          
+
           if (mAttributes.size() > 0) {
+              TiffOutputDirectory rootDirectory = outputSet.getRootDirectory();
               Set<Tag> keys = mAttributes.keySet();
-              for (Tag key:keys) {
-                  String data = mAttributes.get(key);                  
-                   byte[] bytes = key.mTagInfo.encodeValue(key.mFieldType, data, outputSet.byteOrder); 
-                   
-                   TiffOutputField outputField = new TiffOutputField(key.mTagInfo, key.mFieldType, bytes.length, bytes);                        
-                   TiffOutputDirectory exifDirectory = outputSet.getOrCreateExifDirectory();
-                          
-                  // make sure to remove old value if present (this method will
-                  // not fail if the tag does not exist).
-                  exifDirectory.removeField(key.mTagInfo);
-                  exifDirectory.add(outputField);
-                  
-                  Log.v(TAG, "Saving tag " + key + " with value " + data);
+              for (Tag key : keys) {
+
+                  TiffOutputField field = outputSet.findField(key.mTagInfo);
+                  if (field != null) {
+                      outputSet.removeField(key.mTagInfo);
+                  }
+
+                  String data = mAttributes.get(key);
+                  byte[] bytes = null;
+                  if (key.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_SHORT) {
+                      bytes = key.mTagInfo.encodeValue(key.mFieldType, Integer.parseInt(data), outputSet.byteOrder);
+                  } else if (key.mFieldType == TiffFieldTypeConstants.FIELD_TYPE_ASCII) {
+                      bytes = key.mTagInfo.encodeValue(key.mFieldType, data, outputSet.byteOrder);
+                  }
+
+                  if (bytes != null) {
+                      TiffOutputField outputField = new TiffOutputField(key.mTagInfo, key.mFieldType, bytes.length, bytes);
+                      rootDirectory.removeField(key.mTagInfo);
+                      rootDirectory.add(outputField);
+                  }
               }
-              
-              File outFile = File.createTempFile("exif", null, srcFile.getParentFile());
-              outFile.createNewFile();
-              
-              os = new BufferedOutputStream(new FileOutputStream(outFile));
-            
+              File metadataFile = File.createTempFile("exif", null, srcFile.getParentFile());
+              metadataFile.createNewFile();
+
+              os = new BufferedOutputStream(new FileOutputStream(metadataFile));
               new ExifRewriter().updateExifMetadataLossless(srcFile, os, outputSet);
-            
               os.close();
               os = null;
-            
+
               srcFile.delete();
-              outFile.renameTo(srcFile);
-          }          
+              metadataFile.renameTo(srcFile);
+          }
         } catch (SanselanException e) {
             e.printStackTrace();
             throw new IOException();
-        } finally {
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        finally {
             if (os != null) {
                 os.close();
             }

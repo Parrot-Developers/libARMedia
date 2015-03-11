@@ -1,4 +1,34 @@
 /*
+    Copyright (C) 2014 Parrot SA
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the
+      distribution.
+    * Neither the name of Parrot nor the names
+      of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written
+      permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+    AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+    OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+*/
+/*
  * ARMEDIA_VideoAtoms.h
  *
  * Created by n.brulez on 19/08/11
@@ -137,12 +167,23 @@ uint32_t getVideoFpsFromAtom (uint8_t *mdhdAtom, const int atomSize);
 /**
  * @brief Read size and atomName from a given buffer of atom
  * This function get the size and the name of a given buffer atom
- * @param buffer Pointer to the buffer atom
- * @param offset Pointer of number of bytes offset in the video
- * @param tag char Pointer of the wanted atom Name
+ * @param[in] buffer Pointer to the buffer atom
+ * @param[in|out] offset Pointer of number of bytes offset in the video
+ * @param[in] size for the number of bytes of the video
+ * @param[in] tag char Pointer of the wanted atom Name
  * @return int return 0 if the tag is not found and increment the off with the atom size else return 1 if success
  */
-int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag);
+int seekMediaBufferToAtom (uint8_t *buff, long long *offset,long long size, const char *tag);
+
+/**
+ * @brief Read size and atomName from a given video file
+ * This function seek a file to a given Atom
+ * @param[in] videoFile Pointer to the video file
+ * @param[in] tag char Pointer of the wanted atom Name
+ * @param[in|out] size Pointer of number of bytes for te wanted atom in the video
+ * @return int return 0 if the tag is not found else return 1 if success and set the size of retAtomSize
+ */
+int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAtomSize);
 
 /**
  * @brief This function reversed the byte order of a uint64_t
@@ -151,6 +192,6 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset, const char *tag);
 */
 uint64_t swap_uint64(uint64_t value);
 
-char* ARMEDIA_VideoAtom_GetPVATString(eARDISCOVERY_PRODUCT id, char* uuid, char* runDate, struct tm* mediaDate);
+char* ARMEDIA_VideoAtom_GetPVATString(const eARDISCOVERY_PRODUCT id, const char* uuid, const char* runDate, const char* filepath, const struct tm* mediaDate);
 
 #endif // _ARMEDIA_VIDEO_ATOMS_H_

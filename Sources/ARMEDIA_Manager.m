@@ -1,3 +1,33 @@
+/*
+    Copyright (C) 2014 Parrot SA
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the 
+      distribution.
+    * Neither the name of Parrot nor the names
+      of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written
+      permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+    AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+    OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+*/
 /**
  * @file   ARMEDIA_Manager.m
  * @author malick.sylla.ext@parrot.fr
@@ -20,6 +50,7 @@ NSString *const kARMediaManagerPVATRunDateKey                   = @"run_date";
 NSString *const kARMediaManagerPVATMediaDateKey                 = @"media_date";
 NSString *const kARMediaManagerPVATProductIdKey                 = @"product_id";
 NSString *const kARMediaManagerPVATUUID                         = @"uuid";
+NSString *const kARMediaManagerPVATFileName                     = @"filename";
 
 // Archive keys
 NSString *const kARMediaManagerArchiverKey                      = @"kARMediaManagerArchiverKey";
@@ -33,6 +64,7 @@ NSString *const kARMediaManagerNotificationMediaAdded           = @"kARMediaMana
 NSString *const kARMediaManagerNotificationEndOfMediaAdding     = @"kARMediaManagerNotificationEndOfMediaAdding";
 NSString *const kARMediaManagerNotificationAccesDenied          = @"kARMediaManagerNotificationAccesDenied";
 
+NSString *const kARMediaManagerDefaultSkyControllerDateKey      = @"2014-01-01";
 
 // This block is always executed. If failure, an NSError is passed.
 typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
@@ -90,7 +122,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
         NSString *documentsDirectory = [paths objectAtIndex:0];
         NSString *path = [documentsDirectory stringByAppendingPathComponent:ARMEDIA_MANAGER_DATABASE_FILENAME];
         NSData *data = [[NSData alloc] initWithContentsOfFile:path];
-        int valueKARMediaManagerKey = [[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] intValue];
+        NSUInteger valueKARMediaManagerKey = [[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] integerValue];
         
         if(valueKARMediaManagerKey > 0)
         {
@@ -161,7 +193,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                 // Get count of assets
                 _mediaAssetsCount = [group numberOfAssets];
                 
-                NSLog(@"mediaAssetCount : %d",[group numberOfAssets]);
+                NSLog(@"mediaAssetCount : %d",(int)[group numberOfAssets]);
                 if(_mediaAssetsCount > 0)
                 {
                     [self retrieveAssetsWithGroup:group];
@@ -288,7 +320,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
              dispatch_semaphore_signal(sema);
              
          }
-                                failureBlock:^(NSError *error)
+        failureBlock:^(NSError *error)
          {
              NSLog(@"Failure : %@", error);
              dispatch_semaphore_signal(sema);
@@ -371,7 +403,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                             mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
                             mediaObject.uuid = (NSString *) [atomValue valueForKey:kARMediaManagerPVATUUID];
                             mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
-                            
+                            mediaObject.name = (NSString *) [atomValue valueForKey:kARMediaManagerPVATFileName];
                             [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                             [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                         }
@@ -409,7 +441,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                         mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
                                         mediaObject.uuid = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATUUID];
                                         mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_PHOTO];
-                                        
+                                        mediaObject.name = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATFileName];
                                         [[tempProjectDictionaries valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                         [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                                     }
@@ -429,7 +461,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
         }
         else
         {
-            [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithFormat:@"%d",index]  forKey:kARMediaManagerKey];
+            [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithFormat:@"%lu",(unsigned long)index]  forKey:kARMediaManagerKey];
             [_privateProjectsDictionary setDictionary:tempProjectDictionaries];
             [self saveMediaOnArchive];
             _projectsDictionary = [_privateProjectsDictionary copy];
@@ -481,6 +513,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                       mediaObject.runDate = (NSString *)[atomValue valueForKey:kARMediaManagerPVATRunDateKey];
                                       mediaObject.uuid = (NSString *) [atomValue valueForKey:kARMediaManagerPVATUUID];
                                       mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
+                                      mediaObject.name = (NSString *) [atomValue valueForKey:kARMediaManagerPVATFileName];
                                       [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                       
                                       [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
@@ -548,6 +581,24 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
                                                   mediaObject.runDate = (NSString *)[jSONDataDic valueForKey:kARMediaManagerPVATRunDateKey];
                                                   mediaObject.uuid = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATUUID];
                                                   mediaObject.mediaType = [NSNumber numberWithInt:MEDIA_TYPE_PHOTO];
+                                                  mediaObject.name = (NSString *) [jSONDataDic valueForKey:kARMediaManagerPVATFileName];
+                                                  
+                                                  if (asset.editable && [[[mediaObject.date componentsSeparatedByString:@"T"] firstObject] isEqualToString:kARMediaManagerDefaultSkyControllerDateKey])
+                                                  {
+                                                      uint8_t *buffer = (uint8_t *)malloc(representation.size);
+                                                      NSError *error = nil;
+                                                      NSUInteger buffered = [representation getBytes:buffer fromOffset:0.0 length:representation.size error:&error];
+                                                      if (error == nil)
+                                                      {
+                                                          NSData *data = [NSData dataWithBytesNoCopy:buffer length:buffered freeWhenDone:YES];
+                                                          [asset setImageData:data metadata:[self setDateInTiffDictionary:metadata] completionBlock:nil];
+                                                      }
+                                                      else
+                                                      {
+                                                          free(buffer);
+                                                      }
+                                                  }
+                                                  
                                                   [[_privateProjectsDictionary valueForKey:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]] setValue:mediaObject forKey:stringAsset];
                                                   [self addAssetToLibrary:asset albumName:[NSString stringWithUTF8String:ARDISCOVERY_getProductName(ARDISCOVERY_getProductFromProductID(productId))]];
                                                   
@@ -583,4 +634,39 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     return added;
 }
 
+
+- (NSDictionary *)setDateInTiffDictionary:(NSDictionary *)metadata
+{
+    NSMutableDictionary *retVal = [metadata mutableCopy];
+
+    NSString *tiffDescription = [[retVal objectForKey:(NSString *)kCGImagePropertyTIFFDictionary] objectForKey:(NSString *)kCGImagePropertyTIFFImageDescription];
+    NSData *data = [tiffDescription dataUsingEncoding:NSUTF8StringEncoding];
+    
+    if (data != nil)
+    {
+        NSError *jSONerror = nil;
+        NSString *updatedTiffDescription = nil;
+        id jSONDataDic =[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&jSONerror];
+        if (jSONerror == nil)
+        {
+            NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+            [dateFormatter setTimeZone:[NSTimeZone systemTimeZone]];
+            [dateFormatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:@"UTC"]];
+            [dateFormatter setDateFormat:@"yyyy-MM-dd'T'HHmmss+0000"];
+            
+            NSDate *currentDate = [[NSDate alloc] init];
+            NSString *dateString = [dateFormatter stringFromDate:currentDate];
+            
+            [jSONDataDic setValue:dateString forKey:(NSString *)kARMediaManagerPVATMediaDateKey];
+            [jSONDataDic setValue:dateString forKey:(NSString *)kARMediaManagerPVATRunDateKey];
+            data = [NSJSONSerialization dataWithJSONObject:jSONDataDic options:0 error:&jSONerror];
+        }
+        if (jSONerror == nil)
+        {
+            updatedTiffDescription = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            [[retVal objectForKey:(NSString *)kCGImagePropertyTIFFDictionary] setObject:updatedTiffDescription forKey:(NSString *)kCGImagePropertyTIFFImageDescription];
+        }
+    }
+    return (NSDictionary *)retVal;
+}
 @end

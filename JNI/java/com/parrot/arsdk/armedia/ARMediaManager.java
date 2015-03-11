@@ -1,3 +1,33 @@
+/*
+    Copyright (C) 2014 Parrot SA
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the 
+      distribution.
+    * Neither the name of Parrot nor the names
+      of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written
+      permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+    AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+    OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+*/
 package com.parrot.arsdk.armedia;
 
 import java.io.ByteArrayInputStream;
@@ -74,16 +104,17 @@ public class ARMediaManager
 
     private static final String ARMEDIA_MANAGER_DATABASE_FILENAME = "ARMediaDB";
 
-    private static final String ARMEDIA_MANAGER_JPG = ".jpg";
-    private static final String ARMEDIA_MANAGER_MP4 = ".mp4";
+    public static final String ARMEDIA_MANAGER_JPG = ".jpg";
+    public static final String ARMEDIA_MANAGER_MP4 = ".mp4";
 
     private static final String kARMediaManagerKey = "kARMediaManagerKey";
     private static final String kARMediaManagerProjectDicCount = "kARMediaManagerProjectDicCount";
 
     // PVAT Keys
-    private static final String ARMediaManagerPVATRunDateKey = "run_date";
-    private static final String ARMediaManagerPVATMediaDateKey = "media_date";
-    private static final String ARMediaManagerPVATProductIdKey = "product_id";
+    public static final String ARMediaManagerPVATRunDateKey = "run_date";
+    public static final String ARMediaManagerPVATMediaDateKey = "media_date";
+    public static final String ARMediaManagerPVATProductIdKey = "product_id";
+    public static final String ARMediaManagerPVATuuidKey = "uuid";
 
     public final static String ARMediaManagerNotificationDictionary = "ARMediaManagerNotificationDictionary";
     public final static String ARMediaManagerNotificationDictionaryIsInitKey = "ARMediaManagerNotificationDictionaryIsInitKey";
@@ -245,13 +276,12 @@ public class ARMediaManager
                                         HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(jsonReader.getString(ARMediaManagerPVATProductIdKey));
                                         if ((hashMap == null) || (!hashMap.containsKey(mediaFilePath)))
                                         {
-                                            ARMediaObject mediaObject = new ARMediaObject();
-                                            mediaObject.productId = jsonReader.getString(ARMediaManagerPVATProductIdKey);
-                                            if (jsonReader.has(ARMediaManagerPVATMediaDateKey))
-                                                mediaObject.date = jsonReader.getString(ARMediaManagerPVATMediaDateKey);
-                                            if (jsonReader.has(ARMediaManagerPVATRunDateKey))
-                                                mediaObject.runDate = jsonReader.getString(ARMediaManagerPVATRunDateKey);
-                                            ((HashMap<String, Object>) projectsDictionary.get(productName)).put(mediaFilePath, mediaObject);
+                                            ARMediaObject mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
+                                            if(mediaObject != null)
+                                            {
+                                                mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
+                                                ((HashMap<String, Object>) projectsDictionary.get(productName)).put(mediaFilePath, mediaObject);
+                                            }
                                         }
                                     }
                                 }
@@ -368,12 +398,13 @@ public class ARMediaManager
         boolean added = false;
         boolean toAdd = false;
         int productID;
-        ARMediaObject mediaObject = new ARMediaObject();
+        ARMediaObject mediaObject = null;
         String productName = null;
         String exifProductID = null;
         JSONObject jsonReader;
         String filename = file.getName();
 
+        
         if (filename.endsWith(ARMEDIA_MANAGER_JPG))
         {
             Exif2Interface exif;
@@ -390,11 +421,9 @@ public class ARMediaManager
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
-                        mediaObject.productId = jsonReader.getString(ARMediaManagerPVATProductIdKey);
-                        if (jsonReader.has(ARMediaManagerPVATMediaDateKey))
-                            mediaObject.date = jsonReader.getString(ARMediaManagerPVATMediaDateKey);
-                        if (jsonReader.has(ARMediaManagerPVATRunDateKey))
-                            mediaObject.runDate = jsonReader.getString(ARMediaManagerPVATRunDateKey);
+                        mediaObject = createMediaObjectFromJson("/DCIM/".concat(productName).concat("/").concat(filename), jsonReader);
+                        if(mediaObject != null)
+                            mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
                         toAdd = true;
                     }
                 }
@@ -423,11 +452,9 @@ public class ARMediaManager
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
-                        mediaObject.productId = jsonReader.getString(ARMediaManagerPVATProductIdKey);
-                        if (jsonReader.has(ARMediaManagerPVATMediaDateKey))
-                            mediaObject.date = jsonReader.getString(ARMediaManagerPVATMediaDateKey);
-                        if (jsonReader.has(ARMediaManagerPVATRunDateKey))
-                            mediaObject.runDate = jsonReader.getString(ARMediaManagerPVATRunDateKey);
+                        mediaObject = createMediaObjectFromJson("/DCIM/".concat(productName).concat("/").concat(filename), jsonReader);
+                        if(mediaObject != null)
+                            mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_VIDEO;
                         toAdd = true;
                     }
                 }
@@ -455,7 +482,7 @@ public class ARMediaManager
                 directoryFolder.mkdir();
             }
             File destination = new File(directory.concat("/").concat(filename));
-            if (copy(file, destination))
+            if (mediaObject != null)
             {
                 context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(destination)));
                 ((HashMap<String, Object>) projectsDictionary.get(productName)).put(destination.getPath().substring(Environment.getExternalStorageDirectory().toString().length()), mediaObject);
@@ -465,31 +492,6 @@ public class ARMediaManager
         }
 
         isUpdate = true;
-        return added;
-    }
-
-    private boolean copy(File src, File dst) 
-    {
-        boolean added = false;
-        try 
-        {
-            InputStream in = new FileInputStream(src);
-            OutputStream out = new FileOutputStream(dst);
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) > 0)
-            {
-                out.write(buf, 0, len);
-            }
-            out.flush();
-            in.close();
-            out.close();
-            added = true;
-        }
-        catch(Exception e)
-        {
-            e.printStackTrace();
-        }
         return added;
     }
 
@@ -511,13 +513,12 @@ public class ARMediaManager
                     HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(jsonReader.getString(ARMediaManagerPVATProductIdKey));
                     if ((hashMap == null) || (!hashMap.containsKey(mediaFilePath)))
                     {
-                        ARMediaObject mediaObject = new ARMediaObject();
-                        mediaObject.productId = jsonReader.getString(ARMediaManagerPVATProductIdKey);
-                        if (jsonReader.has(ARMediaManagerPVATMediaDateKey))
-                            mediaObject.date = jsonReader.getString(ARMediaManagerPVATMediaDateKey);
-                        if (jsonReader.has(ARMediaManagerPVATRunDateKey))
-                            mediaObject.runDate = jsonReader.getString(ARMediaManagerPVATRunDateKey);
-                        ((HashMap<String, Object>) projectsDictionary.get(productName)).put(mediaFilePath, mediaObject);
+                        ARMediaObject mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
+                        if (mediaObject != null)
+                        {
+                            mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_VIDEO;
+                            ((HashMap<String, Object>) projectsDictionary.get(productName)).put(mediaFilePath, mediaObject);
+                        } 
                     }
                 }
             }
@@ -526,6 +527,33 @@ public class ARMediaManager
                 e.printStackTrace();
             }
         }
+    }
+
+    private ARMediaObject createMediaObjectFromJson(String mediaPath, JSONObject jsonReader)
+    {
+        ARMediaObject mediaObject = null;
+
+        if(jsonReader != null)
+        {
+            mediaObject = new ARMediaObject();
+            try
+            {
+                mediaObject.productId = jsonReader.getString(ARMediaManagerPVATProductIdKey);
+                mediaObject.product = ARDiscoveryService.getProductFromProductID((int) Long.parseLong(mediaObject.productId, 16));
+                if (jsonReader.has(ARMediaManagerPVATMediaDateKey))
+                    mediaObject.date = jsonReader.getString(ARMediaManagerPVATMediaDateKey);
+                if (jsonReader.has(ARMediaManagerPVATRunDateKey))
+                    mediaObject.runDate = jsonReader.getString(ARMediaManagerPVATRunDateKey);
+                if (jsonReader.has(ARMediaManagerPVATuuidKey))
+                    mediaObject.uuid = jsonReader.getString(ARMediaManagerPVATuuidKey);
+                mediaObject.filePath = mediaPath;
+            }
+            catch (JSONException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        return mediaObject;
     }
 
     private void arMediaManagerNotificationMediaAdded(String mediaPath)

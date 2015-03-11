@@ -1,3 +1,33 @@
+/*
+    Copyright (C) 2014 Parrot SA
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the 
+      distribution.
+    * Neither the name of Parrot nor the names
+      of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written
+      permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+    AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+    OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+*/
  
 package com.parrot.arsdk.armedia;
 
@@ -40,6 +70,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
     public float size;
     public Drawable thumbnail;
     public MEDIA_TYPE_ENUM mediaType;
+    public String uuid;
     
     public ARMediaObject ()
     {
@@ -62,6 +93,8 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
             filePath = media.getFilePath();
             date = media.getDate();
             size = media.getSize();
+            uuid = media.getUUID();
+
             product = media.getProduct();
             productId = String.format("%04x", ARDiscoveryService.getProductID(product));
             
@@ -158,6 +191,11 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
     {
         return mediaType;
     }
+
+    public String getUUID()
+    {
+        return this.uuid;
+    }
     
     public Object clone() 
     {
@@ -176,6 +214,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
             model.size = size;
             model.thumbnail = thumbnail;
             model.mediaType = mediaType;
+            model.uuid = uuid;
         }
         catch(CloneNotSupportedException e)
         {
@@ -188,38 +227,42 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
 
     
     public static final Parcelable.Creator<ARMediaObject> CREATOR = new Creator<ARMediaObject>() 
-    		{  
-    		    	 
-    			 	public ARMediaObject createFromParcel(Parcel source)
-    			 	{  
-    			 		ARMediaObject object = new ARMediaObject();  
-    			   		 
-    				 	 object.runDate = source.readString();
-    			   		 object.product = ARDISCOVERY_PRODUCT_ENUM.values()[source.readInt()];
-    			    	 object.name = source.readString();
-    			   		 object.date = source.readString();
-    			   		 object.filePath = source.readString();
-    			   		 object.size = source.readFloat();
-    			   		 object.thumbnail = null;
-    			   		 object.mediaType = MEDIA_TYPE_ENUM.values()[source.readInt()];  
-    			   		 
-    			   		 return object;  
-    			 	}
+	{
+	 	public ARMediaObject createFromParcel(Parcel source)
+	 	{  
+	 		ARMediaObject object = new ARMediaObject();  
+	   		 
+		 	 object.runDate = source.readString();
+	   		 object.product = ARDISCOVERY_PRODUCT_ENUM.values()[source.readInt()];
+	    	 object.name = source.readString();
+	   		 object.date = source.readString();
+	   		 object.filePath = source.readString();
+	   		 object.size = source.readFloat();
+	   		 object.thumbnail = null;
+	   		 object.mediaType = MEDIA_TYPE_ENUM.values()[source.readInt()];
+             object.uuid = source.readString();
+	   		 
+	   		 return object;  
+	 	}
 
-					@Override
-					public ARMediaObject[] newArray(int size) {
-						// TODO Auto-generated method stub
-						return null;
-					}  
-    		 };		 
+		@Override
+		public ARMediaObject[] newArray(int size) 
+        {
+			// TODO Auto-generated method stub
+			return null;
+		}  
+	};
+
 	@Override
-	public int describeContents() {
+	public int describeContents() 
+    {
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
-	public void writeToParcel(Parcel dest, int flags) {
+	public void writeToParcel(Parcel dest, int flags) 
+    {
 		// TODO Auto-generated method stub
 	   	dest.writeString(runDate);  
 	   	dest.writeInt(product.ordinal());
@@ -228,8 +271,8 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
 	   	dest.writeString(filePath);  
 	   	dest.writeFloat(size);  
 	   	dest.writeInt(mediaType.ordinal());
+        dest.writeString(uuid); 
 	}
-	
 	
 	public int compareTo(ARMediaObject obj)
     {
@@ -252,79 +295,85 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
         return retVal;
     }
 	
-	   private void readObject(
-	     ObjectInputStream aInputStream
-	   ) throws ClassNotFoundException, IOException {
-	       
-           runDate = aInputStream.readUTF();
-           product = ARDISCOVERY_PRODUCT_ENUM.values()[aInputStream.readInt()];
-           productId = aInputStream.readUTF();
-           name = aInputStream.readUTF();
-           date = aInputStream.readUTF();
-           filePath = aInputStream.readUTF();
-           size = aInputStream.readFloat();
-           thumbnail = null;
-           mediaType = MEDIA_TYPE_ENUM.values()[aInputStream.readInt()];
-           
-	  }
+    private void readObject(ObjectInputStream aInputStream) throws ClassNotFoundException, IOException 
+    {
+        runDate = aInputStream.readUTF();
+        product = ARDISCOVERY_PRODUCT_ENUM.values()[aInputStream.readInt()];
+        productId = aInputStream.readUTF();
+        name = aInputStream.readUTF();
+        date = aInputStream.readUTF();
+        filePath = aInputStream.readUTF();
+        uuid = aInputStream.readUTF();
+        size = aInputStream.readFloat();
+        thumbnail = null;
+        mediaType = MEDIA_TYPE_ENUM.values()[aInputStream.readInt()];
+    }
 
-	    /**
-	    * This is the default implementation of writeObject.
-	    * Customise if necessary.
-	    */
-	    private void writeObject(
-	      ObjectOutputStream aOutputStream
-	    ) throws IOException {
-	        if (runDate != null)
-	        
-	        {
-	            aOutputStream.writeUTF(runDate);  
-	        }
-	        else
-	        {
-                aOutputStream.writeUTF("");  
- 
-	        }
-	       
-	        aOutputStream.writeInt(product.ordinal());
-	        
-	        if (productId != null)
-	        {
-	           aOutputStream.writeUTF(productId);  
-	        }
-	        else
-	        {
-	           aOutputStream.writeUTF("");  
-	        }
-	        
-	        if (name != null)
-	        {
-	           aOutputStream.writeUTF(name); 
-	        }
-	        else
-            {
-               aOutputStream.writeUTF("");  
-            }
-	        
-	        if (date != null)
-	        {
-	            aOutputStream.writeUTF(date);
-	        }
-	        else
-            {
-               aOutputStream.writeUTF("");  
-            }
-	        
-	        if (filePath != null)
-	        {
-	            aOutputStream.writeUTF(filePath); 
-	        }
-	        else
-            {
-               aOutputStream.writeUTF("");  
-            }
-	        
-	        aOutputStream.writeFloat(size);  
-	        aOutputStream.writeInt(mediaType.ordinal());  
-	    }
+    /**
+    * This is the default implementation of writeObject.
+    * Customise if necessary.
+    */
+    private void writeObject(ObjectOutputStream aOutputStream) throws IOException 
+    {
+        if (runDate != null)
+        
+        {
+            aOutputStream.writeUTF(runDate);  
+        }
+        else
+        {
+            aOutputStream.writeUTF("");  
+
+        }
+       
+        aOutputStream.writeInt(product.ordinal());
+        
+        if (productId != null)
+        {
+           aOutputStream.writeUTF(productId);  
+        }
+        else
+        {
+           aOutputStream.writeUTF("");  
+        }
+        
+        if (name != null)
+        {
+           aOutputStream.writeUTF(name); 
+        }
+        else
+        {
+           aOutputStream.writeUTF("");  
+        }
+        
+        if (date != null)
+        {
+            aOutputStream.writeUTF(date);
+        }
+        else
+        {
+           aOutputStream.writeUTF("");  
+        }
+        
+        if (filePath != null)
+        {
+            aOutputStream.writeUTF(filePath); 
+        }
+        else
+        {
+           aOutputStream.writeUTF("");  
+        }
+
+        if (uuid != null)
+        {
+            aOutputStream.writeUTF(uuid); 
+        }
+        else
+        {
+           aOutputStream.writeUTF("");  
+        }
+        
+        aOutputStream.writeFloat(size);  
+        aOutputStream.writeInt(mediaType.ordinal());  
+    }
 }
