@@ -153,23 +153,22 @@ static void read_uint32 (FILE *fptr, uint32_t *dest)
     *dest = ntohl (locValue);
 }
 
-static uint64_t swapLong(uint64_t x)
-{
-    x = (x & 0x00000000FFFFFFFF) << 32 | (x & 0xFFFFFFFF00000000) >> 32;
-    x = (x & 0x0000FFFF0000FFFF) << 16 | (x & 0xFFFF0000FFFF0000) >> 16;
-    x = (x & 0x00FF00FF00FF00FF) << 8  | (x & 0xFF00FF00FF00FF00) >> 8;
-    return x;
-}
-
 static void read_uint64 (FILE *fptr, uint64_t *dest)
 {
-    uint64_t locValue = 0;
+    uint64_t retValue = 0;
+    uint32_t locValue = 0;
     if (1 != fread (&locValue, sizeof (locValue), 1, fptr))
     {
         fprintf (stderr, "Error reading low value of a uint64_t\n");
         return;
     }
-    *dest = swapLong(locValue);
+    retValue = (uint64_t)(ntohl (locValue));
+    if (1 != fread (&locValue, sizeof (locValue), 1, fptr))
+    {
+        fprintf (stderr, "Error reading a high value of a uint64_t\n");
+    }
+    retValue += ((uint64_t)(ntohl (locValue))) << 32;
+    *dest = retValue;
 }
 
 static void read_4cc (FILE *fptr, char dest[5])
@@ -866,27 +865,38 @@ int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAto
 {
     uint32_t atomSize = 0;
     char fourCCTag [5] = {0};
-    uint64_t wideAtomSize = 8;
+    uint64_t wideAtomSize = 0;
     int found = 0;
     if (NULL == videoFile)
     {
         return 0;
     }
-    while (0 == found && !feof (videoFile))
+
+    read_uint32 (videoFile, &atomSize);
+    read_4cc (videoFile, fourCCTag);
+    if (0 == atomSize)
+    {
+        read_uint64 (videoFile, &wideAtomSize);
+    }
+    else
+    {
+        wideAtomSize = atomSize;
+    }
+    if (0 == strncmp (fourCCTag, atomName, 4))
+    {
+        found = 1;
+    }
+
+    while (0 == found &&
+           !feof (videoFile))
     {
         fseek (videoFile, wideAtomSize - 8, SEEK_CUR);
 
         read_uint32 (videoFile, &atomSize);
         read_4cc (videoFile, fourCCTag);
-        if (1 == atomSize)
+        if (0 == atomSize)
         {
             read_uint64 (videoFile, &wideAtomSize);
-            // remove wideAtom size (64 bits)
-            wideAtomSize = wideAtomSize - 8;
-        }
-        else if (0 == atomSize)
-        {
-            break;
         }
         else
         {
