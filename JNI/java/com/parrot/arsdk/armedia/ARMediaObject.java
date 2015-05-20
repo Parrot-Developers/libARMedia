@@ -71,6 +71,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
     public Drawable thumbnail;
     public MEDIA_TYPE_ENUM mediaType;
     public String uuid;
+    public ARDataTransferMedia media;
     
     public ARMediaObject ()
     {
@@ -83,12 +84,14 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
         thumbnail = null;
         runDate = null;
         mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_MAX;
+        media = null;
     }
     
     public void updateDataTransferMedia (Resources resources, ARDataTransferMedia media)
     {
         if (media != null)
         {
+            this.media = media;
             name = media.getName();
             filePath = media.getFilePath();
             date = media.getDate();
@@ -124,6 +127,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
     
     public void updateThumbnailWithDataTransferMedia (Resources resources, ARDataTransferMedia media)
     {
+        this.media = media;
         Bitmap thumbnailBmp = BitmapFactory.decodeByteArray(media.getThumbnail(), 0, media.getThumbnail().length);
         
         if(thumbnailBmp != null)
@@ -215,6 +219,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
             model.thumbnail = thumbnail;
             model.mediaType = mediaType;
             model.uuid = uuid;
+            model.media = this.media;
         }
         catch(CloneNotSupportedException e)
         {
@@ -241,7 +246,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
 	   		 object.thumbnail = null;
 	   		 object.mediaType = MEDIA_TYPE_ENUM.values()[source.readInt()];
              object.uuid = source.readString();
-	   		 
+             object.media = source.readParcelable(null);
 	   		 return object;  
 	 	}
 
@@ -249,7 +254,7 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
 		public ARMediaObject[] newArray(int size) 
         {
 			// TODO Auto-generated method stub
-			return null;
+			return new ARMediaObject[size];
 		}  
 	};
 
@@ -271,7 +276,8 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
 	   	dest.writeString(filePath);  
 	   	dest.writeFloat(size);  
 	   	dest.writeInt(mediaType.ordinal());
-        dest.writeString(uuid); 
+        dest.writeString(uuid);
+        dest.writeParcelable(this.media, flags);
 	}
 	
 	public int compareTo(ARMediaObject obj)
