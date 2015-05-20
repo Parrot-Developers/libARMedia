@@ -52,7 +52,7 @@
 
 #define ENCAPSULER_SMALL_STRING_SIZE    (30)
 #define ENCAPSULER_INFODATA_MAX_SIZE    (256)
-#define ENCAPSULER_DDT_TOLERANCE_PCT    (15)
+#define ENCAPSULER_DDT_TOLERANCE_PCT    (0)
 #define ARMEDIA_ENCAPSULER_TAG          "ARMEDIA Encapsuler"
 
 /* The structure is initialised to an invalid value
