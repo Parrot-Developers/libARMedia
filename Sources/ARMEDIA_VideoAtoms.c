@@ -153,14 +153,6 @@ static void read_uint32 (FILE *fptr, uint32_t *dest)
     *dest = ntohl (locValue);
 }
 
-static uint64_t swapLong(uint64_t x)
-{
-    x = (x & 0x00000000FFFFFFFF) << 32 | (x & 0xFFFFFFFF00000000) >> 32;
-    x = (x & 0x0000FFFF0000FFFF) << 16 | (x & 0xFFFF0000FFFF0000) >> 16;
-    x = (x & 0x00FF00FF00FF00FF) << 8  | (x & 0xFF00FF00FF00FF00) >> 8;
-    return x;
-}
-
 static void read_uint64 (FILE *fptr, uint64_t *dest)
 {
     uint64_t locValue = 0;
@@ -169,7 +161,7 @@ static void read_uint64 (FILE *fptr, uint64_t *dest)
         fprintf (stderr, "Error reading low value of a uint64_t\n");
         return;
     }
-    *dest = swapLong(locValue);
+    *dest = swap_uint64(locValue);
 }
 
 static void read_4cc (FILE *fptr, char dest[5])
