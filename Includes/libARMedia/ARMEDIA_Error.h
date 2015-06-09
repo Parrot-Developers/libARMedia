@@ -8,7 +8,7 @@
       notice, this list of conditions and the following disclaimer.
     * Redistributions in binary form must reproduce the above copyright
       notice, this list of conditions and the following disclaimer in
-      the documentation and/or other materials provided with the 
+      the documentation and/or other materials provided with the
       distribution.
     * Neither the name of Parrot nor the names
       of its contributors may be used to endorse or promote products
@@ -22,7 +22,7 @@
     COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
     INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
     BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+    OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
     AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
     OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
     OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
@@ -51,8 +51,10 @@ typedef enum
     ARMEDIA_ERROR_ENCAPSULER = -3000, /**< Error encapsuler generic error */
     ARMEDIA_ERROR_ENCAPSULER_WAITING_FOR_IFRAME, /**< Error encapsuler waiting for i-frame */
     ARMEDIA_ERROR_ENCAPSULER_BAD_CODEC, /**< Codec non-supported */
+    ARMEDIA_ERROR_ENCAPSULER_BAD_VIDEO_FRAME, /**< Error in video frame header */
+    ARMEDIA_ERROR_ENCAPSULER_BAD_VIDEO_SAMPLE, /**< Error in audio sample header */
     ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR, /**< File error while encapsulating*/
-    
+
 } eARMEDIA_ERROR;
 
 /**

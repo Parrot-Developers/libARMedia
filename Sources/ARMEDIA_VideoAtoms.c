@@ -293,7 +293,7 @@ void freeAtom (movie_atom_t **atom)
     }
 }
 
-movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_CODEC codec, uint32_t *offset)
+movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_VIDEO_CODEC codec, uint32_t *offset)
 {
     uint32_t dataSize;
     if (codec == CODEC_MPEG4_AVC) dataSize = 24;
@@ -349,7 +349,7 @@ movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize)
         ATOM_WRITE_4CC('m', 'd', 'a', 't');
         uint32_t sizeNe = htonl ((uint32_t) videoSize);
         ATOM_MEMCOPY (data, &sizeNe, sizeof (uint32_t));
-        retAtom = atomFromData (dataSize, "wide", data);
+        retAtom = atomFromData (dataSize, "free", data);
         retAtom->size = dataSize;
         retAtom->wide = 1;
     }
@@ -533,7 +533,7 @@ movie_atom_t *drefAtomGen ()
     return atomFromData (20, "dref", data);
 }
 
-movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_CODEC codec)
+movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_VIDEO_CODEC codec)
 {
     uint32_t dataSize;
     uint32_t currentIndex = 0;
@@ -693,7 +693,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
     return retAtom;
 }
 
-movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_CODEC codec, uint8_t *sps, uint32_t spsSize, uint8_t *pps, uint32_t ppsSize)
+movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_VIDEO_CODEC codec, uint8_t *sps, uint32_t spsSize, uint8_t *pps, uint32_t ppsSize)
 {
     uint32_t avcCSize = 19 + spsSize + ppsSize;
     uint32_t vse_size = avcCSize + 86;
@@ -1154,7 +1154,7 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset,long long size, cons
     {
         *offset += size - *offset;
     }
-    
+
     if(atomSize == 1)
     {
         memcpy(&atomSize, buff + (2 * sizeof(uint32_t)), sizeof(uint64_t));
