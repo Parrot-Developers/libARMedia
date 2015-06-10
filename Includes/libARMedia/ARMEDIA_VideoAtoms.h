@@ -62,6 +62,12 @@ typedef struct
     long long offset;
 } atom_check_return;
 
+typedef enum
+{
+    ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO = 0,
+    ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND,
+} eARMEDIA_VIDEOATOM_MEDIATYPE;
+
 #define atom_ntohll(x)  swap_uint64(x)
 
 /* Atoms :
@@ -71,6 +77,7 @@ LEGEND :
 -> from data = use atomFromData (dataSize, "name", dataPointer);
 
 ftyp -> specific
+pvat -> specific
 mdat -> specific (include freeAtom if needed)
 moov -> empty
  |- mvhd -> specific
@@ -91,11 +98,6 @@ moov -> empty
  |               |- stsc -> specific
  |               |- stsz -> from data (frames sizes as uint32_t network endian)
  |               \- stco -> from data (frames offset as uint32_t network endian)
- \- udta -> empty
-     |- meta1 -> all meta specific (metadataAtomFromTagAndValue)
-   [...]
-     \- metaN -> all meta specific (metadataAtomFromTagAndValue)
-pvat -> specific
 */
 
 /* REMINDER : NEVER INCLUDE A MDAT ATOM INTO ANY OTHER ATOM */
@@ -110,14 +112,16 @@ void freeAtom (movie_atom_t **atom);
 movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_VIDEO_CODEC codec, uint32_t *offset);
 movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize);
 movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date);
-movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date);
+movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date, eARMEDIA_VIDEOATOM_MEDIATYPE type);
 movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date);
-movie_atom_t *hdlrAtomForMdia ();
+movie_atom_t *hdlrAtomForMdia (eARMEDIA_VIDEOATOM_MEDIATYPE type);
 movie_atom_t *vmhdAtomGen ();
+movie_atom_t *smhdAtomGen ();
 movie_atom_t *hdlrAtomForMinf ();
 movie_atom_t *drefAtomGen ();
 movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_VIDEO_CODEC codec);
 movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_VIDEO_CODEC codec, uint8_t *sps, uint32_t spsSize, uint8_t *pps, uint32_t ppsSize);
+movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec);
 movie_atom_t *stscAtomGen ();
 movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value);
 movie_atom_t *pvatAtomGen(const char *jsonString);

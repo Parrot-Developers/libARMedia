@@ -417,8 +417,9 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
     return retAtom;
 }
 
-movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date)
+movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date, eARMEDIA_VIDEOATOM_MEDIATYPE type)
 {
+    static int trackID = 1;
     uint32_t dataSize = 84;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
     uint32_t currentIndex = 0;
@@ -432,13 +433,22 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     ATOM_WRITE_U32 (0x0000000f); /* Version (8) + Flags (24) */
     ATOM_WRITE_U32 (0); /* Creation time */
     ATOM_WRITE_U32 (0); /* Modification time */
-    ATOM_WRITE_U32 (1); /* Track ID */
+    ATOM_WRITE_U32 (trackID); /* Track ID */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (duration); /* Duration, in timescale unit */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
-    ATOM_WRITE_U32 (0); /* Reserved */
-    ATOM_WRITE_U32 (0); /* Reserved */
+    if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND)
+    {
+        ATOM_WRITE_U16 (0); /* layer */
+        ATOM_WRITE_U16 (1); /* alternative group */
+        ATOM_WRITE_U8 (1); /* volume */
+        ATOM_WRITE_U8 (0); /* volume */
+        ATOM_WRITE_U16 (0); /* reserved */
+    } else {
+        ATOM_WRITE_U32 (0); /* layer (16) + alternative group (16) */
+        ATOM_WRITE_U32 (0); /* volume (16) + reserved (16) */
+    }
 
     ATOM_WRITE_U32 (0x00010000); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
@@ -450,14 +460,21 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0x40000000); /* Reserved */
 
-    ATOM_WRITE_U16 (w); /* Width */
-    ATOM_WRITE_U16 (0); /* Reserved */
-    ATOM_WRITE_U16 (h); /* Height*/
-    ATOM_WRITE_U16 (0); /* Reserved */
+    if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO)
+    {
+        ATOM_WRITE_U16 (w); /* Width */
+        ATOM_WRITE_U16 (0); /* Reserved */
+        ATOM_WRITE_U16 (h); /* Height*/
+        ATOM_WRITE_U16 (0); /* Reserved */
+    } else {
+        ATOM_WRITE_U32 (0);
+        ATOM_WRITE_U32 (0);
+    }
 
     retAtom = atomFromData (84, "tkhd", data);
     ATOM_FREE (data);
     data = NULL;
+    trackID++;
     return retAtom;
 }
 
@@ -486,7 +503,7 @@ movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
     return retAtom;
 }
 
-movie_atom_t *hdlrAtomForMdia ()
+movie_atom_t *hdlrAtomForMdia (eARMEDIA_VIDEOATOM_MEDIATYPE type)
 {
     uint8_t data [37] =  {0x00, 0x00, 0x00, 0x00,
                           'm', 'h', 'l', 'r',
@@ -498,7 +515,27 @@ movie_atom_t *hdlrAtomForMdia ()
                           'e', 'o', 'H', 'a',
                           'n', 'd', 'l', 'e',
                           'r'};
+
+    if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND) {
+        data[8] = 's';
+        data[9] = 'o';
+        data[10] = 'u';
+        data[11] = 'n';
+
+        data[25] = 'S';
+        data[26] = 'o';
+        data[27] = 'u';
+        data[28] = 'n';
+        data[29] = 'd';
+    }
     return atomFromData (37, "hdlr", data);
+}
+
+movie_atom_t *smhdAtomGen ()
+{
+    uint8_t data [8] = {0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00};
+    return atomFromData (8, "smhd", data);
 }
 
 movie_atom_t *vmhdAtomGen ()
@@ -688,6 +725,41 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U32(0x80800102);         // 183 - elementary stream descriptor
                                             // 187 -- END
     }
+    retAtom = atomFromData (dataSize, "stsd", data);
+    ATOM_FREE(data);
+    return retAtom;
+}
+
+movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec)
+{
+    uint32_t dataSize = 44;
+    uint32_t currentIndex = 0;
+    movie_atom_t *retAtom;
+
+    uint8_t* data = (uint8_t*) ATOM_MALLOC(dataSize);
+    if (NULL == data)
+    {
+        return NULL;
+    }
+
+    ATOM_WRITE_U32(0);                  // 0 - version & flags
+    ATOM_WRITE_U32(1);                  // 4 - number of entries
+
+    ATOM_WRITE_U32(36);                 // 8 - size of sample description
+    ATOM_WRITE_4CC('s', 'o', 'w', 't'); // 12 - tag for sample description
+    ATOM_WRITE_U32(0x00000000);         // 16 - reserved
+    ATOM_WRITE_U16(0x0000);             // 20 - reserved
+    ATOM_WRITE_U16(0x0001);             // 22 - data reference index
+    ATOM_WRITE_U32(0x00000000);         // 24 - version flag
+    ATOM_WRITE_U32(0x00000000);         // 28 - vendor
+    ATOM_WRITE_U16(1);                  // 32 - number of channels
+    ATOM_WRITE_U16(16);                 // 34 - sample size
+    ATOM_WRITE_U16(0);                  // 36 - compression ID
+    ATOM_WRITE_U16(0);                  // 38 - packet size
+    ATOM_WRITE_U16(16000);              // 40 - sample rate
+    ATOM_WRITE_U16(0);                  // 42 - sample rate
+                                        // 44 -- END
+
     retAtom = atomFromData (dataSize, "stsd", data);
     ATOM_FREE(data);
     return retAtom;
