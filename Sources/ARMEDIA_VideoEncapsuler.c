@@ -72,6 +72,7 @@ struct ARMEDIA_VideoEncapsuler_t
     // Encapsuler local data
     uint8_t version;
     uint32_t timescale;
+    uint8_t got_iframe;
     uint8_t got_audio;
     ARMEDIA_Video_t* video;
     ARMEDIA_Audio_t* audio;
@@ -102,10 +103,9 @@ struct ARMEDIA_Audio_t
     eARMEDIA_ENCAPSULER_AUDIO_CODEC codec;
     eARMEDIA_ENCAPSULER_AUDIO_FORMAT format;
     uint32_t sampleCount; // number of samples
+    uint32_t totalsize;
 
     /* Samples recording values */
-    uint32_t lastSampleNumber;
-    uint32_t currentSampleSize;
     uint64_t lastSampleTimestamp;
 };
 
@@ -196,6 +196,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     // encapsuler data initialization
     retVideo->version = ARMEDIA_ENCAPSULER_VERSION_NUMBER;
     retVideo->timescale = (uint32_t)(fps * 2000);
+    retVideo->got_iframe = 0;
     retVideo->got_audio = 0;
     retVideo->video = (ARMEDIA_Video_t*) malloc (sizeof(ARMEDIA_Video_t));
     retVideo->audio = NULL;
@@ -294,7 +295,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     // get frame data
     if (NULL == frameHeader->frame)
     {
-        ENCAPSULER_ERROR ("Unable to allocate local data (%d bytes) ", frameHeader->frame_size);
+        ENCAPSULER_ERROR ("Unable to get frame data (%d bytes) ", frameHeader->frame_size);
         return ARMEDIA_ERROR_ENCAPSULER;
     }
 
@@ -438,6 +439,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
                 return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             }
         }
+        encapsuler->got_iframe = 1;
     } // end first frame
 
     // Normal operation : file pointer is at end of file
@@ -524,20 +526,125 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     return ARMEDIA_OK;
 }
 
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Sample_Header_t *sampleHeader)
+{
+    uint8_t *data;
+    if (NULL == encapsuler)
+    {
+        ENCAPSULER_ERROR ("encapsuler pointer must not be null");
+        return ARMEDIA_ERROR_BAD_PARAMETER;
+    }
+
+    if (encapsuler->got_iframe == 0)
+    {
+        ENCAPSULER_DEBUG("Waiting for Iframe");
+        return ARMEDIA_ERROR_ENCAPSULER_WAITING_FOR_IFRAME;
+    }
+
+    ARMEDIA_Audio_t* audio;
+    if (NULL == sampleHeader)
+    {
+        ENCAPSULER_ERROR ("sample pointer must not be null");
+        return ARMEDIA_ERROR_BAD_PARAMETER;
+    }
+
+    if (!sampleHeader->sample_size)
+    {
+        // Do nothing
+        ENCAPSULER_DEBUG ("Empty sample\n");
+        return ARMEDIA_OK;
+    }
+
+    // check sample data
+    if (NULL == sampleHeader->sample)
+    {
+        ENCAPSULER_ERROR ("Unable to get sample data (%d bytes)", sampleHeader->sample_size);
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+
+    data = sampleHeader->sample;
+
+    // First sample
+    if ((encapsuler->got_audio == 0) && (encapsuler->audio == NULL))
+    {
+        // Init audio data
+        encapsuler->audio = (ARMEDIA_Audio_t*) malloc (sizeof(ARMEDIA_Audio_t));
+        if (encapsuler->audio != NULL) {
+            encapsuler->got_audio = 1;
+        } else {
+            ENCAPSULER_ERROR ("Unable to allocate audio structure");
+            return ARMEDIA_ERROR_ENCAPSULER;
+        }
+        encapsuler->audio->format = sampleHeader->format;
+        encapsuler->audio->codec = sampleHeader->codec;
+        encapsuler->audio->sampleCount = 0;
+        encapsuler->audio->totalsize = 0;
+        encapsuler->audio->lastSampleTimestamp = 0;
+    }
+
+    audio = encapsuler->audio;
+    if ((encapsuler->got_audio != 0) && (audio != NULL))
+    {
+        // Write audio data
+
+        // if frame TS is null, set it as last TS + default duration (from fps)
+        if (sampleHeader->timestamp == 0) {
+            // TODO: compute a default ts
+        }
+        // For first frame, no previous timestamp => dt = 0
+        if (audio->lastSampleTimestamp == 0) {
+            audio->lastSampleTimestamp = sampleHeader->timestamp;
+        }
+
+        uint32_t infoLen;
+        char infoData [ENCAPSULER_INFODATA_MAX_SIZE] = {0};
+        snprintf (infoData, ENCAPSULER_INFODATA_MAX_SIZE, ARMEDIA_ENCAPSULER_INFO_PATTERN,
+                ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG,
+                sampleHeader->sample_size,
+                'm',
+                (uint32_t)(sampleHeader->timestamp - audio->lastSampleTimestamp)); // Sample duration
+        infoLen = strlen (infoData);
+        if (infoLen != fwrite (infoData, 1, infoLen, encapsuler->metaFile))
+        {
+            ENCAPSULER_ERROR ("Unable to write sampleInfo into info file");
+            return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+        }
+
+        audio->lastSampleTimestamp = sampleHeader->timestamp;
+        audio->sampleCount++;
+
+        if (sampleHeader->sample_size != fwrite (data, 1, sampleHeader->sample_size, encapsuler->dataFile))
+        {
+            ENCAPSULER_ERROR ("Unable to write sample into data file");
+            return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+        }
+
+        audio->totalsize += sampleHeader->sample_size;
+    }
+    else
+    {
+        // issue
+        ENCAPSULER_ERROR ("Issue while getting audio sample (%u - %p)\n", encapsuler->got_audio, encapsuler->audio);
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+
+    return ARMEDIA_OK;
+}
+
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encapsuler)
 {
     eARMEDIA_ERROR localError = ARMEDIA_OK;
-    ARMEDIA_Video_t *myVideo = NULL;
+    ARMEDIA_Video_t *video = NULL;
+    ARMEDIA_Audio_t *audio = NULL;
 
     // Create internal buffers
     uint32_t *frameSizeBufferNE   = NULL;
-    uint32_t *frameOffsetBuffer   = NULL;
+    uint32_t *videoOffsetBuffer   = NULL;
     uint32_t *frameTimeSyncBuffer = NULL;
     uint32_t *iFrameIndexBuffer   = NULL;
     ARMEDIA_VideoEncapsuler_t* encaps = NULL;
 
     struct tm *nowTm;
-    uint64_t dataTotalSize = 0;
     uint32_t nbFrames = 0;
 
     if (NULL == encapsuler)
@@ -563,8 +670,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
     if (ARMEDIA_OK == localError)
     {
-        myVideo = encaps->video; // ease of reading
-        if (!myVideo->width)
+        video = encaps->video; // ease of reading
+        audio = encaps->audio; // ease of reading
+        if (!video->width)
         {
             // Video was not initialized
             ENCAPSULER_ERROR ("video was not initialized");
@@ -576,21 +684,21 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     if (ARMEDIA_OK == localError)
     {
         // Init internal buffers
-        frameSizeBufferNE   = calloc (myVideo->framesCount, sizeof (uint32_t));
-        frameOffsetBuffer   = calloc (myVideo->framesCount, sizeof (uint32_t));
-        frameTimeSyncBuffer = calloc (2*myVideo->framesCount, sizeof (uint32_t));
-        iFrameIndexBuffer   = calloc (myVideo->framesCount, sizeof (uint32_t));
+        frameSizeBufferNE   = calloc (video->framesCount, sizeof (uint32_t));
+        videoOffsetBuffer   = calloc (video->framesCount, sizeof (uint32_t));
+        frameTimeSyncBuffer = calloc (2*video->framesCount, sizeof (uint32_t));
+        iFrameIndexBuffer   = calloc (video->framesCount, sizeof (uint32_t));
 
         if (NULL == frameSizeBufferNE   ||
-                NULL == frameOffsetBuffer   ||
+                NULL == videoOffsetBuffer   ||
                 NULL == frameTimeSyncBuffer ||
                 NULL == iFrameIndexBuffer )
         {
             ENCAPSULER_ERROR ("Unable to allocate buffers for video finish");
             free (frameSizeBufferNE);
             frameSizeBufferNE = NULL;
-            free (frameOffsetBuffer);
-            frameOffsetBuffer = NULL;
+            free (videoOffsetBuffer);
+            videoOffsetBuffer = NULL;
             free (frameTimeSyncBuffer);
             frameTimeSyncBuffer = NULL;
             free (iFrameIndexBuffer);
@@ -604,7 +712,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     {
         // Init internal counters
         uint32_t nbIFrames = 0;
-        uint32_t frameOffset = encaps->dataOffset;
+        uint32_t chunkOffset = encaps->dataOffset;
         uint32_t descriptorSize = 0;
         // Time management
         uint32_t sttsNentries = 0;
@@ -646,7 +754,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t nenbFrames;
         movie_atom_t *stszAtom;
 
-        // Generate stco atom from frameOffsetBuffer and nbFrames
+        // Generate stco atom from videoOffsetBuffer and nbFrames
         uint32_t stcoDataLen;
         uint8_t *stcoBuffer;
         movie_atom_t *stcoAtom;
@@ -667,7 +775,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
         uint32_t interframeDT;
         uint64_t tmpinterframeDT;
-        while (!feof(encaps->metaFile) && nbFrames < myVideo->framesCount)
+        while (!feof(encaps->metaFile) && nbFrames < video->framesCount)
         {
             uint32_t fSize = 0;
             char fType = '\0';
@@ -680,7 +788,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 if (dataType == ARMEDIA_ENCAPSULER_VIDEO_INFO_TAG) // video
                 {
                     frameSizeBufferNE [nbFrames] = htonl (fSize);
-                    frameOffsetBuffer [nbFrames] = htonl (frameOffset);
+                    videoOffsetBuffer [nbFrames] = htonl (chunkOffset);
 
                     // from microseconds to time units
                     tmpinterframeDT = ((uint64_t)vtimescale) * ((uint64_t) interframeDT);
@@ -704,26 +812,25 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                         }
                     } // else : first frame => no DT
 
-                    frameOffset += fSize; // TODO : use another way to get chunk offset
                     if ('i' == fType)
                     {
                         iFrameIndexBuffer [nbIFrames++] = htonl (nbFrames);
                     }
 
                     nbFrames ++;
-                    dataTotalSize += (uint64_t) fSize;
                 }
                 else if (dataType = ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG) // audio
                 {
                     //TODO
                     ;
                 }
+                chunkOffset += fSize; // common computation of chunk offset
             }
         }
 
         // last frame to default DT + last entry
         // from microseconds to time units
-        tmpinterframeDT = ((uint64_t)vtimescale) * ((uint64_t) myVideo->defaultFrameDuration);
+        tmpinterframeDT = ((uint64_t)vtimescale) * ((uint64_t) video->defaultFrameDuration);
         interframeDT = (uint32_t)(tmpinterframeDT / 1000000);
         if (groupInterFrameDT == interframeDT) { // add last frame to previous entry
             groupNframes++;
@@ -753,18 +860,18 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         EMPTY_ATOM(moov);
         mvhdAtom = mvhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, totalDuration, cdate);
         EMPTY_ATOM(trak);
-        tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (myVideo->width, myVideo->height, (*encapsuler)->timescale, totalDuration, cdate);
+        tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (video->width, video->height, (*encapsuler)->timescale, totalDuration, cdate);
         EMPTY_ATOM(mdia);
         mdhdAtom = mdhdAtomFromFpsNumFramesAndDate ((*encapsuler)->timescale, totalDuration, cdate);
         hdlrAtom = hdlrAtomForMdia ();
         EMPTY_ATOM(minf);
         vmhdAtom = vmhdAtomGen ();
-        if (CODEC_MPEG4_AVC == myVideo->codec)
+        if (CODEC_MPEG4_AVC == video->codec)
             hdlr2Atom = hdlrAtomForMinf ();
         EMPTY_ATOM(dinf);
         drefAtom = drefAtomGen ();
         EMPTY_ATOM(stbl);
-        stsdAtom = stsdAtomWithResolutionCodecSpsAndPps (myVideo->width, myVideo->height, myVideo->codec, &myVideo->sps[4], myVideo->spsSize -4, &myVideo->pps[4], myVideo->ppsSize -4);
+        stsdAtom = stsdAtomWithResolutionCodecSpsAndPps (video->width, video->height, video->codec, &video->sps[4], video->spsSize -4, &video->pps[4], video->ppsSize -4);
 
         // Generate stts atom from frameTimeSyncBuffer
         sttsDataLen = (8 + 2 * sttsNentries * sizeof(uint32_t));
@@ -776,7 +883,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         //sttsAtom = sttsAtomWithNumFrames (nbFrames, (*encapsuler)->timescale, (*encapsuler)->fps);
         free(sttsBuffer);
 
-        if (CODEC_MPEG4_AVC == myVideo->codec) {
+        if (CODEC_MPEG4_AVC == video->codec) {
             // Generate stss atom from iFramesIndexBuffer and nbIFrames
             stssDataLen = (8 + (nbIFrames * sizeof (uint32_t)));
             stssBuffer = (uint8_t*) calloc (stssDataLen, 1);
@@ -798,18 +905,18 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         stszAtom = atomFromData (stszDataLen, "stsz", stszBuffer);
         free (stszBuffer);
 
-        // Generate stco atom from frameOffsetBuffer and nbFrames
+        // Generate stco atom from videoOffsetBuffer and nbFrames
         stcoDataLen = (8 + (nbFrames * sizeof (uint32_t)));
         stcoBuffer = (uint8_t*) calloc (stcoDataLen, 1);
         memcpy (&stcoBuffer[4], &nenbFrames, sizeof (uint32_t));
-        memcpy (&stcoBuffer[8], frameOffsetBuffer, nbFrames * sizeof (uint32_t));
+        memcpy (&stcoBuffer[8], videoOffsetBuffer, nbFrames * sizeof (uint32_t));
         stcoAtom = atomFromData (stcoDataLen, "stco", stcoBuffer);
         free (stcoBuffer);
 
         // Create atom tree
         insertAtomIntoAtom (stblAtom, &stsdAtom);
         insertAtomIntoAtom (stblAtom, &sttsAtom);
-        if (CODEC_MPEG4_AVC == myVideo->codec)
+        if (CODEC_MPEG4_AVC == video->codec)
             insertAtomIntoAtom (stblAtom, &stssAtom);
 
         insertAtomIntoAtom (stblAtom, &stscAtom);
@@ -819,7 +926,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         insertAtomIntoAtom (dinfAtom, &drefAtom);
 
         insertAtomIntoAtom (minfAtom, &vmhdAtom);
-        if (CODEC_MPEG4_AVC == myVideo->codec)
+        if (CODEC_MPEG4_AVC == video->codec)
             insertAtomIntoAtom (minfAtom, &hdlr2Atom);
         insertAtomIntoAtom (minfAtom, &dinfAtom);
         insertAtomIntoAtom (minfAtom, &stblAtom);
@@ -845,7 +952,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
     if (ARMEDIA_OK == localError)
     {
-        movie_atom_t *mdatAtom = mdatAtomForFormatWithVideoSize (myVideo->totalsize + 8);
+        uint32_t mdatsize = video->totalsize + 8;
+        if (encaps->got_audio) mdatsize += audio->totalsize;
+        movie_atom_t *mdatAtom = mdatAtomForFormatWithVideoSize(mdatsize);
         // write mdat atom
         fseek (encaps->dataFile, encaps->mdatAtomOffset, SEEK_SET);
         if (-1 == writeAtomToFile (&mdatAtom, encaps->dataFile))
@@ -908,26 +1017,26 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         fsys_time.modtime = encaps->creationTime;
         utime(encaps->dataFilePath, &fsys_time);
 
-        if (myVideo->sps)
+        if (video->sps)
         {
-            free (myVideo->sps);
-            myVideo->sps = NULL;
+            free (video->sps);
+            video->sps = NULL;
         }
-        if (myVideo->pps)
+        if (video->pps)
         {
-            free (myVideo->pps);
-            myVideo->pps = NULL;
+            free (video->pps);
+            video->pps = NULL;
         }
 
-        free (myVideo);
-        myVideo = NULL;
+        free (video);
+        video = NULL;
         free ((*encapsuler));
         *encapsuler = NULL;
 
         free (frameSizeBufferNE);
         frameSizeBufferNE = NULL;
-        free (frameOffsetBuffer);
-        frameOffsetBuffer = NULL;
+        free (videoOffsetBuffer);
+        videoOffsetBuffer = NULL;
         free (frameTimeSyncBuffer);
         frameTimeSyncBuffer = NULL;
         free (iFrameIndexBuffer);
@@ -937,8 +1046,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     {
         free (frameSizeBufferNE);
         frameSizeBufferNE = NULL;
-        free (frameOffsetBuffer);
-        frameOffsetBuffer = NULL;
+        free (videoOffsetBuffer);
+        videoOffsetBuffer = NULL;
         free (frameTimeSyncBuffer);
         frameTimeSyncBuffer = NULL;
         free (iFrameIndexBuffer);
@@ -950,7 +1059,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler)
 {
-    ARMEDIA_Video_t *myVideo = NULL;
+    ARMEDIA_Video_t *video = NULL;
     ARMEDIA_VideoEncapsuler_t* encaps = NULL;
 
     if (NULL == encapsuler)
@@ -965,7 +1074,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
     } else {
         encaps = *encapsuler;
     }
-    myVideo = encaps->video; // ease of reading
+    video = encaps->video; // ease of reading
 
     if(NULL!=encaps->dataFile) fclose (encaps->dataFile);
     if(NULL!=encaps->metaFile) fclose (encaps->metaFile);
@@ -973,18 +1082,18 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
     remove (encaps->tempFilePath);
     remove (encaps->dataFilePath);
 
-    if (myVideo->sps)
+    if (video->sps)
     {
-        free (myVideo->sps);
-        myVideo->sps = NULL;
+        free (video->sps);
+        video->sps = NULL;
     }
-    if (myVideo->pps)
+    if (video->pps)
     {
-        free (myVideo->pps);
-        myVideo->pps = NULL;
+        free (video->pps);
+        video->pps = NULL;
     }
 
-    free (myVideo);
+    free (video);
     *encapsuler = NULL;
 
     return ARMEDIA_OK;
