@@ -119,15 +119,16 @@ typedef enum {
 } eARMEDIA_ENCAPSULER_AUDIO_CODEC;
 
 typedef enum {
-    AFORMAT_32BITS,
-    AFORMAT_16BITS,
-    AFORMAT_8BITS
+    AFORMAT_32BITS = 32,
+    AFORMAT_16BITS = 16,
+    AFORMAT_8BITS = 8
 } eARMEDIA_ENCAPSULER_AUDIO_FORMAT;
 
 typedef struct {
     eARMEDIA_ENCAPSULER_AUDIO_CODEC codec;
     eARMEDIA_ENCAPSULER_AUDIO_FORMAT format;
-    uint32_t frequency;
+    uint16_t frequency;
+    uint16_t nchannel;
     uint64_t timestamp;
     uint32_t sample_size;
     uint8_t* sample;

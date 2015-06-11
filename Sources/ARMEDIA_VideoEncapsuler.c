@@ -102,6 +102,8 @@ struct ARMEDIA_Audio_t
 {
     eARMEDIA_ENCAPSULER_AUDIO_CODEC codec;
     eARMEDIA_ENCAPSULER_AUDIO_FORMAT format;
+    uint16_t nchannel;
+    uint16_t freq;
     uint32_t defaultSampleDuration;
     uint32_t sampleCount; // number of samples
     uint32_t totalsize;
@@ -575,6 +577,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *enc
         }
         encapsuler->audio->format = sampleHeader->format;
         encapsuler->audio->codec = sampleHeader->codec;
+        encapsuler->audio->nchannel = sampleHeader->nchannel;
+        encapsuler->audio->freq = sampleHeader->frequency;
+        encapsuler->audio->defaultSampleDuration = (sampleHeader->sample_size / sampleHeader->nchannel) / sampleHeader->frequency;
         encapsuler->audio->sampleCount = 0;
         encapsuler->audio->totalsize = 0;
         encapsuler->audio->lastSampleTimestamp = 0;
@@ -587,7 +592,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *enc
 
         // if frame TS is null, set it as last TS + default duration (from fps)
         if (sampleHeader->timestamp == 0) {
-            // TODO: compute a default ts
+            sampleHeader->timestamp = audio->lastSampleTimestamp + audio->defaultSampleDuration;
         }
         // For first frame, no previous timestamp => dt = 0
         if (audio->lastSampleTimestamp == 0) {
@@ -1014,7 +1019,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
             stblAtom = atomFromData(0, "stbl", NULL);
 
-            stsdAtom = stsdAtomWithAudioCodec(audio->codec);
+            stsdAtom = stsdAtomWithAudioCodec(audio->codec, audio->format, audio->nchannel, audio->freq);
 
             // Generate stts atom from frameTimeSyncBuffer
             sttsDataLen = (8 + 2 * audiosttsNentries * sizeof(uint32_t));

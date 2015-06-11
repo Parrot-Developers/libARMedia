@@ -730,7 +730,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
     return retAtom;
 }
 
-movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec)
+movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec, eARMEDIA_ENCAPSULER_AUDIO_FORMAT format, uint16_t nchannel, uint16_t freq)
 {
     uint32_t dataSize = 44;
     uint32_t currentIndex = 0;
@@ -752,11 +752,11 @@ movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec)
     ATOM_WRITE_U16(0x0001);             // 22 - data reference index
     ATOM_WRITE_U32(0x00000000);         // 24 - version flag
     ATOM_WRITE_U32(0x00000000);         // 28 - vendor
-    ATOM_WRITE_U16(1);                  // 32 - number of channels
-    ATOM_WRITE_U16(16);                 // 34 - sample size
+    ATOM_WRITE_U16(nchannel);           // 32 - number of channels
+    ATOM_WRITE_U16(format);             // 34 - sample size
     ATOM_WRITE_U16(0);                  // 36 - compression ID
     ATOM_WRITE_U16(0);                  // 38 - packet size
-    ATOM_WRITE_U16(16000);              // 40 - sample rate
+    ATOM_WRITE_U16(freq);               // 40 - sample rate
     ATOM_WRITE_U16(0);                  // 42 - sample rate
                                         // 44 -- END
 
