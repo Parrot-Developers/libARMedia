@@ -893,24 +893,26 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         videoDuration += groupNframes * groupInterFrameDT;
         videosttsNentries++;
 
-        // last sample to default DT + last entry
-        // from microseconds to time units
-        tmpintersampleDT = ((uint64_t)vtimescale) * ((uint64_t) audio->defaultSampleDuration);
-        intersampleDT = (uint32_t)(tmpintersampleDT / 1000000);
-        if (groupInterSampleDT == intersampleDT) { // add last frame to previous entry
-            groupNsamples++;
-        } else { // write previous entry then add last frame to new entry
+        if (encaps->got_audio) {
+            // last sample to default DT + last entry
+            // from microseconds to time units
+            tmpintersampleDT = ((uint64_t)vtimescale) * ((uint64_t) audio->defaultSampleDuration);
+            intersampleDT = (uint32_t)(tmpintersampleDT / 1000000);
+            if (groupInterSampleDT == intersampleDT) { // add last frame to previous entry
+                groupNsamples++;
+            } else { // write previous entry then add last frame to new entry
+                sampleTimeSyncBuffer[2*audiosttsNentries] = htonl(groupNsamples);
+                sampleTimeSyncBuffer[2*audiosttsNentries+1] = htonl(groupInterSampleDT);
+                audioDuration += groupNsamples * groupInterSampleDT;
+                audiosttsNentries++;
+                groupNsamples = 1;
+                groupInterSampleDT = intersampleDT;
+            }
             sampleTimeSyncBuffer[2*audiosttsNentries] = htonl(groupNsamples);
             sampleTimeSyncBuffer[2*audiosttsNentries+1] = htonl(groupInterSampleDT);
             audioDuration += groupNsamples * groupInterSampleDT;
             audiosttsNentries++;
-            groupNsamples = 1;
-            groupInterSampleDT = intersampleDT;
         }
-        sampleTimeSyncBuffer[2*audiosttsNentries] = htonl(groupNsamples);
-        sampleTimeSyncBuffer[2*audiosttsNentries+1] = htonl(groupInterSampleDT);
-        audioDuration += groupNsamples * groupInterSampleDT;
-        audiosttsNentries++;
 
         // get time values
         tzset();
