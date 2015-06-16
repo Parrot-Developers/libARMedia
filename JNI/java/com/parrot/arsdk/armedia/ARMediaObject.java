@@ -60,7 +60,8 @@ import android.graphics.Bitmap;
 public class ARMediaObject implements Cloneable, Parcelable, Serializable, Comparable<ARMediaObject>
 {
     private static final String TAG = ARMediaObject.class.getSimpleName();
-    
+    private SimpleDateFormat dateFormater;
+
     public String runDate;
     public ARDISCOVERY_PRODUCT_ENUM product;
     public String productId;
@@ -279,14 +280,18 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
         dest.writeString(uuid);
         dest.writeParcelable(this.media, flags);
 	}
-	
+
 	public int compareTo(ARMediaObject obj)
     {
+        if (dateFormater == null)
+        {
+            dateFormater = new SimpleDateFormat("yyyy-MM-dd'T'HHmmss");
+        }
+
 	    int retVal = 0;
 	    try {
-	        
-	        Date dateObj1 = new SimpleDateFormat("yyyy-MM-dd'T'HHmmss").parse(obj.date);
-	        Date dateObj2 = new SimpleDateFormat("yyyy-MM-dd'T'HHmmss").parse(this.date);
+	        Date dateObj1 = dateFormater.parse(obj.date);
+	        Date dateObj2 = dateFormater.parse(this.date);
 	        if(dateObj1.after(dateObj2)){
 	            retVal = -1;
 	        } else if (dateObj1.before(dateObj2)){
