@@ -107,6 +107,8 @@ public class ARMediaManager
     public static final String ARMEDIA_MANAGER_JPG = ".jpg";
     public static final String ARMEDIA_MANAGER_MP4 = ".mp4";
 
+    private static final String DOWNLOADING_PREFIX = "downloading_";
+
     private static final String kARMediaManagerKey = "kARMediaManagerKey";
     private static final String kARMediaManagerProjectDicCount = "kARMediaManagerProjectDicCount";
 
@@ -348,9 +350,10 @@ public class ARMediaManager
             {
                 for (File file : fList)
                 {
-                    if (file.getAbsolutePath().endsWith(ARMEDIA_MANAGER_MP4))
+                    final String filePath = file.getAbsolutePath();
+                    if ((filePath.contains(DOWNLOADING_PREFIX) == false) && filePath.endsWith(ARMEDIA_MANAGER_MP4))
                     {
-                        addARMediaVideoToProjectDictionary(file.getAbsolutePath());
+                        addARMediaVideoToProjectDictionary(filePath);
                     }
                 }
             }
