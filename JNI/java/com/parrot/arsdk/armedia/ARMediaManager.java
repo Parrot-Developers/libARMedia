@@ -325,7 +325,7 @@ public class ARMediaManager
                     {
                         String mediaFileAbsolutPath = cursorVideo.getString(cursorVideo.getColumnIndex("_data"));
                         String mediaName = cursorVideo.getString(cursorVideo.getColumnIndex("title"));
-                        if (mediaFileAbsolutPath.endsWith(ARMEDIA_MANAGER_MP4))
+                        if (!mediaFileAbsolutPath.contains(DOWNLOADING_PREFIX) && mediaFileAbsolutPath.endsWith(ARMEDIA_MANAGER_MP4))
                         {
                             addARMediaVideoToProjectDictionary(mediaFileAbsolutPath);
                         }
@@ -351,7 +351,7 @@ public class ARMediaManager
                 for (File file : fList)
                 {
                     final String filePath = file.getAbsolutePath();
-                    if ((filePath.contains(DOWNLOADING_PREFIX) == false) && filePath.endsWith(ARMEDIA_MANAGER_MP4))
+                    if (!filePath.contains(DOWNLOADING_PREFIX) && filePath.endsWith(ARMEDIA_MANAGER_MP4))
                     {
                         addARMediaVideoToProjectDictionary(filePath);
                     }
