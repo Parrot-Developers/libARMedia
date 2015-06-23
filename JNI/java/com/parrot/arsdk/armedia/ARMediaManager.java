@@ -78,6 +78,7 @@ import android.util.Log;
 
 import com.parrot.arsdk.armedia.ARMEDIA_ERROR_ENUM;
 import com.parrot.arsdk.armedia.ARMediaObject;
+import com.parrot.arsdk.arsal.ARSALPrint;
 import com.parrot.arsdk.armedia.MEDIA_TYPE_ENUM;
 import com.parrot.arsdk.ardiscovery.ARDiscoveryService;
 import com.parrot.arsdk.armedia.ARMediaVideoAtoms;
@@ -202,7 +203,7 @@ public class ARMediaManager
 
     public ARMEDIA_ERROR_ENUM update()
     {
-
+        ARSALPrint.v(TAG, "update MediaManager");
         if (!isInit)
             return ARMEDIA_ERROR_ENUM.ARMEDIA_ERROR_MANAGER_NOT_INITIALIZED;
 
@@ -251,7 +252,7 @@ public class ARMediaManager
             {
                 if (!cursorPhoto.moveToFirst())
                 {
-                    Log.d(TAG, "No Photo files for album: " + key);
+                    ARSALPrint.v(TAG, "No Photo files for album: " + key);
                 }
                 else
                 {
@@ -267,12 +268,14 @@ public class ARMediaManager
                             {
                                 exif = new Exif2Interface(mediaFileAbsolutPath);
                                 String description = exif.getAttribute(Exif2Interface.Tag.IMAGE_DESCRIPTION);
+                                ARSALPrint.v(TAG, "image:"+mediaFileAbsolutPath+", desc="+description);
                                 if (description != null)
                                 {
                                     jsonReader = new JSONObject(description);
                                     if (jsonReader.has(ARMediaManagerPVATProductIdKey))
                                         exifProductID = jsonReader.getString(ARMediaManagerPVATProductIdKey);
                                     String productName = ARDiscoveryService.getProductName(ARDiscoveryService.getProductFromProductID((int) Long.parseLong(exifProductID, 16)));
+                                    ARSALPrint.v(TAG, "image product="+productName);
                                     if (projectsDictionary.keySet().contains(productName))
                                     {
                                         HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(jsonReader.getString(ARMediaManagerPVATProductIdKey));
@@ -282,6 +285,7 @@ public class ARMediaManager
                                             if(mediaObject != null)
                                             {
                                                 mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
+                                                ARSALPrint.v(TAG, "add photo:"+mediaFilePath);
                                                 ((HashMap<String, Object>) projectsDictionary.get(productName)).put(mediaFilePath, mediaObject);
                                             }
                                         }
@@ -317,7 +321,7 @@ public class ARMediaManager
             {
                 if (!cursorVideo.moveToFirst())
                 {
-                    Log.d(TAG, "No Video for :" + key);
+                    ARSALPrint.d(TAG, "No Video for :" + key);
                 }
                 else
                 {
@@ -327,6 +331,7 @@ public class ARMediaManager
                         String mediaName = cursorVideo.getString(cursorVideo.getColumnIndex("title"));
                         if (!mediaFileAbsolutPath.contains(DOWNLOADING_PREFIX) && mediaFileAbsolutPath.endsWith(ARMEDIA_MANAGER_MP4))
                         {
+                            ARSALPrint.v(TAG, "adding video:"+mediaFileAbsolutPath);
                             addARMediaVideoToProjectDictionary(mediaFileAbsolutPath);
                         }
                         currentCount++;
@@ -348,11 +353,13 @@ public class ARMediaManager
             File[] fList = directory.listFiles();
             if (fList != null)
             {
+                ARSALPrint.v(TAG, "Fetching files in DCIM folder");
                 for (File file : fList)
                 {
                     final String filePath = file.getAbsolutePath();
                     if (!filePath.contains(DOWNLOADING_PREFIX) && filePath.endsWith(ARMEDIA_MANAGER_MP4))
                     {
+                        ARSALPrint.v(TAG, "adding video:"+filePath);
                         addARMediaVideoToProjectDictionary(filePath);
                     }
                 }
@@ -407,7 +414,7 @@ public class ARMediaManager
         JSONObject jsonReader;
         String filename = file.getName();
 
-        
+        ARSALPrint.v(TAG, "Save media:"+file.getPath());
         if (filename.endsWith(ARMEDIA_MANAGER_JPG))
         {
             Exif2Interface exif;
@@ -415,18 +422,23 @@ public class ARMediaManager
             {
                 exif = new Exif2Interface(file.getPath());
                 String description = exif.getAttribute(Exif2Interface.Tag.IMAGE_DESCRIPTION);
+                ARSALPrint.v(TAG, "image description:"+description);
                 if (description != null)
                 {
                     jsonReader = new JSONObject(description);
                     if (jsonReader.has(ARMediaManagerPVATProductIdKey))
                         exifProductID = jsonReader.getString(ARMediaManagerPVATProductIdKey);
                     productName = ARDiscoveryService.getProductName(ARDiscoveryService.getProductFromProductID((int) Long.parseLong(exifProductID, 16)));
+                    ARSALPrint.v(TAG, "new image product="+productName);
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
                         mediaObject = createMediaObjectFromJson("/DCIM/".concat(productName).concat("/").concat(filename), jsonReader);
                         if(mediaObject != null)
+                        {
+                            ARSALPrint.v(TAG, "new image path:"+mediaObject.getFilePath());
                             mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
+                        }
                         toAdd = true;
                     }
                 }
@@ -444,6 +456,7 @@ public class ARMediaManager
         else if (filename.endsWith(ARMEDIA_MANAGER_MP4))
         {
             String description = com.parrot.arsdk.armedia.ARMediaVideoAtoms.getPvat(file.getAbsolutePath());
+            ARSALPrint.v(TAG, "video description:"+description);
             if (description != null)
             {
                 try
@@ -452,12 +465,16 @@ public class ARMediaManager
                     if (jsonReader.has(ARMediaManagerPVATProductIdKey))
                         exifProductID = jsonReader.getString(ARMediaManagerPVATProductIdKey);
                     productName = ARDiscoveryService.getProductName(ARDiscoveryService.getProductFromProductID((int) Long.parseLong(exifProductID, 16)));
+                    ARSALPrint.v(TAG, "new video product="+productName);
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
                         mediaObject = createMediaObjectFromJson("/DCIM/".concat(productName).concat("/").concat(filename), jsonReader);
                         if(mediaObject != null)
+                        {
+                            ARSALPrint.v(TAG, "new video path:"+mediaObject.getFilePath());
                             mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_VIDEO;
+                        }
                         toAdd = true;
                     }
                 }
