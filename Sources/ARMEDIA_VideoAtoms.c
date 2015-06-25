@@ -932,13 +932,19 @@ int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAto
     char fourCCTag [5] = {0};
     uint64_t wideAtomSize = 8;
     int found = 0;
+    int fseekRet = 0;
     if (NULL == videoFile)
     {
         return 0;
     }
     while (0 == found && !feof (videoFile))
     {
-        fseek (videoFile, wideAtomSize - 8, SEEK_CUR);
+        fseekRet = fseek (videoFile, wideAtomSize - 8, SEEK_CUR);
+        if (fseekRet < 0)
+        {
+            // Error while fseek
+            break;
+        }
 
         read_uint32 (videoFile, &atomSize);
         read_4cc (videoFile, fourCCTag);

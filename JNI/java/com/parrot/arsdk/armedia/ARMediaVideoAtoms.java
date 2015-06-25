@@ -33,6 +33,8 @@ package com.parrot.arsdk.armedia;
 import com.parrot.arsdk.arsal.ARSALPrint;
 import com.parrot.arsdk.ardiscovery.ARDISCOVERY_PRODUCT_ENUM;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 
 public class ARMediaVideoAtoms {
@@ -48,7 +50,11 @@ public class ARMediaVideoAtoms {
     public static String getPvat(String path)
     {
         byte [] data = nativeGetAtom(path, "pvat");
-
+        if (data == null)
+        {
+            // If PVAT is at file's end and file is bigger than 2GB, native function fails, so try in Java
+            data = getPVATFromJava(path);
+        }
         String s = null;
         if (data != null)
         {
@@ -61,6 +67,10 @@ public class ARMediaVideoAtoms {
                 ARSALPrint.e(TAG, "Error while creating pvat string");
                 uee.printStackTrace();
             }
+        }
+        else
+        {
+            ARSALPrint.e(TAG, "Failed to find PVAT in " + path);
         }
 
         return s;
@@ -79,5 +89,99 @@ public class ARMediaVideoAtoms {
     public static void changePvatDate(String path, String videoDate)
     {
         nativeChangePvatDate(path, videoDate);
+    }
+
+    /**
+    * Code ported in Java from nativeGetAtom
+    */
+    private static byte[] getPVATFromJava(String path)
+    {
+        final String atomName = "pvat";
+        byte[] result = null;
+        long atomSize = 0;
+        final byte[] fourCCTagBuffer = new byte[4];
+        boolean found = false;
+        long wideAtomSize = 8;
+
+        RandomAccessFile file = null;
+        try
+        {
+            file = new RandomAccessFile(path, "r");
+            while (!found)
+            {
+                file.seek(file.getFilePointer() + wideAtomSize - 8);
+
+                atomSize = file.readInt();
+                file.read(fourCCTagBuffer, 0, 4);
+                if (atomSize == 1)
+                {
+                    wideAtomSize = file.readLong();
+                    wideAtomSize = wideAtomSize - 8;
+                }
+                else if (atomSize == 0)
+                {
+                    break;
+                }
+                else
+                {
+                    wideAtomSize = atomSize;
+                }
+                if (atomName.equals(new String(fourCCTagBuffer)))
+                {
+                    found = true;
+                }
+            }
+        }
+        catch (IOException e)
+        {
+            ARSALPrint.e(TAG, "error while reading file [" + path + "]");
+        }
+        if (found)
+        {
+            if (atomSize > 8)
+            {
+                atomSize -= 8; // Remove the [size - tag] part, as it was read during seek
+            }
+            final byte[] atomBuffer = new byte[(int)atomSize];
+            boolean valid = true;
+            int read = 0;
+            try
+            {
+                read = file.read(atomBuffer, 0, (int)atomSize);
+            }
+            catch (IOException e)
+            {
+                valid = false;
+            }
+            if (read != atomSize)
+            {
+                valid = false;
+            }
+            if (valid)
+            {
+                result = atomBuffer;
+            }
+            else
+            {
+                ARSALPrint.e(TAG, "failed to read atom, read = [" + read + "], atomSise = [" + atomSize + "]");
+            }
+        }
+        else
+        {
+            ARSALPrint.e(TAG, "failed to found atom = [" + atomName + "]");
+        }
+        if (file != null)
+        {
+            try
+            {
+                file.close();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+
+        return result;
     }
 }
