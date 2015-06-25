@@ -261,6 +261,39 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
 }
 #endif
 
+#define BYTE_STREAM_NALU_START_CODE 0x00000001
+
+static int ARMEDIA_H264StartcodeMatch(uint8_t* pBuf, unsigned int bufSize)
+{
+    int ret, pos, end;
+    uint32_t shiftVal = 0;
+    uint8_t* ptr = pBuf;
+
+    if (bufSize < 4) return -2;
+
+    pos = 0;
+    end = bufSize;
+
+    do
+    {
+        shiftVal <<= 8;
+        shiftVal |= (*ptr++) & 0xFF;
+        pos++;
+    }
+    while (((shiftVal != BYTE_STREAM_NALU_START_CODE) && (pos < end)) || (pos < 4));
+
+    if (shiftVal == BYTE_STREAM_NALU_START_CODE)
+    {
+        ret = pos - 4;
+    }
+    else
+    {
+        ret = -2;
+    }
+
+    return ret;
+}
+
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Frame_Header_t *frameHeader)
 {
     uint8_t *data;
@@ -497,21 +530,27 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     video->lastFrameTimestamp = frameHeader->timestamp;
     video->framesCount++;
 
-    // write SPS/PPS headers
     if (video->codec == CODEC_MPEG4_AVC) {
-        // Modify frames before writing
-        if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME == frameHeader->frame_type) {
-            // set correct sizes for SPS & PPS headers + frame
-            uint32_t sps_size_NE = htonl (video->spsSize - 4);
-            uint32_t pps_size_NE = htonl (video->ppsSize - 4);
-            uint32_t f_size_NE   = htonl (frameHeader->frame_size - (video->spsSize + video->ppsSize + 4));
-            memcpy ( data                                 , &sps_size_NE, sizeof (uint32_t));
-            memcpy (&data[video->spsSize]                 , &pps_size_NE, sizeof (uint32_t));
-            memcpy (&data[video->spsSize + video->ppsSize], &f_size_NE  , sizeof (uint32_t));
-        } else if (ARMEDIA_ENCAPSULER_FRAME_TYPE_P_FRAME == frameHeader->frame_type) {
-            // set correct size for frame
-            uint32_t f_size_NE = htonl (frameHeader->frame_size - 4);
-            memcpy (data, &f_size_NE, sizeof (uint32_t));
+        // Replace the NAL units start code by the NALU size
+        int startCodePos = 0, naluStart = 0, naluEnd = 0, sizeLeft = frameHeader->frame_size;
+        uint32_t naluSize = 0;
+        startCodePos = ARMEDIA_H264StartcodeMatch(data, sizeLeft);
+        naluStart = startCodePos;
+        while (startCodePos >= 0)
+        {
+            sizeLeft = frameHeader->frame_size - naluStart - 4;
+            startCodePos = ARMEDIA_H264StartcodeMatch(data + naluStart + 4, sizeLeft);
+            if (startCodePos >= 0)
+            {
+                naluEnd = naluStart + 4 + startCodePos;
+            }
+            else
+            {
+                naluEnd = frameHeader->frame_size;
+            }
+            naluSize = htonl(naluEnd - naluStart - 4);
+            memcpy(data + naluStart, &naluSize, sizeof(uint32_t));
+            naluStart = naluEnd;
         }
     }
 
