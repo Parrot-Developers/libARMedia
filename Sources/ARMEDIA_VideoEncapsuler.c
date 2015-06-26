@@ -824,7 +824,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
         uint32_t interframeDT, intersampleDT;
         uint64_t tmpinterframeDT, tmpintersampleDT;
-        while (!feof(encaps->metaFile) && (nbFrames < video->framesCount) && (nbSamples < audio->sampleCount))
+        while (!feof(encaps->metaFile))
         {
             uint32_t fSize = 0;
             char fType = '\0';
