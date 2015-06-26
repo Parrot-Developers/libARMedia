@@ -186,9 +186,10 @@ int seekMediaBufferToAtom (uint8_t *buff, long long *offset,long long size, cons
  * @param[in] videoFile Pointer to the video file
  * @param[in] tag char Pointer of the wanted atom Name
  * @param[in|out] size Pointer of number of bytes for te wanted atom in the video
+ * @param[in] index of the atom (if many atoms have the same name). Index starts at 1
  * @return int return 0 if the tag is not found else return 1 if success and set the size of retAtomSize
  */
-int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAtomSize);
+int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAtomSize, uint32_t atomIndex);
 
 /**
  * @brief This function reversed the byte order of a uint64_t

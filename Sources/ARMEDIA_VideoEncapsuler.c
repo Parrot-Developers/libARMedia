@@ -1565,7 +1565,7 @@ int ARMEDIA_VideoEncapsuler_changePVATAtomDate (FILE *videoFile, const char *vid
     uint8_t *atomBuffer = NULL;
 
     uint64_t atomSize = 0;
-    result = seekMediaFileToAtom (videoFile, "pvat", &atomSize);
+    result = seekMediaFileToAtom (videoFile, "pvat", &atomSize, 1);
 
     if(result)
     {

@@ -39,6 +39,7 @@
 
 #include <libARMedia/ARMedia.h>
 #include <libARMedia/ARMEDIA_VideoEncapsuler.h>
+#include <libARSAL/ARSAL_Print.h>
 #include <json/json.h>
 
 #include <string.h>
@@ -53,6 +54,9 @@
 #define ATOM_MEMCOPY(DST, SRC, SIZE) memcpy(DST, SRC, SIZE)
 
 #define TIMESTAMP_FROM_1970_TO_1904 (0x7c25b080U)
+#define ATOM_SIZE 4
+
+#define ARMEDIA_TAG "ARMEDIA_VideoAtoms"
 
 /**
  * To use these macros, function must ensure :
@@ -962,7 +966,7 @@ movie_atom_t *pvatAtomGen(const char *jsonString)
    }
 */
 
-int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAtomSize)
+int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAtomSize, uint32_t atomIndex)
 {
     uint32_t atomSize = 0;
     char fourCCTag [5] = {0};
@@ -1000,7 +1004,12 @@ int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAto
         }
         if (0 == strncmp (fourCCTag, atomName, 4))
         {
-            found = 1;
+            atomIndex--;
+            ARSAL_PRINT(ARSAL_PRINT_VERBOSE, ARMEDIA_TAG, "found atom:%s, iterations left:%d", atomName, atomIndex);
+            if (atomIndex == 0)
+            {
+                found = 1;
+            }
         }
     }
     if (1 == found && NULL != retAtomSize)
@@ -1020,20 +1029,36 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom, uint32_t *dataSi
     char *token;
     char *localAtom;
 
-    // Rewind videoFile
-    if (NULL != videoFile)
+    if (videoFile == NULL)
     {
-        rewind (videoFile);
+        return NULL;
     }
+    // Rewind videoFile
+    rewind (videoFile);
 
     localAtom = strdup(atom);
-
+    if(localAtom == NULL)
+    {
+        return NULL;
+    }
     token = strtok_r(localAtom, "/", &tokSave);
-
+    char fcc[ATOM_SIZE + 1] = {0};
     while (token != NULL)
     {
+        int tokenLen = strlen(token);
+        ARSAL_PRINT(ARSAL_PRINT_VERBOSE, ARMEDIA_TAG, "token=%s len=%d",token, tokenLen);
+        int idx = 1; // by default we search for the first atom that matches
+        if (tokenLen > ATOM_SIZE)
+        {
+            // We got a special atom of type "idx:atom" to decode ex:"moov/2:trak/tkhd" in this we want the second trak atom only
+            sscanf(token, "%d:%s", &idx, fcc);
+            ARSAL_PRINT(ARSAL_PRINT_VERBOSE, ARMEDIA_TAG, "split %s into %s - %d\n", token, fcc, idx);
+            token = fcc;
+        }
         // Seek to atom
-        int seekRes = seekMediaFileToAtom (videoFile, token, &atomSize);
+        ARSAL_PRINT(ARSAL_PRINT_VERBOSE, ARMEDIA_TAG, "looking for token:%s",token);
+        int seekRes = seekMediaFileToAtom (videoFile, token, &atomSize, idx);
+        ARSAL_PRINT(ARSAL_PRINT_VERBOSE, ARMEDIA_TAG, "token:%s, seekRes=%d",token, seekRes);
         if (0 == seekRes)
         {
             return NULL;
@@ -1116,11 +1141,13 @@ uint32_t getVideoFpsFromFile (FILE *videoFile)
     uint32_t retFps = 0;
     int valid = 1;
     int seekRes;
-    // Rewind videoFile
-    if (NULL != videoFile)
+
+    if (videoFile == NULL)
     {
-        rewind (videoFile);
+        return NULL;
     }
+    // Rewind videoFile
+    rewind (videoFile);
 
     // Seek to mdhd atom, following its parents :
     // ROOT:
@@ -1129,7 +1156,7 @@ uint32_t getVideoFpsFromFile (FILE *videoFile)
     //     \ mdia
     //        \ mdhd <-
     // First seek : moov
-    seekRes = seekMediaFileToAtom (videoFile, "moov", NULL);
+    seekRes = seekMediaFileToAtom (videoFile, "moov", NULL, 1);
     if (0 == seekRes)
     {
         valid = 0;
@@ -1137,7 +1164,7 @@ uint32_t getVideoFpsFromFile (FILE *videoFile)
     // Second seek : trak
     if (1 == valid)
     {
-        seekRes = seekMediaFileToAtom (videoFile, "trak", NULL);
+        seekRes = seekMediaFileToAtom (videoFile, "trak", NULL, 1);
         if (0 == seekRes)
         {
             valid = 0;
@@ -1146,7 +1173,7 @@ uint32_t getVideoFpsFromFile (FILE *videoFile)
     // Third seek : mdia
     if (1 == valid)
     {
-        seekRes = seekMediaFileToAtom (videoFile, "mdia", NULL);
+        seekRes = seekMediaFileToAtom (videoFile, "mdia", NULL, 1);
         if (0 == seekRes)
         {
             valid = 0;
@@ -1155,7 +1182,7 @@ uint32_t getVideoFpsFromFile (FILE *videoFile)
     // Final seek : mdhd
     if (1 == valid)
     {
-        seekRes = seekMediaFileToAtom (videoFile, "mdhd", &atomSize);
+        seekRes = seekMediaFileToAtom (videoFile, "mdhd", &atomSize, 1);
         if (0 == seekRes)
         {
             valid = 0;
