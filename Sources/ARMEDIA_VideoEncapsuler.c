@@ -872,7 +872,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
                     nbFrames++;
                 }
-                else if (dataType = ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG) // audio
+                else if (dataType == ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG) // audio
                 {
                     sampleSizeBufferNE[nbSamples] = htonl(fSize);
                     audioOffsetBuffer[nbSamples] = htonl(chunkOffset);
