@@ -840,6 +840,34 @@ movie_atom_t *stscAtomGen ()
     return atomFromData (20, "stsc", data);
 }
 
+movie_atom_t *stszAtomGen(uint32_t uniqueSize, uint32_t* sizeTable, uint32_t nSamples) {
+    movie_atom_t* retAtom = NULL;
+    uint32_t currentIndex = 0;
+    uint8_t* data;
+    uint32_t dataSize = 3 * sizeof(uint32_t);
+
+    if (uniqueSize == 0 && sizeTable != NULL) {
+        dataSize += nSamples * sizeof(uint32_t);
+    }
+
+    data = (uint8_t*) ATOM_MALLOC(dataSize);
+    if (data == NULL) {
+        return NULL;
+    }
+
+    ATOM_WRITE_U32(0); // versions & flags
+    ATOM_WRITE_U32(uniqueSize); // versions & flags
+    ATOM_WRITE_U32(nSamples); // versions & flags
+
+    if (uniqueSize == 0 && sizeTable != NULL) {
+        memcpy (&data[currentIndex], sizeTable, nSamples * sizeof (uint32_t));
+    }
+
+    retAtom = atomFromData(dataSize, "stsz", data);
+    ATOM_FREE(data);
+    return retAtom;
+}
+
 movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value)
 {
     movie_atom_t *retAtom = NULL;

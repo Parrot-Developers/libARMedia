@@ -803,11 +803,13 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t groupInterFrameDT = 0;
         uint32_t groupNframes = 0;
         uint32_t videoDuration = 0;
+        uint32_t videoUniqueSize = 0;
         // Video time management
         uint32_t audiosttsNentries = 0;
         uint32_t groupInterSampleDT = 0;
         uint32_t groupNsamples = 0;
         uint32_t audioDuration = 0;
+        uint32_t audioUniqueSize = 0;
 
         movie_atom_t* moovAtom;         // root
         movie_atom_t* mvhdAtom;         // > mvhd
@@ -839,8 +841,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t sttsNentriesNE;
 
         // Generate stsz atom from frameSizeBufferNE and nbFrames
-        uint32_t stszDataLen;
-        uint8_t *stszBuffer;
         uint32_t nbFramesNE;
 
         // Generate stco atom from videoOffsetBuffer and nbFrames
@@ -887,7 +887,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     interframeDT = (uint32_t)(tmpinterframeDT / 1000000);
                     // Time sync mgmt
                     if (interframeDT != 0) {
-                        // first frame
+                        // not first frame
                         if (interframeDT != groupInterFrameDT) {
                             // new entry => save previous entry and create a new one
                             if (groupInterFrameDT != 0) { // not first group
@@ -902,7 +902,15 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                             // use previous entry
                             groupNframes++;
                         }
-                    } // else : first frame => no DT
+
+                        // size mgmt
+                        if (videoUniqueSize != 0 && videoUniqueSize != fSize) {
+                            videoUniqueSize = 0;
+                        }
+                    } else {
+                        // first frame => no DT
+                        videoUniqueSize = fSize;
+                    }
 
                     if (('i' == fType) && (video->codec == CODEC_MPEG4_AVC))
                     {
@@ -921,7 +929,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     intersampleDT = (uint32_t)(tmpintersampleDT / 1000000);
                     // Time sync mgmt
                     if (intersampleDT != 0) {
-                        // first sample
+                        // not first sample
                         if (intersampleDT != groupInterSampleDT) {
                             // new entry => save previous entry and create a new one
                             if (groupInterSampleDT != 0) { // not first group
@@ -936,7 +944,15 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                             // use previous entry
                             groupNsamples++;
                         }
-                    } // else : first sample => no DT
+
+                        // size mgmt
+                        if (audioUniqueSize != 0 && audioUniqueSize != fSize) {
+                            audioUniqueSize = 0;
+                        }
+                    } else {
+                        // first sample => no DT
+                        audioUniqueSize = fSize;
+                    }
 
                     nbSamples++;
                 }
@@ -1033,15 +1049,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         stscAtom = stscAtomGen();
 
         // Generate stsz atom from frameSizeBufferNE and nbFrames
-        stszDataLen = (12 + (nbFrames * sizeof (uint32_t)));
-        stszBuffer = (uint8_t*) calloc (stszDataLen, 1);
-        nbFramesNE = htonl (nbFrames);
-        memcpy (&stszBuffer[8], &nbFramesNE, sizeof (uint32_t));
-        memcpy (&stszBuffer[12], frameSizeBufferNE, nbFrames * sizeof (uint32_t));
-        stszAtom = atomFromData (stszDataLen, "stsz", stszBuffer);
-        free (stszBuffer);
+        stszAtom = stszAtomGen(videoUniqueSize, frameSizeBufferNE, nbFrames);
 
         // Generate stco atom from videoOffsetBuffer and nbFrames
+        nbFramesNE = htonl (nbFrames);
         stcoDataLen = (8 + (nbFrames * sizeof (uint32_t)));
         stcoBuffer = (uint8_t*) calloc (stcoDataLen, 1);
         memcpy (&stcoBuffer[4], &nbFramesNE, sizeof (uint32_t));
@@ -1098,15 +1109,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             stscAtom = stscAtomGen();
 
             // Generate stsz atom from sampleSizeBufferNE and nbSamples
-            stszDataLen = (12 + (nbSamples * sizeof (uint32_t)));
-            stszBuffer = (uint8_t*) calloc (stszDataLen, 1);
-            nbSamplesNE = htonl (nbSamples);
-            memcpy (&stszBuffer[8], &nbSamplesNE, sizeof (uint32_t));
-            memcpy (&stszBuffer[12], sampleSizeBufferNE, nbSamples * sizeof (uint32_t));
-            stszAtom = atomFromData (stszDataLen, "stsz", stszBuffer);
-            free (stszBuffer);
+            stszAtom = stszAtomGen(audioUniqueSize, sampleSizeBufferNE, nbSamples);
 
             // Generate stco atom from videoOffsetBuffer and nbFrames
+            nbSamplesNE = htonl (nbSamples);
             stcoDataLen = (8 + (nbSamples * sizeof (uint32_t)));
             stcoBuffer = (uint8_t*) calloc (stcoDataLen, 1);
             memcpy (&stcoBuffer[4], &nbSamplesNE, sizeof (uint32_t));
