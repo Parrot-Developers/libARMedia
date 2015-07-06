@@ -289,7 +289,7 @@ movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_VIDEO_COD
 {
     uint32_t dataSize;
     if (codec == CODEC_MPEG4_AVC) dataSize = 24;
-    else if (codec == CODEC_MOTION_JPEG) dataSize = 20;
+    else if (codec == CODEC_MOTION_JPEG) dataSize = 12;
     else return NULL;
 
     if (NULL == offset)
@@ -311,12 +311,10 @@ movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_VIDEO_COD
         ATOM_WRITE_4CC('a', 'v', 'c', '1');
         *offset = 48;
     } else if (codec == CODEC_MOTION_JPEG) {
-        ATOM_WRITE_4CC('m', 'p', '4', '2'); // major brand
-        ATOM_WRITE_U32(0x00000001); // minor version
-        ATOM_WRITE_4CC('m', 'p', '4', '1');
-        ATOM_WRITE_4CC('m', 'p', '4', '2');
-        ATOM_WRITE_4CC('i', 's', 'o', 'm'); // compatible brands
-        *offset = 44;
+        ATOM_WRITE_4CC('q', 't', ' ', ' '); // major brand
+        ATOM_WRITE_U32(0x00000200); // minor version
+        ATOM_WRITE_4CC('q', 't', ' ', ' ');
+        *offset = 36;
     }
     retAtom = atomFromData (dataSize, "ftyp", data);
 
@@ -380,8 +378,8 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
     ATOM_WRITE_U32 (timescale); /* Timescale */
     ATOM_WRITE_U32 (duration); /* Duration (in timescale units) */
 
-    ATOM_WRITE_U32 (0x00010000); /* Reserved */
-    ATOM_WRITE_U16 (0x0100); /* Reserved */
+    ATOM_WRITE_U32 (0x00010000); /* Rate */
+    ATOM_WRITE_U16 (0x0100); /* Volume */
     ATOM_WRITE_U16 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
@@ -402,7 +400,7 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
-    ATOM_WRITE_U32 (2); /* Next track id */
+    ATOM_WRITE_U32 (3); /* Next track id */
 
     retAtom = atomFromData (100, "mvhd", data);
     ATOM_FREE (data);
@@ -594,7 +592,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U32(0x00000000);         // 16 -
         ATOM_WRITE_U32(0x00000001);         // 20 -
         ATOM_WRITE_U32(0x00000000);         // 24 - version & revision
-        ATOM_WRITE_4CC('A', 'R', '.', 'D'); // 28 - vendor
+        ATOM_WRITE_4CC('P', 'A', 'O', 'T'); // 28 - vendor
         ATOM_WRITE_U32(0x00000200);         // 32 - temporal quality
         ATOM_WRITE_U32(0x00000200);         // 36 - spatial quality
         ATOM_WRITE_U16(w);                  // 40 - width
@@ -637,9 +635,9 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U32(0x00000000);         // 16 -
         ATOM_WRITE_U32(0x00000001);         // 20 -
         ATOM_WRITE_U32(0x00000000);         // 24 - version & revision
-        ATOM_WRITE_4CC('A', 'R', '.', 'D'); // 28 - vendor
-        ATOM_WRITE_U32(0x00000000);         // 32 - temporal quality
-        ATOM_WRITE_U32(0x00000000);         // 36 - spatial quality
+        ATOM_WRITE_4CC('P', 'A', 'O', 'T'); // 28 - vendor
+        ATOM_WRITE_U32(512);                // 32 - temporal quality
+        ATOM_WRITE_U32(512);                // 36 - spatial quality
         ATOM_WRITE_U16(w);                  // 40 - width
         ATOM_WRITE_U16(h);                  // 42 - height
         ATOM_WRITE_U32(0x00480000);         // 44 - horizontal resolution
@@ -669,7 +667,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U32(0x00000000);         // 16 -
         ATOM_WRITE_U32(0x00000001);         // 20 -
         ATOM_WRITE_U32(0x00000000);         // 24 - version & revision
-        ATOM_WRITE_4CC('A', 'R', '.', 'D'); // 28 - vendor
+        ATOM_WRITE_4CC('P', 'A', 'O', 'T'); // 28 - vendor
         ATOM_WRITE_U32(0x00000200);         // 32 - temporal quality
         ATOM_WRITE_U32(0x00000200);         // 36 - spatial quality
         ATOM_WRITE_U16(w);                  // 40 - width
@@ -711,9 +709,9 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
         ATOM_WRITE_U32(0x14042e14);         // 162 - elementary stream descriptor
         ATOM_WRITE_U32(0x63000001);         // 166 - elementary stream descriptor
         ATOM_WRITE_U8 (0xb2);               // 170 - elementary stream descriptor
-        ATOM_WRITE_4CC('A', 'R', '.', 'D'); // 171 - elementary stream descriptor
-        ATOM_WRITE_4CC('r', 'o', 'n', 'e'); // 175 - elementary stream descriptor
-        ATOM_WRITE_4CC('_', '3', 6, 0x80);  // 179 - elementary stream descriptor
+        ATOM_WRITE_4CC('B', 'e', 'b', 'o'); // 171 - elementary stream descriptor
+        ATOM_WRITE_4CC('p', 'D', 'r', 'o'); // 175 - elementary stream descriptor
+        ATOM_WRITE_4CC('n', 'e', 6, 0x80);  // 179 - elementary stream descriptor
         ATOM_WRITE_U32(0x80800102);         // 183 - elementary stream descriptor
                                             // 187 -- END
     }
@@ -724,7 +722,7 @@ movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_E
 
 movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec, eARMEDIA_ENCAPSULER_AUDIO_FORMAT format, uint16_t nchannel, uint16_t freq)
 {
-    uint32_t dataSize = 44;
+    uint32_t dataSize = 68;
     uint32_t currentIndex = 0;
     movie_atom_t *retAtom;
 
@@ -737,7 +735,7 @@ movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec, eARM
     ATOM_WRITE_U32(0);                  // 0 - version & flags
     ATOM_WRITE_U32(1);                  // 4 - number of entries
 
-    ATOM_WRITE_U32(36);                 // 8 - size of sample description
+    ATOM_WRITE_U32(60);                 // 8 - size of sample description
     ATOM_WRITE_4CC('s', 'o', 'w', 't'); // 12 - tag for sample description
     ATOM_WRITE_U32(0x00000000);         // 16 - reserved
     ATOM_WRITE_U16(0x0000);             // 20 - reserved
@@ -750,7 +748,13 @@ movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec, eARM
     ATOM_WRITE_U16(0);                  // 38 - packet size
     ATOM_WRITE_U16(freq);               // 40 - sample rate
     ATOM_WRITE_U16(0);                  // 42 - sample rate
-                                        // 44 -- END
+    ATOM_WRITE_U32(24);                 // 44 - channel descriptor size
+    ATOM_WRITE_4CC('c', 'h', 'a', 'n'); // 48 - chan descriptor atom
+    ATOM_WRITE_U32(0x00000000);         // 52 - version & flags
+    ATOM_WRITE_U32(0x00640001);         // 56 - audio channel layout
+    ATOM_WRITE_U32(0x00000000);         // 60 - audio channel layout
+    ATOM_WRITE_U32(0x00000000);         // 64 - audio channel layout
+                                        // 68 -- END
 
     retAtom = atomFromData (dataSize, "stsd", data);
     ATOM_FREE(data);
@@ -786,7 +790,7 @@ movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARM
     ATOM_WRITE_U16 (1); /* Data reference index */
     ATOM_WRITE_U16 (0); /* Codec stream version */
     ATOM_WRITE_U16 (0); /* Codec stream revision */
-    ATOM_WRITE_4CC ('A', 'R', '.', 'D'); /* Muxer name */
+    ATOM_WRITE_4CC ('P', 'A', 'O', 'T'); /* Muxer name */
     ATOM_WRITE_U32 (0x200); /* Temporal quality */
     ATOM_WRITE_U32 (0x200); /* Spatial quality */
     ATOM_WRITE_U16 (w); /* Width */
