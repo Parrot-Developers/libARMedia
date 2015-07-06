@@ -83,8 +83,6 @@ static inline int ARMEDIA_ENCAPSULER_SUCCEEDED (eARMEDIA_ERROR error)
 
 typedef enum {
 	CODEC_UNKNNOWN = 0,
-	CODEC_VLIB,
-	CODEC_P264,
 	CODEC_MPEG4_VISUAL,
 	CODEC_MPEG4_AVC,
     CODEC_MOTION_JPEG
@@ -113,9 +111,7 @@ typedef struct {
 } ARMEDIA_Frame_Header_t;
 
 typedef enum {
-    ACODEC_RAW,
-    ACODEC_WAV,
-    ACOPEC_MP3
+    ACODEC_PCM
 } eARMEDIA_ENCAPSULER_AUDIO_CODEC;
 
 typedef enum {
