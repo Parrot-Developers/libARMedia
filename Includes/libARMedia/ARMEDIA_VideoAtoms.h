@@ -122,7 +122,7 @@ movie_atom_t *drefAtomGen ();
 movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_VIDEO_CODEC codec);
 movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_VIDEO_CODEC codec, uint8_t *sps, uint32_t spsSize, uint8_t *pps, uint32_t ppsSize);
 movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec, eARMEDIA_ENCAPSULER_AUDIO_FORMAT format, uint16_t nchannel, uint16_t freq);
-movie_atom_t *stscAtomGen ();
+movie_atom_t *stscAtomGen (uint32_t samplesPerChunk);
 movie_atom_t *stszAtomGen(uint32_t uniqueSize, uint32_t* sizeTable, uint32_t nSamples);
 movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value);
 movie_atom_t *pvatAtomGen(const char *jsonString);

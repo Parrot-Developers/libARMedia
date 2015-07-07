@@ -830,13 +830,16 @@ movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARM
     return retAtom;
 }
 
-movie_atom_t *stscAtomGen ()
+movie_atom_t *stscAtomGen (uint32_t samplesPerChunk)
 {
-    uint8_t data [20] = {0x00, 0x00, 0x00, 0x00,
-                         0x00, 0x00, 0x00, 0x01,
-                         0x00, 0x00, 0x00, 0x01,
-                         0x00, 0x00, 0x00, 0x01,
-                         0x00, 0x00, 0x00, 0x01};
+    uint8_t data [20];
+    uint32_t currentIndex = 0;
+    ATOM_WRITE_U32(0); // version & flags
+    ATOM_WRITE_U32(1); // entry count
+    ATOM_WRITE_U32(1); // first chunk
+    ATOM_WRITE_U32(samplesPerChunk);
+    ATOM_WRITE_U32(1); // id of track sample descriptor table
+
     return atomFromData (20, "stsc", data);
 }
 
@@ -856,8 +859,8 @@ movie_atom_t *stszAtomGen(uint32_t uniqueSize, uint32_t* sizeTable, uint32_t nSa
     }
 
     ATOM_WRITE_U32(0); // versions & flags
-    ATOM_WRITE_U32(uniqueSize); // versions & flags
-    ATOM_WRITE_U32(nSamples); // versions & flags
+    ATOM_WRITE_U32(uniqueSize); // null if table
+    ATOM_WRITE_U32(nSamples); // or table nentries
 
     if (uniqueSize == 0 && sizeTable != NULL) {
         memcpy (&data[currentIndex], sizeTable, nSamples * sizeof (uint32_t));
