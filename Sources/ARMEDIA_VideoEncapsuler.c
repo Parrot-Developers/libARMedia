@@ -906,12 +906,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                         videoUniqueSize = fSize;
                     }
 
+                    nbFrames++;
+
                     if (('i' == fType) && (video->codec == CODEC_MPEG4_AVC))
                     {
                         iFrameIndexBuffer [nbIFrames++] = htonl (nbFrames);
                     }
-
-                    nbFrames++;
                 }
                 else if (dataType == ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG) // audio
                 {
