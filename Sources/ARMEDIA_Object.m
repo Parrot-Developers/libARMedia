@@ -98,6 +98,10 @@
     {
         _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
     }
+    else if([[[NSString stringWithUTF8String:media->name] pathExtension] isEqual:[NSString stringWithUTF8String:ARMEDIA_MOV_EXTENSION]])
+    {
+        _mediaType = [NSNumber numberWithInt:MEDIA_TYPE_VIDEO];
+    }
     
     if (thumbnailHasChanged && _delegate && [_delegate respondsToSelector:@selector(mediaObjectDidUpdateThumbnail:)])
     {

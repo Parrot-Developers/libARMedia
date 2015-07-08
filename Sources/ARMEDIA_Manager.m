@@ -483,7 +483,8 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     dispatch_semaphore_t sema = dispatch_semaphore_create(0);
     __block ARMediaObject *mediaObject = [[ARMediaObject alloc]init];
     __block unsigned int productId;
-    if ([mediaPath.pathExtension isEqualToString:[NSString stringWithUTF8String:ARMEDIA_MP4_EXTENSION]])
+    if ([mediaPath.pathExtension isEqualToString:[NSString stringWithUTF8String:ARMEDIA_MP4_EXTENSION]] ||
+        [mediaPath.pathExtension isEqualToString:[NSString stringWithUTF8String:ARMEDIA_MOV_EXTENSION]])
     {
         [library writeVideoAtPathToSavedPhotosAlbum:[NSURL URLWithString:mediaPath]  completionBlock:^(NSURL *assetURL, NSError *error)
          {
