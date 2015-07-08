@@ -107,6 +107,7 @@ public class ARMediaManager
 
     public static final String ARMEDIA_MANAGER_JPG = ".jpg";
     public static final String ARMEDIA_MANAGER_MP4 = ".mp4";
+    public static final String ARMEDIA_MANAGER_MOV = ".mov";
 
     private static final String DOWNLOADING_PREFIX = "downloading_";
 
@@ -329,7 +330,7 @@ public class ARMediaManager
                     {
                         String mediaFileAbsolutPath = cursorVideo.getString(cursorVideo.getColumnIndex("_data"));
                         String mediaName = cursorVideo.getString(cursorVideo.getColumnIndex("title"));
-                        if (!mediaFileAbsolutPath.contains(DOWNLOADING_PREFIX) && mediaFileAbsolutPath.endsWith(ARMEDIA_MANAGER_MP4))
+                        if (!mediaFileAbsolutPath.contains(DOWNLOADING_PREFIX) && isValidVideoFile(mediaFileAbsolutPath))
                         {
                             ARSALPrint.v(TAG, "adding video:"+mediaFileAbsolutPath);
                             addARMediaVideoToProjectDictionary(mediaFileAbsolutPath);
@@ -357,7 +358,7 @@ public class ARMediaManager
                 for (File file : fList)
                 {
                     final String filePath = file.getAbsolutePath();
-                    if (!filePath.contains(DOWNLOADING_PREFIX) && filePath.endsWith(ARMEDIA_MANAGER_MP4))
+                    if (!filePath.contains(DOWNLOADING_PREFIX) && isValidVideoFile(filePath))
                     {
                         ARSALPrint.v(TAG, "adding video:"+filePath);
                         addARMediaVideoToProjectDictionary(filePath);
@@ -453,7 +454,7 @@ public class ARMediaManager
             }
 
         }
-        else if (filename.endsWith(ARMEDIA_MANAGER_MP4))
+        else if (isValidVideoFile(filename))
         {
             String description = com.parrot.arsdk.armedia.ARMediaVideoAtoms.getPvat(file.getAbsolutePath());
             ARSALPrint.v(TAG, "video description:"+description);
@@ -598,5 +599,10 @@ public class ARMediaManager
         Intent intentDicChanged = new Intent(ARMediaManagerNotificationDictionary);
         intentDicChanged.putExtras(notificationBundle);
         LocalBroadcastManager.getInstance(context).sendBroadcast(intentDicChanged);
+    }
+
+    private boolean isValidVideoFile(String filename)
+    {
+        return (filename.endsWith(ARMEDIA_MANAGER_MP4) || filename.endsWith(ARMEDIA_MANAGER_MOV));
     }
 }

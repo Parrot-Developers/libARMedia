@@ -123,6 +123,10 @@ public class ARMediaObject implements Cloneable, Parcelable, Serializable, Compa
             {
                 mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_VIDEO;
             }
+            else if (extension.equals("mov" /*ARMedia.ARMEDIA_MOV_EXTENSION*/)) //TODO see
+            {
+                mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_VIDEO;
+            }
         }
     }
 
