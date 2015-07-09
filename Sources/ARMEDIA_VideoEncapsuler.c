@@ -775,14 +775,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 (encaps->got_audio && (NULL == audioOffsetBuffer || NULL == sampleTimeSyncBuffer)))
         {
             ENCAPSULER_ERROR ("Unable to allocate buffers for video finish");
-            free (frameSizeBufferNE);
-            frameSizeBufferNE = NULL;
-            free (videoOffsetBuffer);
-            videoOffsetBuffer = NULL;
-            free (frameTimeSyncBuffer);
-            frameTimeSyncBuffer = NULL;
-            free (iFrameIndexBuffer);
-            iFrameIndexBuffer = NULL;
+
+            ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
+            ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
+            ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
+            ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
+
             localError = ARMEDIA_ERROR_ENCAPSULER;
         }
     }
@@ -1206,14 +1204,11 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     }
     else
     {
-        free (frameSizeBufferNE);
-        frameSizeBufferNE = NULL;
-        free (videoOffsetBuffer);
-        videoOffsetBuffer = NULL;
-        free (frameTimeSyncBuffer);
-        frameTimeSyncBuffer = NULL;
-        free (iFrameIndexBuffer);
-        iFrameIndexBuffer = NULL;
+        ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
+        ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
+        ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
+        ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
+
         ARMEDIA_VideoEncapsuler_Cleanup (encapsuler);
     }
     return localError;
