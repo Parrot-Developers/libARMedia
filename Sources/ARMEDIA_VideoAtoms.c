@@ -409,7 +409,6 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
 
 movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date, eARMEDIA_VIDEOATOM_MEDIATYPE type)
 {
-    static int trackID = 1;
     uint32_t dataSize = 84;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
     uint32_t currentIndex = 0;
@@ -423,7 +422,10 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     ATOM_WRITE_U32 (0x0000000f); /* Version (8) + Flags (24) */
     ATOM_WRITE_U32 (0); /* Creation time */
     ATOM_WRITE_U32 (0); /* Modification time */
-    ATOM_WRITE_U32 (trackID); /* Track ID */
+    if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO)
+        ATOM_WRITE_U32 (1); /* Track ID */
+    else
+        ATOM_WRITE_U32 (2); /* Track ID */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (duration); /* Duration, in timescale unit */
     ATOM_WRITE_U32 (0); /* Reserved */
@@ -464,7 +466,6 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     retAtom = atomFromData (84, "tkhd", data);
     ATOM_FREE (data);
     data = NULL;
-    trackID++;
     return retAtom;
 }
 
