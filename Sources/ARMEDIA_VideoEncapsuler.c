@@ -934,10 +934,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         if (groupInterFrameDT == interframeDT) { // add last frame to previous entry
             groupNframes++;
         } else { // write previous entry then add last frame to new entry
-            frameTimeSyncBuffer[2*videosttsNentries] = htonl(groupNframes);
-            frameTimeSyncBuffer[2*videosttsNentries+1] = htonl(groupInterFrameDT);
-            videoDuration += groupNframes * groupInterFrameDT;
-            videosttsNentries++;
+            if (groupInterFrameDT != 0) { // not first group
+                frameTimeSyncBuffer[2*videosttsNentries] = htonl(groupNframes);
+                frameTimeSyncBuffer[2*videosttsNentries+1] = htonl(groupInterFrameDT);
+                videoDuration += groupNframes * groupInterFrameDT;
+                videosttsNentries++;
+            }
             groupNframes = 1;
             groupInterFrameDT = interframeDT;
         }
