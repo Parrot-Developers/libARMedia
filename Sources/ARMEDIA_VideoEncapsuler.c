@@ -42,6 +42,7 @@
 #include <utime.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <json/json.h>
@@ -162,6 +163,8 @@ struct ARMEDIA_Video_t
     }                                       \
     PTR = NULL;                             \
 } while (0)
+
+static eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler, bool rename_tempFile);
 
 #ifdef AC_VIDEOENC
 ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, int fps, char* uuid, char* runDate, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error)
@@ -713,7 +716,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     uint32_t *iFrameIndexBuffer   = NULL;
     // audio
     uint32_t *audioOffsetBuffer    = NULL;
-    uint32_t *sampleTimeSyncBuffer = NULL;
     ARMEDIA_VideoEncapsuler_t* encaps = NULL;
 
     struct tm *nowTm;
@@ -765,14 +767,13 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         }
         if (encaps->got_audio) {
             audioOffsetBuffer    = calloc (audio->sampleCount, sizeof (uint32_t));
-            sampleTimeSyncBuffer = calloc (2*audio->sampleCount, sizeof (uint32_t));
         }
 
         if (NULL == frameSizeBufferNE   ||
                 NULL == videoOffsetBuffer   ||
                 NULL == frameTimeSyncBuffer ||
                 (NULL == iFrameIndexBuffer && video->codec == CODEC_MPEG4_AVC) ||
-                (encaps->got_audio && (NULL == audioOffsetBuffer || NULL == sampleTimeSyncBuffer)))
+                (encaps->got_audio && (NULL == audioOffsetBuffer)))
         {
             ENCAPSULER_ERROR ("Unable to allocate buffers for video finish");
 
@@ -1045,7 +1046,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
             stsdAtom = stsdAtomWithAudioCodec(audio->codec, audio->format, audio->nchannel, audio->freq);
 
-            // Generate stts atom from sampleTimeSyncBuffer
             sttsDataLen = (8 + 2 * sizeof(uint32_t));
             sttsBuffer = (uint8_t*) calloc (sttsDataLen, 1);
             sttsNentriesNE = htonl(1);
@@ -1167,55 +1167,25 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         fsync(fileno(encaps->dataFile));
     }
 
-    if (ARMEDIA_OK == localError)
-    {
-        if (NULL!=encaps->dataFile) fclose (encaps->dataFile);
-        if (NULL!=encaps->metaFile) fclose (encaps->metaFile);
+    bool rename_tempFile = (ARMEDIA_OK == localError);
+    ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
+    ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
+    ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
+    ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
+    ENCAPSULER_CLEANUP(free, audioOffsetBuffer);
+    ARMEDIA_VideoEncapsuler_Cleanup (encapsuler, rename_tempFile);
 
-        remove (encaps->metaFilePath);
-        rename (encaps->tempFilePath, encaps->dataFilePath);
-
-        // change date creation in file system
-        struct utimbuf fsys_time;
-        fsys_time.actime = encaps->creationTime;
-        fsys_time.modtime = encaps->creationTime;
-        utime(encaps->dataFilePath, &fsys_time);
-
-        if (video->sps)
-        {
-            free (video->sps);
-            video->sps = NULL;
-        }
-        if (video->pps)
-        {
-            free (video->pps);
-            video->pps = NULL;
-        }
-
-        ENCAPSULER_CLEANUP(free, audio);
-        ENCAPSULER_CLEANUP(free, video);
-        ENCAPSULER_CLEANUP(free, encaps);
-        *encapsuler = NULL;
-
-        ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
-        ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
-        ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
-        ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
-    }
-    else
-    {
-        ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
-        ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
-        ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
-        ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
-
-        ARMEDIA_VideoEncapsuler_Cleanup (encapsuler);
-    }
     return localError;
 }
 
-eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler)
+/**
+ * Abort a video recording
+ * This will delete all created files
+ * @param video pointer to your video_encapsuler pointer (will be set to NULL by call)
+ */
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler, bool rename_tempFile)
 {
+    ARMEDIA_Audio_t *audio = NULL;
     ARMEDIA_Video_t *video = NULL;
     ARMEDIA_VideoEncapsuler_t* encaps = NULL;
 
@@ -1231,13 +1201,28 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
     } else {
         encaps = *encapsuler;
     }
-    video = encaps->video; // ease of reading
+    audio = encaps->audio;
+    video = encaps->video;
 
     if(NULL!=encaps->dataFile) fclose (encaps->dataFile);
     if(NULL!=encaps->metaFile) fclose (encaps->metaFile);
     remove (encaps->metaFilePath);
-    remove (encaps->tempFilePath);
-    remove (encaps->dataFilePath);
+
+    if (rename_tempFile)
+    {
+        rename (encaps->tempFilePath, encaps->dataFilePath);
+
+        // change date creation in file system
+        struct utimbuf fsys_time;
+        fsys_time.actime = encaps->creationTime;
+        fsys_time.modtime = encaps->creationTime;
+        utime(encaps->dataFilePath, &fsys_time);
+    }
+    else
+    {
+        remove (encaps->tempFilePath);
+        remove (encaps->dataFilePath);
+    }
 
     if (video->sps)
     {
@@ -1250,7 +1235,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
         video->pps = NULL;
     }
 
-    free (video);
+    ENCAPSULER_CLEANUP(free, audio);
+    ENCAPSULER_CLEANUP(free, video);
+    ENCAPSULER_CLEANUP(free, encaps);
     *encapsuler = NULL;
 
     return ARMEDIA_OK;
@@ -1275,202 +1262,185 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
     ARMEDIA_Video_t *video = NULL;
     ARMEDIA_Audio_t *audio = NULL;
     FILE *metaFile = NULL;
-    int noError = 1;
-    int finishNoError = 1;
+    int ret = 1;
     uint32_t frameNumber = 0;
     uint32_t sampleNumber = 0;
     uint32_t dataSize = 0;
     size_t tmpvidSize = 0;
+    uint32_t descriptorSize = 0;
+    uint64_t vsize = 0;
+    uint64_t asize = 0;
+    int endOfSearch = 0;
+    uint32_t fSize = 0;
+    uint32_t interDT = 0;
+    char fType = '\0';
+    char dataType = '\0';
+    size_t prevInfoIndex = 0;
 
     // Open file for reading
-    if (noError)
+    metaFile = fopen (metaFilePath, "r+b");
+    if (NULL == metaFile)
     {
-        metaFile = fopen (metaFilePath, "r+b");
-        if (NULL == metaFile)
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Unable to open metaFile");
-        }
+        ret = 0;
+        ENCAPSULER_DEBUG ("Unable to open metaFile");
+        goto cleanup;
     }
 
     // Read size from info descriptor
-    if (noError)
+    if (1 != fread (&descriptorSize, sizeof (uint32_t), 1, metaFile))
     {
-        uint32_t descriptorSize = 0;
-        if (1 != fread (&descriptorSize, sizeof (uint32_t), 1, metaFile))
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Unable to read descriptorSize");
-        }
-        else if (descriptorSize < sizeof(ARMEDIA_VideoEncapsuler_t) + sizeof(ARMEDIA_Video_t) + sizeof(ARMEDIA_Audio_t))
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Descriptor size (%d) is not the right size supported by this software\n", descriptorSize);
-        }
+        ret = 0;
+        ENCAPSULER_DEBUG ("Unable to read descriptorSize");
+        goto cleanup;
+    }
+    else if (descriptorSize < sizeof(ARMEDIA_VideoEncapsuler_t) + sizeof(ARMEDIA_Video_t) + sizeof(ARMEDIA_Audio_t))
+    {
+        ret = 0;
+        ENCAPSULER_DEBUG ("Descriptor size (%d) is not the right size supported by this software\n", descriptorSize);
+        goto cleanup;
     }
 
     // Alloc local video pointer
-    if (noError)
+    encapsuler = (ARMEDIA_VideoEncapsuler_t*) calloc(1, sizeof(ARMEDIA_VideoEncapsuler_t));
+    video = (ARMEDIA_Video_t*) calloc(1, sizeof(ARMEDIA_Video_t));
+    audio = (ARMEDIA_Audio_t*) calloc(1, sizeof(ARMEDIA_Audio_t));
+    if (NULL == video || NULL == audio || NULL == encapsuler)
     {
-        encapsuler = (ARMEDIA_VideoEncapsuler_t*) calloc(1, sizeof(ARMEDIA_VideoEncapsuler_t));
-        video = (ARMEDIA_Video_t*) calloc(1, sizeof(ARMEDIA_Video_t));
-        audio = (ARMEDIA_Audio_t*) calloc(1, sizeof(ARMEDIA_Audio_t));
-        if (NULL == video || NULL == audio || NULL == encapsuler)
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Unable to alloc structures pointers\n");
-        }
+        ret = 0;
+        ENCAPSULER_DEBUG ("Unable to alloc structures pointers\n");
+        goto cleanup;
     }
 
     // Read encapsuler
-    if (noError)
+    if (1 != fread (encapsuler, sizeof (ARMEDIA_VideoEncapsuler_t), 1, metaFile))
     {
-        if (1 != fread (encapsuler, sizeof (ARMEDIA_VideoEncapsuler_t), 1, metaFile))
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Unable to read ARMEDIA_VideoEncapsuler_t from metaFile\n");
-        }
-        else
-        {
-            encapsuler->metaFile = metaFile;
-            encapsuler->dataFile = NULL;
-            encapsuler->video = video;
-            encapsuler->audio = audio;
-        }
+        ret = 0;
+        ENCAPSULER_DEBUG ("Unable to read ARMEDIA_VideoEncapsuler_t from metaFile\n");
+        goto cleanup;
+    }
+    else
+    {
+        encapsuler->metaFile = metaFile;
+        encapsuler->dataFile = NULL;
+        encapsuler->video = video;
+        encapsuler->audio = audio;
     }
 
-    if (noError)
+    if (ARMEDIA_ENCAPSULER_VERSION_NUMBER != encapsuler->version)
     {
-        if (ARMEDIA_ENCAPSULER_VERSION_NUMBER != encapsuler->version)
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Encapsuler version number differ\n");
-        }
+        ret = 0;
+        ENCAPSULER_DEBUG ("Encapsuler version number differ\n");
+        goto cleanup;
     }
 
     // Read video
-    if (noError)
+    if (1 != fread (video, sizeof (ARMEDIA_Video_t), 1, metaFile))
     {
-        if (1 != fread (video, sizeof (ARMEDIA_Video_t), 1, metaFile))
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Unable to read ARMEDIA_Video_t from metaFile\n");
-        }
-        else
-        {
-            video->sps = NULL;
-            video->pps = NULL;
-        }
+        ret = 0;
+        ENCAPSULER_DEBUG ("Unable to read ARMEDIA_Video_t from metaFile\n");
+        goto cleanup;
+    }
+    else
+    {
+        video->sps = NULL;
+        video->pps = NULL;
     }
 
     // Allocate / copy SPS/PPS pointers
-    if (noError) {
-        if(video->codec == CODEC_MPEG4_AVC) {
-            if (0 != video->spsSize && 0 != video->ppsSize)
+    if(video->codec == CODEC_MPEG4_AVC) {
+        if (0 != video->spsSize && 0 != video->ppsSize)
+        {
+            video->sps = (uint8_t*) malloc (video->spsSize);
+            video->pps = (uint8_t*) malloc (video->ppsSize);
+            if (NULL == video->sps ||
+                    NULL == video->pps)
             {
-                video->sps = (uint8_t*) malloc (video->spsSize);
-                video->pps = (uint8_t*) malloc (video->ppsSize);
-                if (NULL == video->sps ||
-                        NULL == video->pps)
-                {
-                    noError = 0;
-                    ENCAPSULER_DEBUG ("Unable to allocate video sps/pps");
-                    free (video->sps);
-                    free (video->pps);
-                    video->sps = NULL;
-                    video->pps = NULL;
-                }
-                else
-                {
-                    if (1 != fread (video->sps, video->spsSize, 1, encapsuler->metaFile))
-                    {
-                        ENCAPSULER_DEBUG ("Unable to read video SPS");
-                        noError = 0;
-                    }
-                    else if (1 != fread (video->pps, video->ppsSize, 1, encapsuler->metaFile))
-                    {
-                        ENCAPSULER_DEBUG ("Unable to read video PPS");
-                        noError = 0;
-                    } // No else
-                }
+                ret = 0;
+                ENCAPSULER_DEBUG ("Unable to allocate video sps/pps");
+                free (video->sps);
+                free (video->pps);
+                video->sps = NULL;
+                video->pps = NULL;
+                goto cleanup;
             }
             else
             {
-                ENCAPSULER_DEBUG ("Video SPS/PPS sizes are bad");
-                noError = 0;
+                if (1 != fread (video->sps, video->spsSize, 1, encapsuler->metaFile))
+                {
+                    ENCAPSULER_DEBUG ("Unable to read video SPS");
+                    ret = 0;
+                    goto cleanup;
+                }
+                else if (1 != fread (video->pps, video->ppsSize, 1, encapsuler->metaFile))
+                {
+                    ENCAPSULER_DEBUG ("Unable to read video PPS");
+                    ret = 0;
+                    goto cleanup;
+                } // No else
             }
+        }
+        else
+        {
+            ENCAPSULER_DEBUG ("Video SPS/PPS sizes are bad");
+            ret = 0;
+            goto cleanup;
         }
     }
 
     // Read audio
-    if (noError)
+    if (1 != fread (audio, sizeof (ARMEDIA_Audio_t), 1, metaFile))
     {
-        if (1 != fread (audio, sizeof (ARMEDIA_Audio_t), 1, metaFile))
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Unable to read ARMEDIA_Audio_t from metaFile\n");
-        }
+        ret = 0;
+        ENCAPSULER_DEBUG ("Unable to read ARMEDIA_Audio_t from metaFile\n");
+        goto cleanup;
     }
 
     // Open temp file
-    if (noError)
+    encapsuler->dataFile = fopen (encapsuler->tempFilePath, "r+b");
+    if (NULL == encapsuler->dataFile)
     {
-        encapsuler->dataFile = fopen (encapsuler->tempFilePath, "r+b");
-        if (NULL == encapsuler->dataFile)
-        {
-            noError = 0;
-            ENCAPSULER_DEBUG ("Unable to open dataFile : %s\n", encapsuler->tempFilePath);
-        }
+        ret = 0;
+        ENCAPSULER_DEBUG ("Unable to open dataFile : %s\n", encapsuler->tempFilePath);
+        goto cleanup;
     }
 
     // Count frames and samples
-    uint64_t vsize = 0;
-    uint64_t asize = 0;
-    if (noError)
+    fseek (encapsuler->dataFile, 0, SEEK_END);
+    tmpvidSize = ftell (encapsuler->dataFile);
+
+    while (!endOfSearch)
     {
-        int endOfSearch = 0;
-        uint32_t fSize = 0;
-        uint32_t interDT = 0;
-        char fType = '\0';
-        char dataType = '\0';
-        size_t prevInfoIndex = 0;
-
-        fseek (encapsuler->dataFile, 0, SEEK_END);
-        tmpvidSize = ftell (encapsuler->dataFile);
-
-        while (!endOfSearch)
+        prevInfoIndex = ftell (encapsuler->metaFile);
+        if ((!feof (encapsuler->metaFile)) &&
+                ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN ==
+                fscanf (encapsuler->metaFile, ARMEDIA_ENCAPSULER_INFO_PATTERN, &dataType, &fSize, &fType, &interDT))
         {
-            prevInfoIndex = ftell (encapsuler->metaFile);
-            if ((!feof (encapsuler->metaFile)) &&
-                    ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN ==
-                    fscanf (encapsuler->metaFile, ARMEDIA_ENCAPSULER_INFO_PATTERN, &dataType, &fSize, &fType, &interDT))
+            if ((asize + vsize + encapsuler->dataOffset + fSize) > tmpvidSize)
             {
-                if ((asize + vsize + encapsuler->dataOffset + fSize) > tmpvidSize)
+                ENCAPSULER_DEBUG ("Too many infos : truncate at %u\n", prevInfoIndex);
+                fseek (encapsuler->metaFile, 0, SEEK_SET);
+                if (0 != ftruncate (fileno (encapsuler->metaFile), prevInfoIndex))
                 {
-                    ENCAPSULER_DEBUG ("Too many infos : truncate at %u\n", prevInfoIndex);
-                    fseek (encapsuler->metaFile, 0, SEEK_SET);
-                    if (0 != ftruncate (fileno (encapsuler->metaFile), prevInfoIndex))
-                    {
-                        ENCAPSULER_DEBUG ("Unable to truncate metaFile");
-                        noError = 0;
-                    }
-                    endOfSearch = 1;
+                    ENCAPSULER_DEBUG ("Unable to truncate metaFile");
+                    ret = 0;
+                    goto cleanup;
                 }
-                else
-                {
-                    if (dataType == ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG) {
-                        asize += fSize;
-                        sampleNumber++;
-                    } else if (dataType == ARMEDIA_ENCAPSULER_VIDEO_INFO_TAG) {
-                        vsize += fSize;
-                        frameNumber++;
-                    }
-                }
+                endOfSearch = 1;
             }
             else
             {
-                endOfSearch = 1;
+                if (dataType == ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG) {
+                    asize += fSize;
+                    sampleNumber++;
+                } else if (dataType == ARMEDIA_ENCAPSULER_VIDEO_INFO_TAG) {
+                    vsize += fSize;
+                    frameNumber++;
+                }
             }
+        }
+        else
+        {
+            endOfSearch = 1;
         }
     }
 
@@ -1478,37 +1448,33 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
     audio->totalsize = asize;
     dataSize = asize + vsize;
 
-    if (noError)
+    // If needed remove unused frames from .dat file
+    dataSize += encapsuler->dataOffset;
+    if (tmpvidSize > dataSize)
     {
-        // If needed remove unused frames from .dat file
-        dataSize += encapsuler->dataOffset;
-        if (tmpvidSize > dataSize)
+        if (0 != ftruncate (fileno (encapsuler->dataFile), dataSize))
         {
-            if (0 != ftruncate (fileno (encapsuler->dataFile), dataSize))
-            {
-                ENCAPSULER_DEBUG ("Unable to truncate dataFile");
-                noError = 0;
-            }
-        }
-
-        fseek (encapsuler->dataFile, 0, SEEK_END);
-    }
-
-    if (noError)
-    {
-        audio->sampleCount = sampleNumber;
-        video->framesCount = frameNumber;
-        if (ARMEDIA_OK != ARMEDIA_VideoEncapsuler_Finish (&encapsuler))
-        {
-            ENCAPSULER_DEBUG ("Unable to finish video");
-            /* We don't use the "noError" variable here as the
-             * ARMEDIA_Videofinish function will do the cleanup
-             * even if it fails */
-            finishNoError = 0;
+            ENCAPSULER_DEBUG ("Unable to truncate dataFile");
+            ret = 0;
+            goto cleanup;
         }
     }
 
-    if (!noError)
+    fseek (encapsuler->dataFile, 0, SEEK_END);
+
+    audio->sampleCount = sampleNumber;
+    video->framesCount = frameNumber;
+    if (ARMEDIA_OK != ARMEDIA_VideoEncapsuler_Finish (&encapsuler))
+    {
+        ENCAPSULER_DEBUG ("Unable to finish video");
+        /* ARMEDIA_VideoEncapsuler_Finish function will do the cleanup
+         * even if it fails */
+        ret = 0;
+        goto no_cleanup;
+    }
+
+cleanup:
+    if (!ret)
     {
         uint32_t pathLen;
         char *tmpVidFilePath;
@@ -1521,6 +1487,7 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
             ENCAPSULER_CLEANUP (free, video->pps);
             video->pps = NULL;
             ENCAPSULER_CLEANUP (fclose, encapsuler->metaFile);
+            metaFile = NULL;
             ENCAPSULER_CLEANUP (fclose, encapsuler->dataFile);
             ENCAPSULER_CLEANUP (free ,video);
             video = NULL;
@@ -1552,8 +1519,12 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
             ENCAPSULER_DEBUG ("Unable to allocate filename buffer, cleanup was not complete");
         }
     }
+    ENCAPSULER_CLEANUP (free, audio);
+    ENCAPSULER_CLEANUP (free, video);
+    ENCAPSULER_CLEANUP (free, encapsuler);
 
-    return noError && finishNoError;
+no_cleanup:
+    return ret;
 }
 
 int ARMEDIA_VideoEncapsuler_changePVATAtomDate (FILE *videoFile, const char *videoDate)

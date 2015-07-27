@@ -185,13 +185,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t* enc
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encapsuler);
 
 /**
- * Abort a video recording
- * This will delete all created files
- * @param video pointer to your video_encapsuler pointer (will be set to NULL by call)
- */
-eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler);
-
-/**
  * Set the current GPS position for further recordings
  * @param latitude current latitude
  * @param longitude current longitude
