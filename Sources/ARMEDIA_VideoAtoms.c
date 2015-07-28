@@ -1028,10 +1028,11 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom, uint32_t *dataSi
     char *tokSave;
     char *token;
     char *localAtom;
+    char fcc[ATOM_SIZE + 1] = {0};
 
     if (videoFile == NULL)
     {
-        return NULL;
+        goto err_nofree;
     }
     // Rewind videoFile
     rewind (videoFile);
@@ -1039,10 +1040,9 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom, uint32_t *dataSi
     localAtom = strdup(atom);
     if(localAtom == NULL)
     {
-        return NULL;
+        goto err_nofree;
     }
     token = strtok_r(localAtom, "/", &tokSave);
-    char fcc[ATOM_SIZE + 1] = {0};
     while (token != NULL)
     {
         int tokenLen = strlen(token);
@@ -1061,17 +1061,16 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom, uint32_t *dataSi
         ARSAL_PRINT(ARSAL_PRINT_VERBOSE, ARMEDIA_TAG, "token:%s, seekRes=%d",token, seekRes);
         if (0 == seekRes)
         {
-            return NULL;
+            goto err_free;
         }
         token = strtok_r(NULL, "/", &tokSave);
     }
-    free (localAtom);
 
     if (atomSize > 8) {
         atomSize -= 8; // Remove the [size - tag] part, as it was read during seek
     } else {
         // atomSize is minimum 8; if not -> problem
-        return NULL;
+        goto err_free;
     }
 
     // Alloc local buffer
@@ -1108,6 +1107,9 @@ uint8_t *createDataFromFile (FILE *videoFile, const char* atom, uint32_t *dataSi
         ATOM_FREE (atomBuffer);
     }
 
+err_free:
+    free (localAtom);
+err_nofree:
     return retBuffer;
 }
 
