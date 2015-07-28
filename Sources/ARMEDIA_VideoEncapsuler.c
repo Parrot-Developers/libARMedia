@@ -134,7 +134,7 @@ struct ARMEDIA_Video_t
     uint64_t lastFrameTimestamp;
 };
 
-#define ENCAPSULER_DEBUG_ENABLE (0)
+#define ENCAPSULER_DEBUG_ENABLE (1)
 
 // File extension for temporary files
 #define TEMPFILE_EXT "-encaps.tmp"
