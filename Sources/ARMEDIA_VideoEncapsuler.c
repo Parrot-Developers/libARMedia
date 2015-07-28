@@ -207,8 +207,8 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     retVideo->mdatAtomOffset = 0;
     retVideo->dataOffset = 0;
 
-    strncpy  (retVideo->uuid, uuid, UUID_MAXLENGTH);
-    strncpy  (retVideo->runDate, runDate, DATETIME_MAXLENGTH);
+    snprintf (retVideo->uuid, UUID_MAXLENGTH, "%s", uuid);
+    snprintf (retVideo->runDate, DATETIME_MAXLENGTH, "%s", runDate);
     retVideo->product = product;
 
     // path and files initialization
