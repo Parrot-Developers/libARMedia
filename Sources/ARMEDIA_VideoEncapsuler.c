@@ -1618,9 +1618,9 @@ int ARMEDIA_VideoEncapsuler_addPVATAtom (FILE *videoFile, eARDISCOVERY_PRODUCT p
         }
         else
         {
-            json_object_put(pvato);
             retVal = 1;
         }
+        json_object_put(pvato);
     }
     return retVal;
 }
