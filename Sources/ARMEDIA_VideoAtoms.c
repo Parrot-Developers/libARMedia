@@ -184,7 +184,7 @@ movie_atom_t *atomFromData (uint32_t data_size, const char *tag, const uint8_t *
         return retAtom;
     }
     retAtom->size = data_size + 8;
-    strncpy (retAtom->tag, tag, 4);
+    memcpy (retAtom->tag, tag, 4);
 
     retAtom->data = NULL;
     if (NULL != data && data_size > 0)
