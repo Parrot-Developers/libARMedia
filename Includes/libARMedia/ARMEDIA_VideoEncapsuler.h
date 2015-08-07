@@ -137,7 +137,6 @@ typedef struct {
  */
 typedef void (*ARMEDIA_VideoEncapsuler_Callback)(const char *path, int unused);
 
-#ifdef AC_VIDEOENC
 /**
  * @brief Create a new ARMedia encapsuler
  * @warning This function allocate memory
@@ -147,7 +146,6 @@ typedef void (*ARMEDIA_VideoEncapsuler_Callback)(const char *path, int unused);
  * @see ARMEDIA_VideoEncapsuler_Delete()
  */
 ARMEDIA_VideoEncapsuler_t* ARMEDIA_VideoEncapsuler_New(const char *mediaPath, int fps, char* uuid, char* runDate, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error);
-#endif
 
 /**
  * @brief Delete the Manager

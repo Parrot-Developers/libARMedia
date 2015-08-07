@@ -45,6 +45,7 @@ typedef enum
     ARMEDIA_OK = 0, /**< No error */
     ARMEDIA_ERROR = -1000, /**< Unknown generic error */
     ARMEDIA_ERROR_BAD_PARAMETER, /**< Bad parameters */
+    ARMEDIA_ERROR_NOT_IMPLEMENTED, /**< Function not implemented */
     ARMEDIA_ERROR_MANAGER = -2000, /**< Unknown manager error */
     ARMEDIA_ERROR_MANAGER_ALREADY_INITIALIZED, /**< Error manager already initialized */
     ARMEDIA_ERROR_MANAGER_NOT_INITIALIZED, /**< Error manager not initialized */

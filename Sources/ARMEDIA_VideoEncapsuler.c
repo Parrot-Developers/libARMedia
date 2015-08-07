@@ -166,9 +166,9 @@ struct ARMEDIA_Video_t
 
 static eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler, bool rename_tempFile);
 
-#ifdef AC_VIDEOENC
 ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, int fps, char* uuid, char* runDate, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error)
 {
+#ifdef AC_VIDEOENC
     ARMEDIA_VideoEncapsuler_t *retVideo = NULL;
 
     if (NULL == error)
@@ -261,8 +261,14 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     *error = ARMEDIA_OK;
 
     return retVideo;
-}
+#else
+    if (NULL != error)
+    {
+        *error = ARMEDIA_ERROR_NOT_IMPLEMENTED;
+    }
+    return NULL;
 #endif
+}
 
 #define BYTE_STREAM_NALU_START_CODE 0x00000001
 
