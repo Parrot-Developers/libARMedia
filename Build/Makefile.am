@@ -18,7 +18,7 @@ endif
 
 # The sources to add to the library and to add to the source distribution
 SOURCE_FILES                                        =  $(HEADER_FILES)                                  \
-                                                       ../Sources/ARMEDIA_Error.c    				\
+                                                       ../gen/Sources/ARMEDIA_Error.c    				\
                                                        ../Sources/ARMEDIA_VideoEncapsuler.c    			\
                                                        ../Sources/ARMEDIA_VideoAtoms.c
 
