@@ -1381,6 +1381,7 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
     uint32_t descriptorSize = 0;
     uint64_t vsize = 0;
     uint64_t asize = 0;
+    uint32_t stscEntries = 0;
     int endOfSearch = 0;
     uint32_t fSize = 0;
     uint32_t interDT = 0;
@@ -1519,6 +1520,7 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
     fseek (encapsuler->dataFile, 0, SEEK_END);
     tmpvidSize = ftell (encapsuler->dataFile);
 
+    uint32_t prevSize = 0;
     while (!endOfSearch)
     {
         prevInfoIndex = ftell (encapsuler->metaFile);
@@ -1542,6 +1544,10 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
             {
                 if (dataType == ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG) {
                     asize += fSize;
+                    if (prevSize != fSize) {
+                        prevSize = fSize;
+                        stscEntries++;
+                    }
                     sampleNumber++;
                 } else if (dataType == ARMEDIA_ENCAPSULER_VIDEO_INFO_TAG) {
                     vsize += fSize;
@@ -1575,6 +1581,7 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
 
     audio->sampleCount = sampleNumber;
     video->framesCount = frameNumber;
+    audio->stscEntries = stscEntries;
     if (ARMEDIA_OK != ARMEDIA_VideoEncapsuler_Finish (&encapsuler))
     {
         ENCAPSULER_DEBUG ("Unable to finish video");
