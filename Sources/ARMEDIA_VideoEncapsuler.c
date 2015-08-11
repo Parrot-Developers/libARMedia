@@ -55,6 +55,14 @@
 #define ENCAPSULER_INFODATA_MAX_SIZE    (256)
 #define ARMEDIA_ENCAPSULER_TAG          "ARMEDIA Encapsuler"
 
+#define ENCAPSULER_DEBUG_ENABLE (1)
+#define ENCAPSULER_LOG_TIMESTAMPS (0)
+
+#if ENCAPSULER_LOG_TIMESTAMPS
+FILE* tslogger = NULL;
+#include <inttypes.h>
+#endif
+
 /* The structure is initialised to an invalid value
    so we won't set any position in videos unless we got a
    valid ARMEDIA_Videoset_gps_infos() call */
@@ -105,12 +113,15 @@ struct ARMEDIA_Audio_t
     eARMEDIA_ENCAPSULER_AUDIO_FORMAT format;
     uint16_t nchannel;
     uint16_t freq;
-    uint32_t defaultSampleDuration;
+    uint32_t defaultSampleDuration; // in usec
     uint32_t sampleCount; // number of samples
     uint32_t totalsize;
 
     /* Samples recording values */
     uint64_t lastSampleTimestamp;
+    uint64_t theoreticalts;
+    uint32_t stscEntries;
+    uint32_t lastChunkSize;
 };
 
 struct ARMEDIA_Video_t
@@ -133,12 +144,14 @@ struct ARMEDIA_Video_t
 
     /* Frames recording values */
     uint64_t lastFrameTimestamp;
+    uint64_t firstFrameTimestamp;
 };
-
-#define ENCAPSULER_DEBUG_ENABLE (1)
 
 // File extension for temporary files
 #define TEMPFILE_EXT "-encaps.tmp"
+
+// Limit for audio drift. If more, then add encapsuler adds blank.
+#define ADRIFT_LIMIT 10000 // usec
 
 #define ENCAPSULER_ERROR(...)                                           \
     do {                                                                \
@@ -215,6 +228,11 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     retVideo->product = product;
 
     // path and files initialization
+#if ENCAPSULER_LOG_TIMESTAMPS
+    char loggerpath [ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE];
+    snprintf (loggerpath, ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s-ts.log", mediaPath);
+    tslogger = fopen(loggerpath, "w");
+#endif
     snprintf (retVideo->metaFilePath, ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s%s", mediaPath, METAFILE_EXT);
     snprintf (retVideo->tempFilePath, ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s%s", mediaPath, TEMPFILE_EXT);
     snprintf (retVideo->dataFilePath, ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s", mediaPath);
@@ -257,6 +275,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     retVideo->video->spsSize = 0;
     retVideo->video->ppsSize = 0;
     retVideo->video->lastFrameTimestamp = 0;
+    retVideo->video->firstFrameTimestamp = 0;
 
     *error = ARMEDIA_OK;
 
@@ -490,6 +509,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
         }
         fseek(encapsuler->metaFile, sizeof(ARMEDIA_Audio_t), SEEK_CUR);
         encapsuler->got_iframe = 1;
+        video->firstFrameTimestamp = frameHeader->timestamp;
     } // end first frame
 
     // Normal operation : file pointer is at end of file
@@ -570,6 +590,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     }
 
     video->totalsize += frameHeader->frame_size;
+#if ENCAPSULER_LOG_TIMESTAMPS
+    fprintf(tslogger, "V;%"PRIu64"\n", frameHeader->timestamp);
+#endif
 
     // synchronisation
     if ((video->framesCount % 10) == 0) {
@@ -635,10 +658,13 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *enc
         encapsuler->audio->codec = sampleHeader->codec;
         encapsuler->audio->nchannel = sampleHeader->nchannel;
         encapsuler->audio->freq = sampleHeader->frequency;
-        encapsuler->audio->defaultSampleDuration = (sampleHeader->sample_size / sampleHeader->nchannel) / sampleHeader->frequency;
+        encapsuler->audio->defaultSampleDuration = ((uint64_t)sampleHeader->sample_size*8000000 / (sampleHeader->nchannel*sampleHeader->format)) / sampleHeader->frequency;
         encapsuler->audio->sampleCount = 0;
         encapsuler->audio->totalsize = 0;
         encapsuler->audio->lastSampleTimestamp = 0;
+        encapsuler->audio->theoreticalts = encapsuler->video->firstFrameTimestamp;
+        encapsuler->audio->stscEntries = 0;
+        encapsuler->audio->lastChunkSize = 0;
 
         // Rewrite encapsuler info
         fseek(encapsuler->metaFile, sizeof(uint32_t), SEEK_SET);
@@ -673,13 +699,54 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *enc
             audio->lastSampleTimestamp = sampleHeader->timestamp;
         }
 
+#if ENCAPSULER_LOG_TIMESTAMPS
+        fprintf(tslogger, "A;%"PRIu64"\n", sampleHeader->timestamp);
+#endif
+        uint32_t newSize = sampleHeader->sample_size;
+        uint8_t* newData = data;
+
+        // synchronisation
+        int64_t tsdiff = sampleHeader->timestamp - audio->theoreticalts;
+        int32_t zlen = 0;
+        if (tsdiff > ADRIFT_LIMIT) {
+            ENCAPSULER_DEBUG("Audio drift too high (%"PRId64"µs) on %uth sample\n", tsdiff, audio->sampleCount);
+            audio->theoreticalts += tsdiff;
+            zlen = (tsdiff * audio->freq / 1000000) * (audio->nchannel * audio->format / 8);
+            uint8_t* zbuff = calloc(zlen, sizeof(uint8_t));
+            if (zbuff == NULL) {
+                ENCAPSULER_ERROR("Failed to allocate %u bytes\n", zlen);
+            } else {
+                fwrite(zbuff, sizeof(uint8_t), zlen, encapsuler->dataFile);
+                free(zbuff);
+            }
+            ENCAPSULER_DEBUG("zlen = %i\n", zlen);
+        }
+        else if (tsdiff < -ADRIFT_LIMIT)
+        {
+            ENCAPSULER_DEBUG("Audio drift too low (%"PRId64"µs) on %uth sample\n", tsdiff, audio->sampleCount);
+            audio->theoreticalts += tsdiff;
+            zlen = (tsdiff * audio->freq / 1000000) * (audio->nchannel * audio->format / 8);
+            if (-zlen >= sampleHeader->sample_size) {
+                ENCAPSULER_ERROR ("Timestamp anterior to previous sample");
+                return ARMEDIA_ERROR_ENCAPSULER_BAD_TIMESTAMP;
+            }
+            newSize += zlen;
+            newData -= zlen;
+        }
+        uint32_t newChunkSize = sampleHeader->sample_size + zlen;
+
+        if (audio->lastChunkSize != newChunkSize) {
+            audio->lastChunkSize = newChunkSize;
+            audio->stscEntries++;
+        }
+
         uint32_t infoLen;
         char infoData [ENCAPSULER_INFODATA_MAX_SIZE] = {0};
         snprintf (infoData, ENCAPSULER_INFODATA_MAX_SIZE, ARMEDIA_ENCAPSULER_INFO_PATTERN,
                 ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG,
-                sampleHeader->sample_size,
+                newChunkSize,
                 'm',
-                (uint32_t)(sampleHeader->timestamp - audio->lastSampleTimestamp)); // Sample duration
+                (uint32_t)(sampleHeader->timestamp - audio->lastSampleTimestamp)); // Chunk duration (in usec)
         infoLen = strlen (infoData);
         if (infoLen != fwrite (infoData, 1, infoLen, encapsuler->metaFile))
         {
@@ -687,16 +754,17 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *enc
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
 
+        audio->theoreticalts += audio->defaultSampleDuration;
         audio->lastSampleTimestamp = sampleHeader->timestamp;
         audio->sampleCount++;
 
-        if (sampleHeader->sample_size != fwrite (data, 1, sampleHeader->sample_size, encapsuler->dataFile))
+        if (newSize != fwrite (newData, 1, newSize, encapsuler->dataFile))
         {
             ENCAPSULER_ERROR ("Unable to write sample into data file");
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
 
-        audio->totalsize += sampleHeader->sample_size;
+        audio->totalsize += sampleHeader->sample_size + zlen;
     }
     else
     {
@@ -711,6 +779,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *enc
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encapsuler)
 {
     eARMEDIA_ERROR localError = ARMEDIA_OK;
+    ARMEDIA_VideoEncapsuler_t* encaps = NULL;
     ARMEDIA_Video_t *video = NULL;
     ARMEDIA_Audio_t *audio = NULL;
 
@@ -721,12 +790,16 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     uint32_t *frameTimeSyncBuffer = NULL;
     uint32_t *iFrameIndexBuffer   = NULL;
     // audio
-    uint32_t *audioOffsetBuffer    = NULL;
-    ARMEDIA_VideoEncapsuler_t* encaps = NULL;
+    uint32_t *audioOffsetBuffer = NULL;
+    uint32_t *audioStscBuffer   = NULL;
 
     struct tm *nowTm;
     uint32_t nbFrames = 0;
     uint32_t nbaChunks = 0;
+
+#if ENCAPSULER_LOG_TIMESTAMPS
+    fclose(tslogger);
+#endif
 
     if (NULL == encapsuler)
     {
@@ -772,14 +845,16 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             iFrameIndexBuffer = calloc (video->framesCount, sizeof (uint32_t));
         }
         if (encaps->got_audio) {
-            audioOffsetBuffer    = calloc (audio->sampleCount, sizeof (uint32_t));
+            audioOffsetBuffer = calloc (audio->sampleCount, sizeof (uint32_t));
+            audioStscBuffer = calloc(audio->stscEntries*3, sizeof (uint32_t));
         }
 
         if (NULL == frameSizeBufferNE   ||
                 NULL == videoOffsetBuffer   ||
                 NULL == frameTimeSyncBuffer ||
                 (NULL == iFrameIndexBuffer && video->codec == CODEC_MPEG4_AVC) ||
-                (encaps->got_audio && (NULL == audioOffsetBuffer)))
+                (encaps->got_audio && (NULL == audioOffsetBuffer ||
+                                       NULL == audioStscBuffer)))
         {
             ENCAPSULER_ERROR ("Unable to allocate buffers for video finish");
 
@@ -787,6 +862,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
             ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
             ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
+            ENCAPSULER_CLEANUP(free, audioOffsetBuffer);
+            ENCAPSULER_CLEANUP(free, audioStscBuffer);
 
             localError = ARMEDIA_ERROR_ENCAPSULER;
         }
@@ -807,8 +884,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t groupNframes = 0;
         uint32_t videoDuration = 0;
         uint32_t videoUniqueSize = 0;
-        // Audio variables
-        uint32_t achunkSize = 0;
 
         movie_atom_t* moovAtom;         // root
         movie_atom_t* mvhdAtom;         // > mvhd
@@ -860,8 +935,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             fseek (encaps->metaFile, descriptorSize, SEEK_CUR);
         }
 
-        uint32_t interframeDT, intersampleDT;
-        uint64_t tmpinterframeDT, tmpintersampleDT;
+        uint32_t interframeDT;
+        uint64_t tmpinterframeDT;
+        uint32_t lastChunkSize = 0;
+        uint32_t cptAudioStsc = 0;
         while (!feof(encaps->metaFile))
         {
             uint32_t fSize = 0;
@@ -870,9 +947,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             // video
             interframeDT = 0;
             tmpinterframeDT = 0;
-            // audio
-            intersampleDT = 0;
-            tmpintersampleDT = 0;
             if (ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN ==
                     fscanf (encaps->metaFile, ARMEDIA_ENCAPSULER_INFO_PATTERN, &dataType, &fSize, &fType, &interframeDT))
             {
@@ -921,12 +995,17 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 else if (dataType == ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG) // audio
                 {
                     audioOffsetBuffer[nbaChunks] = htonl(chunkOffset);
-                    if (intersampleDT == 0) {
-                        // first audio chunk
-                        achunkSize = fSize;
-                    }
-
                     nbaChunks++;
+
+                    if (lastChunkSize != fSize) {
+                        // add stsc entry
+                        uint32_t nSampleInChunk = fSize * 8*sizeof(uint8_t) / (audio->nchannel*audio->format);
+                        audioStscBuffer[3*cptAudioStsc] = htonl(nbaChunks);
+                        audioStscBuffer[3*cptAudioStsc+1] = htonl(nSampleInChunk);
+                        audioStscBuffer[3*cptAudioStsc+2] = htonl(1);
+                        cptAudioStsc++;
+                        lastChunkSize = fSize;
+                    }
                 }
                 chunkOffset += fSize; // common computation of chunk offset
             }
@@ -999,7 +1078,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             free (stssBuffer);
         }
 
-        stscAtom = stscAtomGen(1); // 1 video frame = 1 chunk
+        stscAtom = stscAtomGen(1, NULL, 1); // 1 video frame = 1 chunk
 
         // Generate stsz atom from frameSizeBufferNE and nbFrames
         stszAtom = stszAtomGen(videoUniqueSize, frameSizeBufferNE, nbFrames);
@@ -1061,7 +1140,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             sttsAtom = atomFromData (sttsDataLen, "stts", sttsBuffer);
             free(sttsBuffer);
 
-            stscAtom = stscAtomGen(achunkSize * 8*sizeof(uint8_t) / (audio->nchannel*audio->format));
+            stscAtom = stscAtomGen(0, audioStscBuffer, cptAudioStsc);
 
             // Generate stsz atom
             stszAtom = stszAtomGen(audio->nchannel * audio->format/(8*sizeof(uint8_t)), NULL, nbSamples);
@@ -1179,6 +1258,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
     ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
     ENCAPSULER_CLEANUP(free, audioOffsetBuffer);
+    ENCAPSULER_CLEANUP(free, audioStscBuffer);
     ARMEDIA_VideoEncapsuler_Cleanup (encapsuler, rename_tempFile);
 
     return localError;

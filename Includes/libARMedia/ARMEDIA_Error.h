@@ -54,7 +54,8 @@ typedef enum
     ARMEDIA_ERROR_ENCAPSULER_BAD_CODEC, /**< Codec non-supported */
     ARMEDIA_ERROR_ENCAPSULER_BAD_VIDEO_FRAME, /**< Error in video frame header */
     ARMEDIA_ERROR_ENCAPSULER_BAD_VIDEO_SAMPLE, /**< Error in audio sample header */
-    ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR, /**< File error while encapsulating*/
+    ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR, /**< File error while encapsulating */
+    ARMEDIA_ERROR_ENCAPSULER_BAD_TIMESTAMP, /**< Timestamp is before previous sample */
 
 } eARMEDIA_ERROR;
 

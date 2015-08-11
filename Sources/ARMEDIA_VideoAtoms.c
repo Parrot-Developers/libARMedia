@@ -835,20 +835,41 @@ movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARM
     return retAtom;
 }
 
-movie_atom_t *stscAtomGen (uint32_t samplesPerChunk)
+movie_atom_t *stscAtomGen (uint32_t uniqueCount, uint32_t* stscTable, uint32_t nEntries)
 {
-    uint8_t data [20];
+    movie_atom_t* retAtom = NULL;
+    uint8_t* data;
     uint32_t currentIndex = 0;
-    ATOM_WRITE_U32(0); // version & flags
-    ATOM_WRITE_U32(1); // entry count
-    ATOM_WRITE_U32(1); // first chunk
-    ATOM_WRITE_U32(samplesPerChunk);
-    ATOM_WRITE_U32(1); // id of track sample descriptor table
+    uint32_t dataSize = 2 * sizeof(uint32_t);
+    uint32_t localStscTable[3];
 
-    return atomFromData (20, "stsc", data);
+    if (uniqueCount != 0) {
+        nEntries = 1;
+        localStscTable[0] = htonl(1);
+        localStscTable[1] = htonl(uniqueCount);
+        localStscTable[2] = htonl(1);
+        stscTable = localStscTable;
+    } else if (stscTable == NULL) {
+        return NULL;
+    }
+
+    dataSize += nEntries * 3 * sizeof(uint32_t);
+    data = (uint8_t*) ATOM_MALLOC(dataSize);
+    if (data == NULL) {
+        return NULL;
+    }
+
+    ATOM_WRITE_U32(0); // version & flags
+    ATOM_WRITE_U32(nEntries); // entry count
+    memcpy (&data[currentIndex], stscTable, nEntries * 3 * sizeof(uint32_t));
+
+    retAtom = atomFromData(dataSize, "stsc", data);
+    ATOM_FREE(data);
+    return retAtom;
 }
 
-movie_atom_t *stszAtomGen(uint32_t uniqueSize, uint32_t* sizeTable, uint32_t nSamples) {
+movie_atom_t *stszAtomGen(uint32_t uniqueSize, uint32_t* sizeTable, uint32_t nSamples)
+{
     movie_atom_t* retAtom = NULL;
     uint32_t currentIndex = 0;
     uint8_t* data;
