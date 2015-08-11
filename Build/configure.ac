@@ -101,14 +101,6 @@ DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN([libARNetwork], [doxygen.cfg], [$srcdir/../Doc])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 
-# Check for python and run prebuild PY script
-AM_PATH_PYTHON(,, AC_MSG_ERROR(Python is required to generate source files for this library))
-
-# Run prebuild PY script
-AC_MSG_NOTICE([Executing python prebuild commands])
-AM_CONDITIONAL([PYTHON_RUN_OK], [$PYTHON $srcdir/../../ARSDKBuildUtils/Utils/Python/ARSDK_PrebuildActions.py $srcdir])
-AM_COND_IF([PYTHON_RUN_OK], , AC_MSG_ERROR(Python processing failed))
-
 # Checks for header files.
 AC_HEADER_STDC
 
