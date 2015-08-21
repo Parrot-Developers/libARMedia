@@ -178,6 +178,7 @@ struct ARMEDIA_Video_t
 } while (0)
 
 static eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler, bool rename_tempFile);
+static eARMEDIA_ERROR ARMEDIA_FillZeros(FILE* file, uint32_t nBytes);
 
 ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, int fps, char* uuid, char* runDate, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error)
 {
@@ -605,6 +606,33 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     return ARMEDIA_OK;
 }
 
+#define ZBUFF_SIZE 1024 // <=> 32 ms of sound
+static eARMEDIA_ERROR ARMEDIA_FillZeros(FILE* file, uint32_t nBytes)
+{
+    uint8_t zbuff[ZBUFF_SIZE] = {0};
+
+    uint32_t rest = nBytes % ZBUFF_SIZE;
+    uint32_t quotient = (nBytes - rest) / ZBUFF_SIZE;
+    uint32_t i;
+
+    for (i=0 ; i<quotient ; i++) {
+        if (ZBUFF_SIZE != fwrite(zbuff, sizeof(uint8_t), ZBUFF_SIZE, file)) {
+            goto fillzeros_error;
+        }
+    }
+
+    // write rest
+    if (rest) {
+        if (rest != fwrite(zbuff, sizeof(uint8_t), rest, file)) {
+            goto fillzeros_error;
+        }
+    }
+
+    return ARMEDIA_OK;
+fillzeros_error:
+    return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+}
+
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Sample_Header_t *sampleHeader)
 {
     uint8_t *data;
@@ -712,14 +740,11 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *enc
             ENCAPSULER_DEBUG("Audio drift too high (%"PRId64"µs) on %uth sample\n", tsdiff, audio->sampleCount);
             audio->theoreticalts += tsdiff;
             zlen = (tsdiff * audio->freq / 1000000) * (audio->nchannel * audio->format / 8);
-            uint8_t* zbuff = calloc(zlen, sizeof(uint8_t));
-            if (zbuff == NULL) {
-                ENCAPSULER_ERROR("Failed to allocate %u bytes\n", zlen);
-            } else {
-                fwrite(zbuff, sizeof(uint8_t), zlen, encapsuler->dataFile);
-                free(zbuff);
+            eARMEDIA_ERROR error = ARMEDIA_FillZeros(encapsuler->dataFile, zlen);
+            if (error != ARMEDIA_OK) {
+                ENCAPSULER_ERROR ("Unable to write zeros into data file");
+                return error;
             }
-            ENCAPSULER_DEBUG("zlen = %i\n", zlen);
         }
         else if (tsdiff < -ADRIFT_LIMIT)
         {
