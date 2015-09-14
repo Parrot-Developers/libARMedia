@@ -109,7 +109,9 @@ public class ARMediaManager
     public static final String ARMEDIA_MANAGER_MP4 = ".mp4";
     public static final String ARMEDIA_MANAGER_MOV = ".mov";
 
-    private static final String DOWNLOADING_PREFIX = "downloading_";
+    public static final String DOWNLOADING_PREFIX = "downloading_";
+    public static final String LOCAL_MEDIA_MASS_STORAGE_PATH =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath() + File.separator;
 
     private static final String kARMediaManagerKey = "kARMediaManagerKey";
     private static final String kARMediaManagerProjectDicCount = "kARMediaManagerProjectDicCount";
@@ -213,7 +215,7 @@ public class ARMediaManager
         for (String key : projectsDictionary.keySet())
         {
             int nbrOfFileInFolder = 0;
-            String directoryName = Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(key);
+            String directoryName = LOCAL_MEDIA_MASS_STORAGE_PATH + key;
             File directory = new File(directoryName);
 
             if (directory.listFiles() != null)
@@ -349,7 +351,7 @@ public class ARMediaManager
                 }
             }
 
-            String directoryName = Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(key);
+            String directoryName = LOCAL_MEDIA_MASS_STORAGE_PATH + key;
             File directory = new File(directoryName);
             File[] fList = directory.listFiles();
             if (fList != null)
@@ -434,7 +436,8 @@ public class ARMediaManager
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
-                        mediaObject = createMediaObjectFromJson("/DCIM/".concat(productName).concat("/").concat(filename), jsonReader);
+                        mediaObject = createMediaObjectFromJson(
+                                File.separator + Environment.DIRECTORY_DCIM + File.separator + productName + File.separator  + filename, jsonReader);
                         if(mediaObject != null)
                         {
                             ARSALPrint.v(TAG, "new image path:"+mediaObject.getFilePath());
@@ -470,7 +473,8 @@ public class ARMediaManager
                     if (projectsDictionary.keySet().contains(productName))
                     {
                         productID = Integer.parseInt(jsonReader.getString(ARMediaManagerPVATProductIdKey), 16);
-                        mediaObject = createMediaObjectFromJson("/DCIM/".concat(productName).concat("/").concat(filename), jsonReader);
+                        mediaObject = createMediaObjectFromJson(
+                                File.separator + Environment.DIRECTORY_DCIM + File.separator + productName + File.separator  + filename, jsonReader);
                         if(mediaObject != null)
                         {
                             ARSALPrint.v(TAG, "new video path:"+mediaObject.getFilePath());
@@ -496,13 +500,13 @@ public class ARMediaManager
 
         if (toAdd)
         {
-            String directory = Environment.getExternalStorageDirectory().toString().concat("/DCIM/").concat(productName);
+            String directory = LOCAL_MEDIA_MASS_STORAGE_PATH + productName;
             File directoryFolder = new File(directory);
             if (!directoryFolder.exists() || !directoryFolder.isDirectory()) 
             {
                 directoryFolder.mkdir();
             }
-            File destination = new File(directory.concat("/").concat(filename));
+            File destination = new File(directory + File.separator + filename);
             if (mediaObject != null)
             {
                 context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(destination)));
