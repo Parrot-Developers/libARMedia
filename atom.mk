@@ -22,6 +22,36 @@ LOCAL_AUTOTOOLS_CONFIGURE_ARGS := \
 	--with-libARDiscoveryInstallDir="" \
 	--with-jsonInstallDir=""
 
+ifdef ARSDK_BUILD_FOR_APP
+
+LOCAL_AUTOTOOLS_CONFIGURE_ARGS += \
+	--disable-videoenc
+
+ifeq ("$(TARGET_OS_FLAVOUR)","android")
+
+LOCAL_AUTOTOOLS_CONFIGURE_ARGS += \
+	--disable-static \
+	--enable-shared \
+	--disable-so-version
+
+else ifneq ($(filter iphoneos iphonesimulator, $(TARGET_OS_FLAVOUR)),)
+
+# libARDataTransfer is needed for iOS build but its presence is
+# not tested in configure.ac nor Makefile.am at the moment
+LOCAL_LIBRARIES += libARDataTransfer
+
+LOCAL_AUTOTOOLS_CONFIGURE_ARGS += \
+	--enable-static \
+	--disable-shared \
+	OBJCFLAGS=" -x objective-c -fobjc-arc -std=gnu99 $(TARGET_GLOBAL_CFLAGS)" \
+	OBJC="$(TARGET_CC)" \
+	CFLAGS=" -std=gnu99 -x c $(TARGET_GLOBAL_CFLAGS)"
+
+endif
+
+endif
+
+
 # User define command to be launch before configure step.
 # Generates files used by configure
 define LOCAL_AUTOTOOLS_CMD_POST_UNPACK
