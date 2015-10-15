@@ -533,6 +533,17 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     }
 
     // Use frameHeader->frame_type to check that we don't write infos about a null frame
+
+    // synchronisation every 10 frames in MJPEG or else before new I-Frames
+    if ((video->codec == CODEC_MOTION_JPEG && (video->framesCount % 10) == 0) ||
+	frameHeader->frame_type == ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME)
+    {
+        fflush (encapsuler->dataFile);
+        fsync(fileno(encapsuler->dataFile));
+        fflush (encapsuler->metaFile);
+        fsync(fileno(encapsuler->metaFile));
+    }
+
     if (ARMEDIA_ENCAPSULER_FRAME_TYPE_UNKNNOWN != frameHeader->frame_type)
     {
         uint32_t infoLen;
@@ -594,14 +605,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
 #if ENCAPSULER_LOG_TIMESTAMPS
     fprintf(tslogger, "V;%"PRIu64"\n", frameHeader->timestamp);
 #endif
-
-    // synchronisation
-    if ((video->framesCount % 10) == 0) {
-        fflush (encapsuler->dataFile);
-        fsync(fileno(encapsuler->dataFile));
-        fflush (encapsuler->metaFile);
-        fsync(fileno(encapsuler->metaFile));
-    }
 
     return ARMEDIA_OK;
 }
