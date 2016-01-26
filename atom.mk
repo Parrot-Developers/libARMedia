@@ -2,60 +2,51 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_CATEGORY_PATH := dragon/libs
 LOCAL_MODULE := libARMedia
 LOCAL_DESCRIPTION := Library to manage video encapsulation
+LOCAL_CATEGORY_PATH := dragon/libs
 
-LOCAL_CFLAGS := -D_FILE_OFFSET_BITS=64
-LOCAL_LIBRARIES := ARSDKBuildUtils libARSAL libARDiscovery json
-LOCAL_EXPORT_LDLIBS := -larmedia
+LOCAL_MODULE_FILENAME := libarmedia.so
 
-# Copy in build dir so bootstrap files are generated in build dir
-LOCAL_AUTOTOOLS_COPY_TO_BUILD_DIR := 1
+LOCAL_LIBRARIES := \
+	libARSAL \
+	libARDiscovery \
+	json
 
-# Configure script is not at the root
-LOCAL_AUTOTOOLS_CONFIGURE_SCRIPT := Build/configure
+LOCAL_C_INCLUDES := \
+	$(LOCAL_PATH)/Includes \
+	$(LOCAL_PATH)/Sources
 
-#Autotools variables
-LOCAL_AUTOTOOLS_CONFIGURE_ARGS := \
-	--with-libARSALInstallDir="" \
-	--with-libARDiscoveryInstallDir="" \
-	--with-jsonInstallDir=""
+LOCAL_CFLAGS := \
+	-D_FILE_OFFSET_BITS=64 \
+	-D_LARGEFILE64_SOURCE
 
-ifdef ARSDK_BUILD_FOR_APP
+LOCAL_SRC_FILES := \
+	gen/Sources/ARMEDIA_Error.c \
+	Sources/ARMEDIA_VideoEncapsuler.c \
+	Sources/ARMEDIA_VideoAtoms.c
 
-LOCAL_AUTOTOOLS_CONFIGURE_ARGS += \
-	--disable-videoenc
+LOCAL_INSTALL_HEADERS := \
+	Includes/libARMedia/ARMEDIA_VideoAtoms.h:usr/include/libARMedia/ \
+	Includes/libARMedia/ARMEDIA_Error.h:usr/include/libARMedia/ \
+	Includes/libARMedia/ARMEDIA_VideoEncapsuler.h:usr/include/libARMedia/ \
+	Includes/libARMedia/ARMedia.h:usr/include/libARMedia/
 
-ifeq ("$(TARGET_OS_FLAVOUR)","android")
+ifndef ARSDK_BUILD_FOR_APP
+LOCAL_CFLAGS += -DAC_VIDEOENC
+endif
 
-LOCAL_AUTOTOOLS_CONFIGURE_ARGS += \
-	--disable-static \
-	--enable-shared \
-	--disable-so-version
-
-else ifneq ($(filter iphoneos iphonesimulator, $(TARGET_OS_FLAVOUR)),)
-
-# libARDataTransfer is needed for iOS build but its presence is
-# not tested in configure.ac nor Makefile.am at the moment
+ifeq ("$(TARGET_OS)","darwin")
+ifneq ("$(TARGET_OS_FLAVOUR)","native")
 LOCAL_LIBRARIES += libARDataTransfer
-
-LOCAL_AUTOTOOLS_CONFIGURE_ARGS += \
-	--enable-static \
-	--disable-shared \
-	OBJCFLAGS=" -x objective-c -fobjc-arc -std=gnu99 $(TARGET_GLOBAL_CFLAGS)" \
-	OBJC="$(TARGET_CC)" \
-	CFLAGS=" -std=gnu99 -x c $(TARGET_GLOBAL_CFLAGS)"
-
+LOCAL_SRC_FILES += \
+	Sources/ARMEDIA_Manager.m \
+	Sources/ALAssetRepresentation+VideoAtoms.m \
+	Sources/ARMEDIA_Object.m
+LOCAL_INSTALL_HEADERS += \
+	Includes/libARMedia/ARMEDIA_Manager.h:usr/include/libARMedia/ \
+	Includes/libARMedia/ARMEDIA_Object.h:usr/include/libARMedia/
+endif
 endif
 
-endif
-
-
-# User define command to be launch before configure step.
-# Generates files used by configure
-define LOCAL_AUTOTOOLS_CMD_POST_UNPACK
-	$(Q) cd $(PRIVATE_SRC_DIR)/Build && ./bootstrap
-endef
-
-include $(BUILD_AUTOTOOLS)
+include $(BUILD_LIBRARY)
