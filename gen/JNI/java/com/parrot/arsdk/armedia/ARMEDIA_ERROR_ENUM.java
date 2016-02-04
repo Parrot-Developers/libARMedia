@@ -68,7 +68,9 @@ public enum ARMEDIA_ERROR_ENUM {
    /** Error in audio sample header */
     ARMEDIA_ERROR_ENCAPSULER_BAD_VIDEO_SAMPLE (-2996, "Error in audio sample header"),
    /** File error while encapsulating */
-    ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR (-2995, "File error while encapsulating");
+    ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR (-2995, "File error while encapsulating"),
+   /** Timestamp is before previous sample */
+    ARMEDIA_ERROR_ENCAPSULER_BAD_TIMESTAMP (-2994, "Timestamp is before previous sample");
 
     private final int value;
     private final String comment;
