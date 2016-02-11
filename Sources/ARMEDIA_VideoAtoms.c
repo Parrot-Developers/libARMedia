@@ -526,14 +526,14 @@ movie_atom_t *hdlrAtomForMdia (eARMEDIA_VIDEOATOM_MEDIATYPE type)
     return atomFromData (37, "hdlr", data);
 }
 
-movie_atom_t *smhdAtomGen ()
+movie_atom_t *smhdAtomGen (void)
 {
     uint8_t data [8] = {0x00, 0x00, 0x00, 0x00,
                         0x00, 0x00, 0x00, 0x00};
     return atomFromData (8, "smhd", data);
 }
 
-movie_atom_t *vmhdAtomGen ()
+movie_atom_t *vmhdAtomGen (void)
 {
     uint8_t data [12] = {0x00, 0x00, 0x00, 0x01,
                          0x00, 0x00, 0x00, 0x00,
@@ -541,7 +541,7 @@ movie_atom_t *vmhdAtomGen ()
     return atomFromData (12, "vmhd", data);
 }
 
-movie_atom_t *hdlrAtomForMinf ()
+movie_atom_t *hdlrAtomForMinf (void)
 {
     uint8_t data [36] =  {0x00, 0x00, 0x00, 0x00,
                           'd', 'h', 'l', 'r',
@@ -555,7 +555,7 @@ movie_atom_t *hdlrAtomForMinf ()
     return atomFromData (36, "hdlr", data);
 }
 
-movie_atom_t *drefAtomGen ()
+movie_atom_t *drefAtomGen (void)
 {
     uint8_t data [20] = {0x00, 0x00, 0x00, 0x00,
                          0x00, 0x00, 0x00, 0x01,

@@ -115,10 +115,10 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
 movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date, eARMEDIA_VIDEOATOM_MEDIATYPE type);
 movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date);
 movie_atom_t *hdlrAtomForMdia (eARMEDIA_VIDEOATOM_MEDIATYPE type);
-movie_atom_t *vmhdAtomGen ();
-movie_atom_t *smhdAtomGen ();
-movie_atom_t *hdlrAtomForMinf ();
-movie_atom_t *drefAtomGen ();
+movie_atom_t *vmhdAtomGen (void);
+movie_atom_t *smhdAtomGen (void);
+movie_atom_t *hdlrAtomForMinf (void);
+movie_atom_t *drefAtomGen (void);
 movie_atom_t *stsdAtomWithResolutionAndCodec (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_VIDEO_CODEC codec);
 movie_atom_t *stsdAtomWithResolutionCodecSpsAndPps (uint32_t w, uint32_t h, eARMEDIA_ENCAPSULER_VIDEO_CODEC codec, uint8_t *sps, uint32_t spsSize, uint8_t *pps, uint32_t ppsSize);
 movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec, eARMEDIA_ENCAPSULER_AUDIO_FORMAT format, uint16_t nchannel, uint16_t freq);
