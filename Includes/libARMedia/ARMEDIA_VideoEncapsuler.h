@@ -41,6 +41,7 @@
 #include <dirent.h>
 #include <libARDiscovery/ARDiscovery.h>
 
+#define ARMEDIA_ENCAPSULER_METADATA_STSD_INFO_SIZE (100)
 #define ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE      (256)
 #define ARMEDIA_ENCAPSULER_FRAMES_COUNT_LIMIT   (131072)
 
