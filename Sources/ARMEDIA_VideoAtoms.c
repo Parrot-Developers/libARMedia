@@ -1167,7 +1167,7 @@ uint32_t getVideoFpsFromFile (FILE *videoFile)
 
     if (videoFile == NULL)
     {
-        return NULL;
+        return 0;
     }
     // Rewind videoFile
     rewind (videoFile);

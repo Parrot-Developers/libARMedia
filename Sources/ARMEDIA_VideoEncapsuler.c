@@ -754,7 +754,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddSample (ARMEDIA_VideoEncapsuler_t *enc
             ENCAPSULER_DEBUG("Audio drift too low (%"PRId64"µs) on %uth sample\n", tsdiff, audio->sampleCount);
             audio->theoreticalts += tsdiff;
             zlen = (tsdiff * audio->freq / 1000000) * (audio->nchannel * audio->format / 8);
-            if (-zlen >= sampleHeader->sample_size) {
+            if (((uint32_t)-zlen) >= sampleHeader->sample_size) {
                 ENCAPSULER_ERROR ("Timestamp anterior to previous sample");
                 return ARMEDIA_ERROR_ENCAPSULER_BAD_TIMESTAMP;
             }
@@ -1391,6 +1391,7 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
     char fType = '\0';
     char dataType = '\0';
     size_t prevInfoIndex = 0;
+    uint32_t prevSize = 0;
 
     // Open file for reading
     metaFile = fopen (metaFilePath, "r+b");
@@ -1523,7 +1524,7 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
     fseek (encapsuler->dataFile, 0, SEEK_END);
     tmpvidSize = ftell (encapsuler->dataFile);
 
-    uint32_t prevSize = 0;
+    prevSize = 0;
     while (!endOfSearch)
     {
         prevInfoIndex = ftell (encapsuler->metaFile);
