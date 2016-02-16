@@ -40,7 +40,7 @@
 
 #include <libARMedia/ARMEDIA_Error.h>
 
-char* ARMEDIA_Error_ToString (eARMEDIA_ERROR error)
+const char* ARMEDIA_Error_ToString (eARMEDIA_ERROR error)
 {
     switch (error)
     {
