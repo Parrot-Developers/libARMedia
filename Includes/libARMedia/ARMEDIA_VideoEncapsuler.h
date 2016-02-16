@@ -51,6 +51,7 @@
 #define ARMEDIA_ENCAPSULER_INFO_PATTERN        "%c:%u:%c:%u|"
 #define ARMEDIA_ENCAPSULER_AUDIO_INFO_TAG      'a'
 #define ARMEDIA_ENCAPSULER_VIDEO_INFO_TAG      'v'
+#define ARMEDIA_ENCAPSULER_METADATA_INFO_TAG   'm'
 #define ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN    (4)
 
 // File extension for informations files (frame sizes / types)
@@ -157,15 +158,26 @@ ARMEDIA_VideoEncapsuler_t* ARMEDIA_VideoEncapsuler_New(const char *mediaPath, in
 void ARMEDIA_VideoEncapsuler_Delete(ARMEDIA_VideoEncapsuler_t **encapsuler);
 
 /**
+ * @brief Set encoding content, mime type and block size of Metadata
+ * @param encapsuler ARMedia video encapsuler created by ARMEDIA_VideoEncapsuler_new()
+ * @param content_encoding Metadata content encoding
+ * @param mime_format Metadata mime format
+ * @param block_size Metadata block size
+ * @return Possible return values are in eARMEDIA_ERROR
+ */
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetMetadataInfo (ARMEDIA_VideoEncapsuler_t *encapsuler, const char *content_encoding, const char *mime_format, uint32_t metadata_block_size);
+
+/**
  * Add a video frame to an encapsulated video
  * The actual writing of the video will start on the first given I-Frame slice. (after that, each frame will be written)
  * The first I-Frame slice will be used to get the video codec, height and width of the video
  * @brief Add a new video frame to the encapsulated media
  * @param encapsuler ARMedia video encapsuler created by ARMEDIA_VideoEncapsuler_new()
  * @param frameHeader Pointer to the video frame header to add
+ * @param metadataBuffer Pointer to metadata to add to video file, NULL if not supported on product
  * @return Possible return values are in eARMEDIA_ERROR
  */
-eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Frame_Header_t *frameHeader);
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Frame_Header_t *frameHeader, const void *metadataBuffer);
 
 /**
  * Add an audio sample to the encapsulated data
