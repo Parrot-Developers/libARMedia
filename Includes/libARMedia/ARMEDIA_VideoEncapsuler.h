@@ -54,6 +54,8 @@
 #define ARMEDIA_ENCAPSULER_METADATA_INFO_TAG   'm'
 #define ARMEDIA_ENCAPSULER_NUM_MATCH_PATTERN    (4)
 
+#define ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX   (128)
+
 // File extension for informations files (frame sizes / types)
 #define METAFILE_EXT "-encaps.dat"
 
@@ -110,6 +112,10 @@ typedef struct {
     uint64_t timestamp;                /* in microseconds */
     eARMEDIA_ENCAPSULER_FRAME_TYPE frame_type;               /* I-frame, P-frame, JPEG-frame */
     uint8_t* frame;
+    uint32_t avc_nalu_count;
+    uint32_t avc_nalu_size[ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX];
+    uint8_t *avc_nalu_data[ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX];
+    uint32_t avc_insert_ps;            /* if not null, insert SPS and PPS before this frame */
 } ARMEDIA_Frame_Header_t;
 
 typedef enum {
@@ -156,6 +162,17 @@ ARMEDIA_VideoEncapsuler_t* ARMEDIA_VideoEncapsuler_New(const char *mediaPath, in
  * @see ARMEDIA_VideoEncapsuler_New()
  */
 void ARMEDIA_VideoEncapsuler_Delete(ARMEDIA_VideoEncapsuler_t **encapsuler);
+
+/**
+ * @brief Set H.264/AVC parameter sets (SPS and PPS)
+ * @param encapsuler ARMedia video encapsuler created by ARMEDIA_VideoEncapsuler_new()
+ * @param sps SPS buffer
+ * @param spsSize SPS size in bytes
+ * @param pps PPS buffer
+ * @param ppsSize PPS size in bytes
+ * @return Possible return values are in eARMEDIA_ERROR
+ */
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetAvcParameterSets (ARMEDIA_VideoEncapsuler_t *encapsuler, const uint8_t *sps, uint32_t spsSize, const uint8_t *pps, uint32_t ppsSize);
 
 /**
  * @brief Set encoding content, mime type and block size of Metadata

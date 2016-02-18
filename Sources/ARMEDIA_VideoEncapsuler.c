@@ -338,6 +338,62 @@ static int ARMEDIA_H264StartcodeMatch(uint8_t* pBuf, unsigned int bufSize)
     return ret;
 }
 
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetAvcParameterSets (ARMEDIA_VideoEncapsuler_t *encapsuler, const uint8_t *sps, uint32_t spsSize, const uint8_t *pps, uint32_t ppsSize)
+{
+    if (NULL == encapsuler)
+    {
+        ENCAPSULER_ERROR ("encapsuler pointer must not be null");
+        return ARMEDIA_ERROR_BAD_PARAMETER;
+    }
+    if (NULL == sps)
+    {
+        ENCAPSULER_ERROR ("SPS pointer must not be null");
+        return ARMEDIA_ERROR_BAD_PARAMETER;
+    }
+    if (0 == spsSize)
+    {
+        ENCAPSULER_ERROR ("SPS size must not be null");
+        return ARMEDIA_ERROR_BAD_PARAMETER;
+    }
+    if (NULL == pps)
+    {
+        ENCAPSULER_ERROR ("PPS pointer must not be null");
+        return ARMEDIA_ERROR_BAD_PARAMETER;
+    }
+    if (0 == ppsSize)
+    {
+        ENCAPSULER_ERROR ("PPS pointer must not be null");
+        return ARMEDIA_ERROR_BAD_PARAMETER;
+    }
+
+    ARMEDIA_Video_t* video = encapsuler->video;
+    video->spsSize = spsSize;
+    video->ppsSize = ppsSize;
+    video->sps = malloc (video->spsSize);
+    video->pps = malloc (video->ppsSize);
+
+    if (NULL == video->sps || NULL == video->pps)
+    {
+        ENCAPSULER_ERROR ("Unable to allocate SPS/PPS buffers");
+        if (NULL != video->sps)
+        {
+            free (video->sps);
+            video->sps = NULL;
+        }
+
+        if (NULL != video->pps)
+        {
+            free (video->pps);
+            video->pps = NULL;
+        }
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+    memcpy (video->sps, sps, video->spsSize);
+    memcpy (video->pps, pps, video->ppsSize);
+
+    return ARMEDIA_OK;
+}
+
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetMetadataInfo (ARMEDIA_VideoEncapsuler_t *encapsuler, const char *content_encoding, const char *mime_format, uint32_t metadata_block_size)
 {
     // Init ot metadata structure
@@ -392,18 +448,18 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
         return ARMEDIA_ERROR_BAD_PARAMETER;
     }
 
-    if (!frameHeader->frame_size)
+    // get frame data
+    if ((NULL == frameHeader->frame) && (0 == frameHeader->avc_nalu_count))
+    {
+        ENCAPSULER_ERROR ("Unable to get frame data (%d bytes) ", frameHeader->frame_size);
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+
+    if ((NULL != frameHeader->frame) && (!frameHeader->frame_size))
     {
         // Do nothing
         ENCAPSULER_DEBUG ("Empty frame\n");
         return ARMEDIA_OK;
-    }
-
-    // get frame data
-    if (NULL == frameHeader->frame)
-    {
-        ENCAPSULER_ERROR ("Unable to get frame data (%d bytes) ", frameHeader->frame_size);
-        return ARMEDIA_ERROR_ENCAPSULER;
     }
 
     if (ARMEDIA_ENCAPSULER_FRAMES_COUNT_LIMIT <= video->framesCount)
@@ -438,55 +494,79 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
                 return ARMEDIA_ERROR_ENCAPSULER_WAITING_FOR_IFRAME;
             }
 
-            // we'll need to search the "00 00 00 01" pattern to find each header size
-            // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
-            for (searchIndex = 4; searchIndex <= frameHeader->frame_size - 4; searchIndex ++)
+            if ((NULL == video->sps) && (NULL == video->pps))
             {
-                if (0 == data[searchIndex  ] &&
-                        0 == data[searchIndex+1] &&
-                        0 == data[searchIndex+2] &&
-                        1 == data[searchIndex+3])
+                uint8_t *pSps = NULL, *pPps = NULL;
+                if (frameHeader->avc_nalu_count)
                 {
-                    break;  // PPS header found
+                    // We consider that on a I-Frame the first NALU is an SPS and the second NALU is a PPS
+                    video->spsSize = frameHeader->avc_nalu_size[0];
+                    video->ppsSize = frameHeader->avc_nalu_size[1];
+                    if (data)
+                    {
+                        pSps = data;
+                        pPps = data + video->spsSize;
+                    }
+                    else
+                    {
+                        pSps = frameHeader->avc_nalu_data[0];
+                        pPps = frameHeader->avc_nalu_data[1];
+                    }
                 }
+                else
+                {
+                    // we'll need to search the "00 00 00 01" pattern to find each header size
+                    // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
+                    for (searchIndex = 4; searchIndex <= frameHeader->frame_size - 4; searchIndex ++)
+                    {
+                        if (0 == data[searchIndex  ] &&
+                                0 == data[searchIndex+1] &&
+                                0 == data[searchIndex+2] &&
+                                1 == data[searchIndex+3])
+                        {
+                            break;  // PPS header found
+                        }
+                    }
+                    video->spsSize = searchIndex;
+                    pSps = data;
+
+                    // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
+                    for (searchIndex = video->spsSize+4; searchIndex <= frameHeader->frame_size - 4; searchIndex ++)
+                    {
+                        if (0 == data[searchIndex  ] &&
+                                0 == data[searchIndex+1] &&
+                                0 == data[searchIndex+2] &&
+                                1 == data[searchIndex+3])
+                        {
+                            break;  // frame header found
+                        }
+                    }
+                    video->ppsSize = searchIndex - video->spsSize;
+                    pPps = data + video->spsSize;
+                }
+
+                video->sps = malloc (video->spsSize);
+                video->pps = malloc (video->ppsSize);
+
+                if (NULL == video->sps || NULL == video->pps)
+                {
+                    ENCAPSULER_ERROR ("Unable to allocate SPS/PPS buffers");
+                    if (NULL != video->sps)
+                    {
+                        free (video->sps);
+                        video->sps = NULL;
+                    }
+
+                    if (NULL != video->pps)
+                    {
+                        free (video->pps);
+                        video->pps = NULL;
+                    }
+                    return ARMEDIA_ERROR_ENCAPSULER;
+                }
+                memcpy (video->sps, pSps, video->spsSize);
+                memcpy (video->pps, pPps, video->ppsSize);
             }
-            video->spsSize = searchIndex;
-
-            // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
-            for (searchIndex = video->spsSize+4; searchIndex <= frameHeader->frame_size - 4; searchIndex ++)
-            {
-                if (0 == data[searchIndex  ] &&
-                        0 == data[searchIndex+1] &&
-                        0 == data[searchIndex+2] &&
-                        1 == data[searchIndex+3])
-                {
-                    break;  // frame header found
-                }
-            }
-
-            video->ppsSize = searchIndex - video->spsSize;
-
-            video->sps = malloc (video->spsSize);
-            video->pps = malloc (video->ppsSize);
-
-            if (NULL == video->sps || NULL == video->pps)
-            {
-                ENCAPSULER_ERROR ("Unable to allocate SPS/PPS buffers");
-                if (NULL != video->sps)
-                {
-                    free (video->sps);
-                    video->sps = NULL;
-                }
-
-                if (NULL != video->pps)
-                {
-                    free (video->pps);
-                    video->pps = NULL;
-                }
-                return ARMEDIA_ERROR_ENCAPSULER;
-            }
-            memcpy (video->sps, data, video->spsSize);
-            memcpy (video->pps, &data[video->spsSize], video->ppsSize);
         }
 
         // Start to write file
@@ -618,6 +698,26 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     if (ARMEDIA_ENCAPSULER_FRAME_TYPE_UNKNNOWN != frameHeader->frame_type)
     {
         uint32_t infoLen;
+        uint32_t totalFrameSize = 0;
+        if (data)
+        {
+            totalFrameSize += frameHeader->frame_size;
+        }
+        else
+        {
+            uint32_t i;
+            for (i = 0; i < frameHeader->avc_nalu_count; i++)
+            {
+                totalFrameSize += frameHeader->avc_nalu_size[i];
+            }
+        }
+        if (frameHeader->avc_insert_ps)
+        {
+            if (video->spsSize > 4)
+                totalFrameSize += video->spsSize;
+            if (video->ppsSize > 4)
+                totalFrameSize += video->ppsSize;
+        }
 
         char infoData [ENCAPSULER_INFODATA_MAX_SIZE] = {0};
         char fTypeChar = 'p';
@@ -629,7 +729,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
         snprintf (infoData, ENCAPSULER_INFODATA_MAX_SIZE,
                 ARMEDIA_ENCAPSULER_INFO_PATTERN,
                 ARMEDIA_ENCAPSULER_VIDEO_INFO_TAG,
-                frameHeader->frame_size,
+                totalFrameSize,
                 fTypeChar,
                 (uint32_t)(frameHeader->timestamp - video->lastFrameTimestamp)); // frame duration
         infoLen = strlen(infoData);
@@ -666,35 +766,113 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
 
     if (video->codec == CODEC_MPEG4_AVC) {
         // Replace the NAL units start code by the NALU size
-        int startCodePos = 0, naluStart = 0, naluEnd = 0, sizeLeft = frameHeader->frame_size;
-        uint32_t naluSize = 0;
-        startCodePos = ARMEDIA_H264StartcodeMatch(data, sizeLeft);
-        naluStart = startCodePos;
-        while (startCodePos >= 0)
+
+        if (frameHeader->avc_nalu_count > 0)
         {
-            sizeLeft = frameHeader->frame_size - naluStart - 4;
-            startCodePos = ARMEDIA_H264StartcodeMatch(data + naluStart + 4, sizeLeft);
-            if (startCodePos >= 0)
+            uint32_t i, offset, naluSize;
+            for (i = 0, offset = 0; i < frameHeader->avc_nalu_count; i++)
             {
-                naluEnd = naluStart + 4 + startCodePos;
+                naluSize = htonl((frameHeader->avc_nalu_size[i] > 4) ? frameHeader->avc_nalu_size[i] - 4 : 0);
+                if (data)
+                {
+                    memcpy(data + offset, &naluSize, sizeof(uint32_t));
+                }
+                else if (frameHeader->avc_nalu_data[i])
+                {
+                    memcpy(frameHeader->avc_nalu_data[i], &naluSize, sizeof(uint32_t));
+                }
+                else
+                {
+                    ENCAPSULER_ERROR ("No valid pointer for NALU");
+                }
+                offset += frameHeader->avc_nalu_size[i];
             }
-            else
+        }
+        else
+        {
+            int startCodePos = 0, naluStart = 0, naluEnd = 0, sizeLeft = frameHeader->frame_size;
+            uint32_t naluSize = 0;
+            startCodePos = ARMEDIA_H264StartcodeMatch(data, sizeLeft);
+            naluStart = startCodePos;
+            while (startCodePos >= 0)
             {
-                naluEnd = frameHeader->frame_size;
+                sizeLeft = frameHeader->frame_size - naluStart - 4;
+                startCodePos = ARMEDIA_H264StartcodeMatch(data + naluStart + 4, sizeLeft);
+                if (startCodePos >= 0)
+                {
+                    naluEnd = naluStart + 4 + startCodePos;
+                }
+                else
+                {
+                    naluEnd = frameHeader->frame_size;
+                }
+                naluSize = htonl(naluEnd - naluStart - 4);
+                memcpy(data + naluStart, &naluSize, sizeof(uint32_t));
+                naluStart = naluEnd;
             }
-            naluSize = htonl(naluEnd - naluStart - 4);
-            memcpy(data + naluStart, &naluSize, sizeof(uint32_t));
-            naluStart = naluEnd;
         }
     }
 
-    if (frameHeader->frame_size != fwrite (data, 1, frameHeader->frame_size, encapsuler->dataFile))
+    if (frameHeader->avc_insert_ps)
     {
-        ENCAPSULER_ERROR ("Unable to write frame into data file");
-        return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+        // Force insertion of SPS and PPS before this frame
+        uint32_t naluSize, naluSizeNe;
+        if (video->spsSize > 4)
+        {
+            naluSize = video->spsSize - 4;
+            naluSizeNe = htonl(naluSize);
+            if (4 != fwrite (&naluSizeNe, 1, 4, encapsuler->dataFile))
+            {
+                ENCAPSULER_ERROR ("Unable to write SPS into data file");
+                return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            }
+            if (naluSize != fwrite (video->sps + 4, 1, naluSize, encapsuler->dataFile))
+            {
+                ENCAPSULER_ERROR ("Unable to write SPS into data file");
+                return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            }
+            video->totalsize += video->spsSize;
+        }
+        if (video->ppsSize > 4)
+        {
+            naluSize = video->ppsSize - 4;
+            naluSizeNe = htonl(naluSize);
+            if (4 != fwrite (&naluSizeNe, 1, 4, encapsuler->dataFile))
+            {
+                ENCAPSULER_ERROR ("Unable to write PPS into data file");
+                return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            }
+            if (naluSize != fwrite (video->pps + 4, 1, naluSize, encapsuler->dataFile))
+            {
+                ENCAPSULER_ERROR ("Unable to write PPS into data file");
+                return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            }
+            video->totalsize += video->ppsSize;
+        }
     }
 
-    video->totalsize += frameHeader->frame_size;
+    if (data)
+    {
+        if (frameHeader->frame_size != fwrite (data, 1, frameHeader->frame_size, encapsuler->dataFile))
+        {
+            ENCAPSULER_ERROR ("Unable to write frame into data file");
+            return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+        }
+        video->totalsize += frameHeader->frame_size;
+    }
+    else
+    {
+        uint32_t i;
+        for (i = 0; i < frameHeader->avc_nalu_count; i++)
+        {
+            if (frameHeader->avc_nalu_size[i] != fwrite (frameHeader->avc_nalu_data[i], 1, frameHeader->avc_nalu_size[i], encapsuler->dataFile))
+            {
+                ENCAPSULER_ERROR ("Unable to write frame into data file");
+                return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            }
+            video->totalsize += frameHeader->avc_nalu_size[i];
+        }
+    }
 
     if (metadataBuffer != NULL && metadata != NULL && metadata->block_size > 0)
     {
