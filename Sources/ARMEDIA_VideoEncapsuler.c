@@ -943,7 +943,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         localError = ARMEDIA_ERROR_BAD_PARAMETER;
     }
 
-    if (NULL == *encapsuler)
+    if (encapsuler && (NULL == *encapsuler))
     {
         ENCAPSULER_ERROR ("encapsuler pointer must not be null");
         localError = ARMEDIA_ERROR_BAD_PARAMETER;
