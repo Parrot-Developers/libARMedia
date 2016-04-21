@@ -2003,7 +2003,6 @@ cleanup:
             ENCAPSULER_CLEANUP (free, video->pps);
             video->pps = NULL;
             ENCAPSULER_CLEANUP (fclose, encapsuler->metaFile);
-            metaFile = NULL;
             ENCAPSULER_CLEANUP (fclose, encapsuler->dataFile);
             ENCAPSULER_CLEANUP (free ,video);
             video = NULL;
