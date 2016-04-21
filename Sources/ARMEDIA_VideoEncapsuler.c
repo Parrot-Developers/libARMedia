@@ -247,7 +247,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
         return NULL;
     }
 
-    retVideo->dataFile = (FILE*)fopen64(retVideo->tempFilePath, "w+b");
+    retVideo->dataFile = fopen(retVideo->tempFilePath, "w+b");
     if (NULL == retVideo->dataFile)
     {
         ENCAPSULER_ERROR ("Unable to open file %s for writing", mediaPath);

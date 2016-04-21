@@ -83,6 +83,9 @@ char* ARMEDIA_Error_ToString (eARMEDIA_ERROR error)
     case ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR:
         return "File error while encapsulating";
         break;
+    case ARMEDIA_ERROR_ENCAPSULER_BAD_TIMESTAMP:
+        return "Timestamp is before previous sample";
+        break;
     default:
         return "Unknown value";
         break;
