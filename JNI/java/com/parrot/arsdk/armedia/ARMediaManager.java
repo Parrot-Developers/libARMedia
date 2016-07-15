@@ -70,6 +70,8 @@ import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
 import android.provider.MediaStore.Images.Media;
 import android.provider.MediaStore.Video;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Base64;
 import android.util.Base64InputStream;
@@ -248,8 +250,6 @@ public class ARMediaManager
 
             int currentCount = 0;
             arMediaManagerNotificationUpdating((double) currentCount / (double) totalMediaInFoldersCount * 100);
-            JSONObject jsonReader;
-            String exifProductID = null;
 
             try
             {
@@ -261,50 +261,11 @@ public class ARMediaManager
                 {
                     do
                     {
-                        String mediaFileAbsolutPath = cursorPhoto.getString(cursorPhoto.getColumnIndex("_data"));
-                        String mediaFilePath = cursorPhoto.getString(cursorPhoto.getColumnIndex("_data")).substring(Environment.getExternalStorageDirectory().toString().length());
-                        String mediaName = cursorPhoto.getString(cursorPhoto.getColumnIndex("title"));
+                        String mediaFileAbsolutPath = cursorPhoto.getString(cursorPhoto.getColumnIndex(Media.DATA));
+                        String mediaFilePath = mediaFileAbsolutPath.substring(Environment.getExternalStorageDirectory().toString().length());
                         if (mediaFileAbsolutPath.endsWith(ARMEDIA_MANAGER_JPG))
                         {
-                            Exif2Interface exif;
-                            try
-                            {
-                                exif = new Exif2Interface(mediaFileAbsolutPath);
-                                String description = exif.getAttribute(Exif2Interface.Tag.IMAGE_DESCRIPTION);
-                                ARSALPrint.v(TAG, "image:"+mediaFileAbsolutPath+", desc="+description);
-                                if (description != null)
-                                {
-                                    jsonReader = new JSONObject(description);
-                                    if (jsonReader.has(ARMediaManagerPVATProductIdKey))
-                                        exifProductID = jsonReader.getString(ARMediaManagerPVATProductIdKey);
-                                    String productName = ARDiscoveryService.getProductName(ARDiscoveryService.getProductFromProductID((int) Long.parseLong(exifProductID, 16)));
-                                    ARSALPrint.v(TAG, "image product="+productName);
-                                    if (projectsDictionary.keySet().contains(productName))
-                                    {
-                                        HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(jsonReader.getString(ARMediaManagerPVATProductIdKey));
-                                        if ((hashMap == null) || (!hashMap.containsKey(mediaFilePath)))
-                                        {
-                                            ARMediaObject mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
-                                            if(mediaObject != null)
-                                            {
-                                                mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
-                                                ARSALPrint.v(TAG, "add photo:"+mediaFilePath);
-                                                ((HashMap<String, Object>) projectsDictionary.get(productName)).put(mediaFilePath, mediaObject);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            catch (IOException e)
-                            {
-                                // TODO Auto-generated catch block
-                                e.printStackTrace();
-                            }
-                            catch (JSONException e)
-                            {
-                                // TODO: handle exception
-                                e.printStackTrace();
-                            }
+                            addPhotoToProjectDictionary(mediaFileAbsolutPath, mediaFilePath);
                         }
                         currentCount++;
                         arMediaManagerNotificationUpdating((double) currentCount / (double) totalMediaInFoldersCount * 100);
@@ -360,10 +321,13 @@ public class ARMediaManager
                 for (File file : fList)
                 {
                     final String filePath = file.getAbsolutePath();
-                    if (!filePath.contains(DOWNLOADING_PREFIX) && isValidVideoFile(filePath))
-                    {
-                        ARSALPrint.v(TAG, "adding video:"+filePath);
-                        addARMediaVideoToProjectDictionary(filePath);
+                    if (!filePath.startsWith(DOWNLOADING_PREFIX)) {
+                        if (isValidVideoFile(filePath)) {
+                            ARSALPrint.v(TAG, "adding video:" + filePath);
+                            addARMediaVideoToProjectDictionary(filePath);
+                        } else if (filePath.endsWith(ARMEDIA_MANAGER_JPG)) {
+                            addPhotoToProjectDictionary(filePath, null);
+                        }
                     }
                 }
             }
@@ -518,6 +482,53 @@ public class ARMediaManager
 
         isUpdate = true;
         return added;
+    }
+
+    private void addPhotoToProjectDictionary(@NonNull String mediaFileAbsolutPath, @Nullable String mediaFilePath) {
+        try {
+            String exifProductID = null;
+
+            if (mediaFilePath == null) {
+                mediaFilePath = mediaFileAbsolutPath.substring(Environment.getExternalStorageDirectory().toString().length());
+            }
+
+            Exif2Interface exif = new Exif2Interface(mediaFileAbsolutPath);
+            String description = exif.getAttribute(Exif2Interface.Tag.IMAGE_DESCRIPTION);
+
+            ARSALPrint.v(TAG, "image:"+mediaFileAbsolutPath+", desc="+description);
+
+            if (description != null) {
+                JSONObject jsonReader = new JSONObject(description);
+
+                if (jsonReader.has(ARMediaManagerPVATProductIdKey)) {
+                    exifProductID = jsonReader.getString(ARMediaManagerPVATProductIdKey);
+                }
+
+                String productName = ARDiscoveryService.getProductName(ARDiscoveryService.getProductFromProductID((int) Long.parseLong(exifProductID, 16)));
+
+                ARSALPrint.v(TAG, "image product="+productName);
+
+                if (projectsDictionary.containsKey(productName)) {
+                    // If projectsDictionary contains productName as key, then the associated hashmap should not be null
+                    // as it will have been set in initWithProjectsId method
+                    HashMap<String, Object> hashMap = (HashMap<String, Object>) projectsDictionary.get(productName);
+                    if (!hashMap.containsKey(mediaFilePath)) {
+                        ARMediaObject mediaObject = createMediaObjectFromJson(mediaFilePath, jsonReader);
+                        if(mediaObject != null) {
+                            mediaObject.mediaType = MEDIA_TYPE_ENUM.MEDIA_TYPE_PHOTO;
+                            ARSALPrint.v(TAG, "add photo:"+mediaFilePath);
+                            hashMap.put(mediaFilePath, mediaObject);
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (JSONException e) {
+            // TODO: handle exception
+            e.printStackTrace();
+        }
     }
 
     private void addARMediaVideoToProjectDictionary(String mediaFileAbsolutPath)
