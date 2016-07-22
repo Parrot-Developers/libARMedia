@@ -404,7 +404,7 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
-    ATOM_WRITE_U32 (3); /* Next track id */
+    ATOM_WRITE_U32 (4); /* Next track id */
 
     retAtom = atomFromData (100, "mvhd", data);
     ATOM_FREE (data);
@@ -426,10 +426,7 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     ATOM_WRITE_U32 (0x0000000f); /* Version (8) + Flags (24) */
     ATOM_WRITE_U32 (0); /* Creation time */
     ATOM_WRITE_U32 (0); /* Modification time */
-    if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO)
-        ATOM_WRITE_U32 (1); /* Track ID */
-    else
-        ATOM_WRITE_U32 (2); /* Track ID */
+    ATOM_WRITE_U32 ((type+1)); /* Track ID */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (duration); /* Duration, in timescale unit */
     ATOM_WRITE_U32 (0); /* Reserved */
@@ -510,6 +507,7 @@ movie_atom_t *hdlrAtomForMdia (eARMEDIA_VIDEOATOM_MEDIATYPE type)
                           'e', 'o', 'H', 'a',
                           'n', 'd', 'l', 'e',
                           'r'};
+    int dataSize = 37;
 
     if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND) {
         data[8] = 's';
@@ -522,8 +520,25 @@ movie_atom_t *hdlrAtomForMdia (eARMEDIA_VIDEOATOM_MEDIATYPE type)
         data[27] = 'u';
         data[28] = 'n';
         data[29] = 'd';
+    } else if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_METADATA) {
+        data[8] = 'm';
+        data[9] = 'e';
+        data[10] = 't';
+        data[11] = 'a';
+
+        data[24] = 0x08;
+        data[25] = 'M';
+        data[26] = 'e';
+        data[27] = 't';
+        data[28] = 'a';
+        data[29] = 'd';
+        data[30] = 'a';
+        data[31] = 't';
+        data[32] = 'a';
+
+        dataSize = 33;
     }
-    return atomFromData (37, "hdlr", data);
+    return atomFromData (dataSize, "hdlr", data);
 }
 
 movie_atom_t *smhdAtomGen (void)
@@ -539,6 +554,12 @@ movie_atom_t *vmhdAtomGen (void)
                          0x00, 0x00, 0x00, 0x00,
                          0x00, 0x00, 0x00, 0x00};
     return atomFromData (12, "vmhd", data);
+}
+
+movie_atom_t *nmhdAtomGen (void)
+{
+    uint8_t data [4] = {0x00, 0x00, 0x00, 0x00};
+    return atomFromData (4, "nmhd", data);
 }
 
 movie_atom_t *hdlrAtomForMinf (void)
@@ -760,6 +781,57 @@ movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec, eARM
     ATOM_WRITE_U32(0x00000000);         // 60 - audio channel layout
     ATOM_WRITE_U32(0x00000000);         // 64 - audio channel layout
                                         // 68 -- END
+
+    retAtom = atomFromData (dataSize, "stsd", data);
+    ATOM_FREE(data);
+    return retAtom;
+}
+
+movie_atom_t *stsdAtomForMetadata (const char *content_encoding, const char *mime_format)
+{
+    uint32_t dataSize = 24;
+    uint32_t currentIndex = 0;
+    int content_encoding_len, mime_format_len;
+    movie_atom_t *retAtom;
+
+    if (content_encoding != NULL)
+        content_encoding_len = strnlen (content_encoding, ARMEDIA_ENCAPSULER_METADATA_STSD_INFO_SIZE);
+    else
+        content_encoding_len = 0;
+
+    if (mime_format != NULL)
+        mime_format_len = strnlen (mime_format, ARMEDIA_ENCAPSULER_METADATA_STSD_INFO_SIZE);
+    else
+        mime_format_len = 0;
+
+    dataSize += content_encoding_len+1 + mime_format_len+1;
+
+    uint8_t* data = (uint8_t*) ATOM_MALLOC(dataSize);
+    if (NULL == data)
+    {
+        return NULL;
+    }
+
+    ATOM_WRITE_U32(0);                      // 0 - version & flags
+    ATOM_WRITE_U32(1);                      // 4 - number of entries
+
+    ATOM_WRITE_U32((dataSize-8));           // 8 - size of sample description
+    ATOM_WRITE_4CC('m', 'e', 't', 't');     // 12 - tag for sample description
+    ATOM_WRITE_U32(0x00000000);             // 16 - reserved
+    ATOM_WRITE_U16(0x0000);                 // 20 - reserved
+    ATOM_WRITE_U16(0x0001);                 // 22 - data reference index
+
+    // 24 - content_encoding beginning
+    memcpy (data + currentIndex, content_encoding, content_encoding_len);
+    currentIndex += content_encoding_len;
+    data[currentIndex] = '\0';
+    currentIndex++;
+
+    // 24 + content_encoding_len+1 -> mime_format beginning
+    memcpy (data + currentIndex, mime_format, mime_format_len);
+    currentIndex += mime_format_len;
+    data[currentIndex] = '\0';
+    currentIndex++;
 
     retAtom = atomFromData (dataSize, "stsd", data);
     ATOM_FREE(data);
@@ -1167,7 +1239,7 @@ uint32_t getVideoFpsFromFile (FILE *videoFile)
 
     if (videoFile == NULL)
     {
-        return NULL;
+        return 0;
     }
     // Rewind videoFile
     rewind (videoFile);

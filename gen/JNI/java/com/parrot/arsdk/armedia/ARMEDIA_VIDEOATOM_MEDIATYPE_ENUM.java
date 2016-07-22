@@ -44,7 +44,8 @@ public enum ARMEDIA_VIDEOATOM_MEDIATYPE_ENUM {
    /** Dummy value for all unknown cases */
     eARMEDIA_VIDEOATOM_MEDIATYPE_UNKNOWN_ENUM_VALUE (Integer.MIN_VALUE, "Dummy value for all unknown cases"),
    ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO (0),
-   ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND (1);
+   ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND (1),
+   ARMEDIA_VIDEOATOM_MEDIATYPE_METADATA (2);
 
     private final int value;
     private final String comment;

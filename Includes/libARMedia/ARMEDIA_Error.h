@@ -66,6 +66,6 @@ typedef enum
  *
  * @note User should NEVER try to modify a returned string
  */
-char* ARMEDIA_Error_ToString (eARMEDIA_ERROR error);
+const char* ARMEDIA_Error_ToString (eARMEDIA_ERROR error);
 
 #endif /* _ARMEDIA_ERROR_H_ */

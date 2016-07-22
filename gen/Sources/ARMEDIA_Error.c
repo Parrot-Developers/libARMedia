@@ -40,7 +40,7 @@
 
 #include <libARMedia/ARMEDIA_Error.h>
 
-char* ARMEDIA_Error_ToString (eARMEDIA_ERROR error)
+const char* ARMEDIA_Error_ToString (eARMEDIA_ERROR error)
 {
     switch (error)
     {
@@ -87,7 +87,6 @@ char* ARMEDIA_Error_ToString (eARMEDIA_ERROR error)
         return "Timestamp is before previous sample";
         break;
     default:
-        return "Unknown value";
         break;
     }
     return "Unknown value";
