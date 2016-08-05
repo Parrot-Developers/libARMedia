@@ -289,7 +289,7 @@ void freeAtom (movie_atom_t **atom)
     }
 }
 
-movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_VIDEO_CODEC codec, uint32_t *offset)
+movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_VIDEO_CODEC codec, off_t *offset)
 {
     uint32_t dataSize;
     if (codec == CODEC_MPEG4_AVC) dataSize = 24;
@@ -1063,7 +1063,8 @@ int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAto
 {
     uint32_t atomSize = 0;
     char fourCCTag [5] = {0};
-    uint64_t wideAtomSize = 8;
+    off_t wideAtomSize = 8;
+    uint64_t size64 = 0;
     int found = 0;
     int fseekRet = 0;
     if (NULL == videoFile)
@@ -1072,7 +1073,7 @@ int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAto
     }
     while (0 == found && !feof (videoFile))
     {
-        fseekRet = fseek (videoFile, wideAtomSize - 8, SEEK_CUR);
+        fseekRet = fseeko (videoFile, wideAtomSize - 8, SEEK_CUR);
         if (fseekRet < 0)
         {
             // Error while fseek
@@ -1083,7 +1084,8 @@ int seekMediaFileToAtom (FILE *videoFile, const char *atomName, uint64_t *retAto
         read_4cc (videoFile, fourCCTag);
         if (1 == atomSize)
         {
-            read_uint64 (videoFile, &wideAtomSize);
+            read_uint64 (videoFile, &size64);
+            wideAtomSize = (off_t)size64;
             // remove wideAtom size (64 bits)
             wideAtomSize = wideAtomSize - 8;
         }
