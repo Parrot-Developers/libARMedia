@@ -1169,6 +1169,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     uint32_t *frameSizeBufferNE   = NULL;
     uint64_t *videoOffsetBuffer   = NULL;
     uint32_t *frameTimeSyncBuffer = NULL;
+    uint32_t *metadataTimeSyncBuffer = NULL;
     uint32_t *iFrameIndexBuffer   = NULL;
     // metadata
     uint64_t *metadataOffsetBuffer = NULL;
@@ -1226,6 +1227,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         frameSizeBufferNE   = calloc (video->framesCount, sizeof (uint32_t));
         videoOffsetBuffer   = calloc (video->framesCount, sizeof (uint64_t));
         frameTimeSyncBuffer = calloc (2*video->framesCount, sizeof (uint32_t));
+        metadataTimeSyncBuffer = calloc (2*video->framesCount, sizeof (uint32_t));
         if (encaps->got_metadata && metadata != NULL && metadata->block_size > 0)
         {
             metadataOffsetBuffer = calloc (metadata->framesCount, sizeof (uint64_t));
@@ -1241,6 +1243,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         if (NULL == frameSizeBufferNE   ||
                 NULL == videoOffsetBuffer   ||
                 NULL == frameTimeSyncBuffer ||
+                NULL == metadataTimeSyncBuffer ||
                 (encaps->got_metadata && metadata != NULL && metadata->block_size > 0
                  && NULL == metadataOffsetBuffer) ||
                 (NULL == iFrameIndexBuffer && video->codec == CODEC_MPEG4_AVC) ||
@@ -1252,6 +1255,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
             ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
             ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
+            ENCAPSULER_CLEANUP(free, metadataTimeSyncBuffer);
             ENCAPSULER_CLEANUP(free, metadataOffsetBuffer);
             ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
             ENCAPSULER_CLEANUP(free, audioOffsetBuffer);
@@ -1272,8 +1276,11 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t vtimescale = encaps->timescale;
         // Video time management
         uint32_t videosttsNentries = 0;
+        uint32_t metadatasttsNentries = 0;
         uint32_t groupInterFrameDT = 0;
         uint32_t groupNframes = 0;
+        uint32_t metadataGroupInterFrameDT = 0;
+        uint32_t metadataGroupNframes = 0;
         uint32_t videoDuration = 0;
         off_t videoUniqueSize = 0;
 
@@ -1422,6 +1429,28 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     uint64_t n_co_l = htonl(chunkOffset & 0xffffffff);
                     uint64_t n_co_h = htonl(chunkOffset >> 32);
                     metadataOffsetBuffer[nbtFrames] = (n_co_l << 32) + n_co_h;
+
+                    // from microseconds to time units
+                    tmpinterframeDT = ((uint64_t)vtimescale) * ((uint64_t) interframeDT);
+                    interframeDT = (uint32_t)(tmpinterframeDT / 1000000);
+                    // Time sync mgmt
+                    if (interframeDT != 0) {
+                        // not first frame
+                        if (interframeDT != metadataGroupInterFrameDT) {
+                            // new entry => save previous entry and create a new one
+                            if (metadataGroupInterFrameDT != 0) { // not first group
+                                metadataTimeSyncBuffer[2*metadatasttsNentries] = htonl(metadataGroupNframes);
+                                metadataTimeSyncBuffer[2*metadatasttsNentries+1] = htonl(metadataGroupInterFrameDT);
+                                metadatasttsNentries++;
+                            }
+                            metadataGroupNframes = 1;
+                            metadataGroupInterFrameDT = interframeDT;
+                        } else {
+                            // use previous entry
+                            metadataGroupNframes++;
+                        }
+                    }
+
                     nbtFrames++;
                 }
                 chunkOffset += fSize; // common computation of chunk offset
@@ -1448,6 +1477,25 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         frameTimeSyncBuffer[2*videosttsNentries+1] = htonl(groupInterFrameDT);
         videoDuration += groupNframes * groupInterFrameDT;
         videosttsNentries++;
+
+        // last frame to default DT + last entry
+        // from microseconds to time units
+        tmpinterframeDT = ((uint64_t)vtimescale) * ((uint64_t) video->defaultFrameDuration);
+        interframeDT = (uint32_t)(tmpinterframeDT / 1000000);
+        if (metadataGroupInterFrameDT == interframeDT) { // add last frame to previous entry
+            metadataGroupNframes++;
+        } else { // write previous entry then add last frame to new entry
+            if (metadataGroupInterFrameDT != 0) { // not first group
+                metadataTimeSyncBuffer[2*metadatasttsNentries] = htonl(metadataGroupNframes);
+                metadataTimeSyncBuffer[2*metadatasttsNentries+1] = htonl(metadataGroupInterFrameDT);
+                metadatasttsNentries++;
+            }
+            metadataGroupNframes = 1;
+            metadataGroupInterFrameDT = interframeDT;
+        }
+        metadataTimeSyncBuffer[2*metadatasttsNentries] = htonl(metadataGroupNframes);
+        metadataTimeSyncBuffer[2*metadatasttsNentries+1] = htonl(metadataGroupInterFrameDT);
+        metadatasttsNentries++;
 
         // get time values
         tzset();
@@ -1639,12 +1687,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             stsdAtom = stsdAtomForMetadata (
                     metadata->content_encoding, metadata->mime_format);
 
-            sttsDataLen = (8 + 2 * sizeof(uint32_t));
+            // Generate stts atom from metadataTimeSyncBuffer
+            sttsDataLen = (8 + 2 * metadatasttsNentries * sizeof(uint32_t));
             sttsBuffer = (uint8_t*) calloc (sttsDataLen, 1);
-            sttsNentriesNE = htonl(1);
+            sttsNentriesNE = htonl(metadatasttsNentries);
             memcpy (&sttsBuffer[4], &sttsNentriesNE, sizeof(uint32_t));
-            memcpy (&sttsBuffer[8], &nbtFramesNE, sizeof(uint32_t));
-            memcpy (&sttsBuffer[12], &sttsNentriesNE, sizeof(uint32_t));
+            memcpy (&sttsBuffer[8], metadataTimeSyncBuffer, 2 * metadatasttsNentries * sizeof(uint32_t));
             sttsAtom = atomFromData (sttsDataLen, "stts", sttsBuffer);
             free(sttsBuffer);
 
@@ -1835,6 +1883,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
     ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
     ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
+    ENCAPSULER_CLEANUP(free, metadataTimeSyncBuffer);
     ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
     ENCAPSULER_CLEANUP(free, metadataOffsetBuffer);
     ENCAPSULER_CLEANUP(free, audioOffsetBuffer);
