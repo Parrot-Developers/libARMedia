@@ -111,10 +111,10 @@ typedef struct {
     uint16_t height;
     uint64_t timestamp;                /* in microseconds */
     eARMEDIA_ENCAPSULER_FRAME_TYPE frame_type;               /* I-frame, P-frame, JPEG-frame */
-    uint8_t* frame;
+    const uint8_t* frame;
     uint32_t avc_nalu_count;
     uint32_t avc_nalu_size[ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX];
-    uint8_t *avc_nalu_data[ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX];
+    const uint8_t *avc_nalu_data[ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX];
     uint32_t avc_insert_ps;            /* if not null, insert SPS and PPS before this frame */
 } ARMEDIA_Frame_Header_t;
 
