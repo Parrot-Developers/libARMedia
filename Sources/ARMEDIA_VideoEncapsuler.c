@@ -488,6 +488,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
             if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME != frameHeader->frame_type)
             {
                 // Wait until we get an IFrame 1 to start the actual recording
+                video->width = video->height = frameHeader->codec = 0;
                 return ARMEDIA_ERROR_ENCAPSULER_WAITING_FOR_IFRAME;
             }
 
