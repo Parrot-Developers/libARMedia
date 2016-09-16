@@ -51,6 +51,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <json/json.h>
+#include <locale.h>
 #include <libARDiscovery/ARDiscovery.h>
 #include <libARMedia/ARMedia.h>
 #include <libARSAL/ARSAL_Print.h>
@@ -94,6 +95,9 @@ struct ARMEDIA_VideoEncapsuler_t
     ARMEDIA_Audio_t* audio;
     ARMEDIA_Metadata_t* metadata;
     time_t creationTime;
+    ARMEDIA_Untimed_Metadata_t untimed_metadata;
+    uint8_t got_untimed_metadata;
+    char *thumbnailFilePath;
 
     // Atoms datas
     off_t mdatAtomOffset;
@@ -234,6 +238,9 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     retVideo->got_iframe = 0;
     retVideo->got_audio = 0;
     retVideo->got_metadata = 0;
+    retVideo->got_untimed_metadata = 0;
+    memset(&retVideo->untimed_metadata, 0, sizeof(ARMEDIA_Untimed_Metadata_t));
+    retVideo->thumbnailFilePath = NULL;
     retVideo->video = (ARMEDIA_Video_t*) malloc (sizeof(ARMEDIA_Video_t));
     retVideo->audio = NULL;
     retVideo->metadata = NULL;
@@ -416,6 +423,63 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetMetadataInfo (ARMEDIA_VideoEncapsuler_
             sizeof(encapsuler->metadata->mime_format), "%s", mime_format);
 
     encapsuler->metadata->block_size = metadata_block_size;
+
+    return ARMEDIA_OK;
+}
+
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsuler_t *encapsuler, const ARMEDIA_Untimed_Metadata_t *metadata)
+{
+    if (!encapsuler)
+    {
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+    if (!metadata)
+    {
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+
+    if (metadata->makerAndModel)
+    {
+        encapsuler->untimed_metadata.makerAndModel = strdup(metadata->makerAndModel);
+    }
+    if (metadata->serialNumber)
+    {
+        encapsuler->untimed_metadata.serialNumber = strdup(metadata->serialNumber);
+    }
+    if (metadata->softwareVersion)
+    {
+        encapsuler->untimed_metadata.softwareVersion = strdup(metadata->softwareVersion);
+    }
+    if (metadata->runDate)
+    {
+        encapsuler->untimed_metadata.runDate = strdup(metadata->runDate);
+    }
+    if (metadata->runUuid)
+    {
+        encapsuler->untimed_metadata.runUuid = strdup(metadata->runUuid);
+    }
+    encapsuler->untimed_metadata.takeoffLatitude = metadata->takeoffLatitude;
+    encapsuler->untimed_metadata.takeoffLongitude = metadata->takeoffLongitude;
+    encapsuler->untimed_metadata.takeoffAltitude = metadata->takeoffAltitude;
+    encapsuler->untimed_metadata.pictureHFov = metadata->pictureHFov;
+    encapsuler->untimed_metadata.pictureVFov = metadata->pictureVFov;
+    encapsuler->got_untimed_metadata = 1;
+
+    return ARMEDIA_OK;
+}
+
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetVideoThumbnail (ARMEDIA_VideoEncapsuler_t *encapsuler, const char *file)
+{
+    if (!encapsuler)
+    {
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+    if (!file)
+    {
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+
+    encapsuler->thumbnailFilePath = strdup(file);
 
     return ARMEDIA_OK;
 }
@@ -1232,6 +1296,15 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t* stscAtom;         // |       > stsc
         movie_atom_t* stszAtom;         // |       > stsz
         movie_atom_t* stcoAtom;         // |       > stco
+        movie_atom_t* udtaAtom;         // > udta (used with untimed metadata and thumbnail)
+        movie_atom_t* metaAtom;         // | > meta
+        movie_atom_t* hdlrMetaAtom;     // |   > hdlr
+        movie_atom_t* ilstMetaAtom;     // |   > ilst
+        movie_atom_t* artistMetaAtom;   // |     > ART
+        movie_atom_t* titleMetaAtom;    // |     > nam
+        movie_atom_t* encoderMetaAtom;  // |     > too
+        movie_atom_t* commentMetaAtom;  // |     > cmt
+        movie_atom_t* coverMetaAtom;    // |     > covr
 
         uint32_t stssDataLen;
         uint8_t *stssBuffer;
@@ -1387,6 +1460,98 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         // create atoms
         // Generating Atoms
         moovAtom = atomFromData(0, "moov", NULL);
+
+        // Untimed metadata
+        if ((encaps->got_untimed_metadata) || (encaps->thumbnailFilePath))
+        {
+            udtaAtom = atomFromData(0, "udta", NULL);
+            uint32_t zero = 0;
+            metaAtom = atomFromData(4, "meta", (uint8_t*)&zero);
+            hdlrMetaAtom = hdlrAtomForMetadata();
+            ilstMetaAtom = atomFromData(0, "ilst", NULL);
+            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.makerAndModel))
+            {
+                artistMetaAtom = metadataAtomFromTagAndValue("ART", encaps->untimed_metadata.makerAndModel, 1);
+                if (artistMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &artistMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.runDate))
+            {
+                titleMetaAtom = metadataAtomFromTagAndValue("nam", encaps->untimed_metadata.runDate, 1);
+                if (titleMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &titleMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.serialNumber))
+            {
+                encoderMetaAtom = metadataAtomFromTagAndValue("too", encaps->untimed_metadata.serialNumber, 1);
+                if (encoderMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &encoderMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && ((encaps->untimed_metadata.softwareVersion)
+                    || (encaps->untimed_metadata.runUuid)
+                    || ((encaps->untimed_metadata.takeoffLatitude != 500.) && (encaps->untimed_metadata.takeoffLongitude != 500.))
+                    || (encaps->untimed_metadata.pictureHFov != 0.)
+                    || (encaps->untimed_metadata.pictureVFov != 0.)))
+            {
+                struct json_object* cmt;
+                cmt = json_object_new_object();
+                if (cmt != NULL)
+                {
+                    setlocale(LC_ALL,"C");
+                    if (encaps->untimed_metadata.softwareVersion)
+                    {
+                        json_object_object_add(cmt, "software_version", json_object_new_string(encaps->untimed_metadata.softwareVersion));
+                    }
+                    if (encaps->untimed_metadata.runUuid)
+                    {
+                        json_object_object_add(cmt, "run_uuid", json_object_new_string(encaps->untimed_metadata.runUuid));
+                    }
+                    if ((encaps->untimed_metadata.takeoffLatitude != 500.) && (encaps->untimed_metadata.takeoffLongitude != 500.))
+                    {
+                        char takeoff[100];
+                        snprintf(takeoff, 100, "%.8f,%.8f,%.8f", encaps->untimed_metadata.takeoffLatitude, encaps->untimed_metadata.takeoffLongitude, encaps->untimed_metadata.takeoffAltitude);
+                        json_object_object_add(cmt, "takeoff_position", json_object_new_string(takeoff));
+                    }
+                    if (encaps->untimed_metadata.pictureHFov != 0.)
+                    {
+                        char hfov[20];
+                        snprintf(hfov, 20, "%.2f", encaps->untimed_metadata.pictureHFov);
+                        json_object_object_add(cmt, "picture_hfov", json_object_new_string(hfov));
+                    }
+                    if (encaps->untimed_metadata.pictureVFov != 0.)
+                    {
+                        char vfov[20];
+                        snprintf(vfov, 20, "%.2f", encaps->untimed_metadata.pictureVFov);
+                        json_object_object_add(cmt, "picture_vfov", json_object_new_string(vfov));
+                    }
+                    commentMetaAtom = metadataAtomFromTagAndValue("cmt", json_object_to_json_string(cmt), 1);
+                    if (commentMetaAtom)
+                    {
+                        insertAtomIntoAtom(ilstMetaAtom, &commentMetaAtom);
+                    }
+                    setlocale(LC_ALL,"");
+                }
+            }
+            if (encaps->thumbnailFilePath)
+            {
+                coverMetaAtom = metadataAtomFromTagAndFile("covr", encaps->thumbnailFilePath, 13);
+                if (coverMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &coverMetaAtom);
+                }
+            }
+            insertAtomIntoAtom(metaAtom, &hdlrMetaAtom);
+            insertAtomIntoAtom(metaAtom, &ilstMetaAtom);
+            insertAtomIntoAtom(udtaAtom, &metaAtom);
+            insertAtomIntoAtom(moovAtom, &udtaAtom);
+        }
+
         mvhdAtom = mvhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, cdate);
         trakAtom = atomFromData(0, "trak", NULL);
         tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (video->width, video->height, encaps->timescale, videoDuration, cdate, ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO);
@@ -1737,6 +1902,14 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
         free (video->pps);
         video->pps = NULL;
     }
+
+    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.makerAndModel);
+    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.serialNumber);
+    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.softwareVersion);
+    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.runDate);
+    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.runUuid);
+    ENCAPSULER_CLEANUP(free, encaps->thumbnailFilePath);
+
 
     ENCAPSULER_CLEANUP(free, audio);
     ENCAPSULER_CLEANUP(free, video);

@@ -138,6 +138,19 @@ typedef struct {
     uint8_t* sample;
 } ARMEDIA_Sample_Header_t;
 
+typedef struct {
+    char *makerAndModel;        /* product maker and model */
+    char *serialNumber;         /* product serial number */
+    char *softwareVersion;      /* software version */
+    char *runDate;              /* run date and time */
+    char *runUuid;              /* run UUID */
+    double takeoffLatitude;     /* takeoff latitude */
+    double takeoffLongitude;    /* takeoff longitude */
+    float takeoffAltitude;      /* takeoff altitude */
+    float pictureHFov;          /* camera horizontal field of view */
+    float pictureVFov;          /* camera vertical field of view */
+} ARMEDIA_Untimed_Metadata_t;
+
 /**
  * @brief Callback called when remove_all fixes a media file
  * @param path path of the fixed media
@@ -183,6 +196,22 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetAvcParameterSets (ARMEDIA_VideoEncapsu
  * @return Possible return values are in eARMEDIA_ERROR
  */
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetMetadataInfo (ARMEDIA_VideoEncapsuler_t *encapsuler, const char *content_encoding, const char *mime_format, uint32_t metadata_block_size);
+
+/**
+ * @brief Set the video untimed metadata
+ * @param encapsuler ARMedia video encapsuler created by ARMEDIA_VideoEncapsuler_new()
+ * @param metadata Untimed metadata
+ * @return Possible return values are in eARMEDIA_ERROR
+ */
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsuler_t *encapsuler, const ARMEDIA_Untimed_Metadata_t *metadata);
+
+/**
+ * @brief Set the video thumbnail to include in metadata
+ * @param encapsuler ARMedia video encapsuler created by ARMEDIA_VideoEncapsuler_new()
+ * @param file File path (JPEG format only)
+ * @return Possible return values are in eARMEDIA_ERROR
+ */
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetVideoThumbnail (ARMEDIA_VideoEncapsuler_t *encapsuler, const char *file);
 
 /**
  * Add a video frame to an encapsulated video
