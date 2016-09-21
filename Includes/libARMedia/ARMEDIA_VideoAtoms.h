@@ -132,8 +132,8 @@ movie_atom_t *stsdAtomWithAudioCodec(eARMEDIA_ENCAPSULER_AUDIO_CODEC codec, eARM
 movie_atom_t *stsdAtomForMetadata (const char *content_encoding, const char *mime_format);
 movie_atom_t *stscAtomGen(uint32_t uniqueCount, uint32_t* stscTable, uint32_t nEntries);
 movie_atom_t *stszAtomGen(uint32_t uniqueSize, uint32_t* sizeTable, uint32_t nSamples);
-movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, uint8_t class);
-movie_atom_t *metadataAtomFromTagAndFile (const char *tag, const char *file, uint8_t class);
+movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, uint8_t classId);
+movie_atom_t *metadataAtomFromTagAndFile (const char *tag, const char *file, uint8_t classId);
 movie_atom_t *pvatAtomGen(const char *jsonString);
 
 /**

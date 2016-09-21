@@ -981,7 +981,7 @@ movie_atom_t *stszAtomGen(uint32_t uniqueSize, uint32_t* sizeTable, uint32_t nSa
     return retAtom;
 }
 
-movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, uint8_t class)
+movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, uint8_t classId)
 {
     movie_atom_t *retAtom = NULL;
     movie_atom_t *dataAtom = NULL;
@@ -1010,7 +1010,7 @@ movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, u
             ATOM_WRITE_U8 (0);
             ATOM_WRITE_U8 (0);
             ATOM_WRITE_U8 (0);
-            ATOM_WRITE_U8 (class);
+            ATOM_WRITE_U8 (classId);
             ATOM_WRITE_U8 (0);
             ATOM_WRITE_U8 (0);
             ATOM_WRITE_U8 (0);
@@ -1026,7 +1026,7 @@ movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, u
     return retAtom;
 }
 
-movie_atom_t *metadataAtomFromTagAndFile (const char *tag, const char *file, uint8_t class)
+movie_atom_t *metadataAtomFromTagAndFile (const char *tag, const char *file, uint8_t classId)
 {
     movie_atom_t *retAtom = NULL;
     movie_atom_t *dataAtom = NULL;
@@ -1070,7 +1070,7 @@ movie_atom_t *metadataAtomFromTagAndFile (const char *tag, const char *file, uin
                 ATOM_WRITE_U8 (0);
                 ATOM_WRITE_U8 (0);
                 ATOM_WRITE_U8 (0);
-                ATOM_WRITE_U8 (class);
+                ATOM_WRITE_U8 (classId);
                 ATOM_WRITE_U8 (0);
                 ATOM_WRITE_U8 (0);
                 ATOM_WRITE_U8 (0);
