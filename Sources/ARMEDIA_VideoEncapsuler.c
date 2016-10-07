@@ -2224,8 +2224,9 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
         /* ARMEDIA_VideoEncapsuler_Finish function will do the cleanup
          * even if it fails */
         ret = 0;
-        goto no_cleanup;
     }
+
+    goto no_cleanup;
 
 cleanup:
     if (!ret)
