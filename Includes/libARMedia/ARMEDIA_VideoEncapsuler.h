@@ -56,6 +56,12 @@
 
 #define ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX   (128)
 
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE      (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE (19)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE   (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE   (23)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE   (33)
+
 // File extension for informations files (frame sizes / types)
 #define METAFILE_EXT "-encaps.dat"
 
@@ -139,11 +145,11 @@ typedef struct {
 } ARMEDIA_Sample_Header_t;
 
 typedef struct {
-    char *makerAndModel;        /* product maker and model */
-    char *serialNumber;         /* product serial number */
-    char *softwareVersion;      /* software version */
-    char *runDate;              /* run date and time */
-    char *runUuid;              /* run UUID */
+    char makerAndModel[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];      /* product maker and model */
+    char serialNumber[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE];  /* product serial number */
+    char softwareVersion[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE]; /* software version */
+    char runDate[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE];         /* run date and time */
+    char runUuid[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE];         /* run UUID */
     double takeoffLatitude;     /* takeoff latitude */
     double takeoffLongitude;    /* takeoff longitude */
     float takeoffAltitude;      /* takeoff altitude */

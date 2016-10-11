@@ -97,7 +97,7 @@ struct ARMEDIA_VideoEncapsuler_t
     time_t creationTime;
     ARMEDIA_Untimed_Metadata_t untimed_metadata;
     uint8_t got_untimed_metadata;
-    char *thumbnailFilePath;
+    char thumbnailFilePath[ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE];
 
     // Atoms datas
     off_t mdatAtomOffset;
@@ -240,7 +240,7 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     retVideo->got_metadata = 0;
     retVideo->got_untimed_metadata = 0;
     memset(&retVideo->untimed_metadata, 0, sizeof(ARMEDIA_Untimed_Metadata_t));
-    retVideo->thumbnailFilePath = NULL;
+    memset(retVideo->thumbnailFilePath, 0, sizeof retVideo->thumbnailFilePath);
     retVideo->video = (ARMEDIA_Video_t*) malloc (sizeof(ARMEDIA_Video_t));
     retVideo->audio = NULL;
     retVideo->metadata = NULL;
@@ -438,25 +438,35 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsul
         return ARMEDIA_ERROR_ENCAPSULER;
     }
 
-    if (metadata->makerAndModel)
+    if (strlen(metadata->makerAndModel))
     {
-        encapsuler->untimed_metadata.makerAndModel = strdup(metadata->makerAndModel);
+        snprintf(encapsuler->untimed_metadata.makerAndModel,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE, "%s",
+                 metadata->makerAndModel);
     }
-    if (metadata->serialNumber)
+    if (strlen(metadata->serialNumber))
     {
-        encapsuler->untimed_metadata.serialNumber = strdup(metadata->serialNumber);
+        snprintf(encapsuler->untimed_metadata.serialNumber,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE, "%s",
+                 metadata->serialNumber);
     }
-    if (metadata->softwareVersion)
+    if (strlen(metadata->softwareVersion))
     {
-        encapsuler->untimed_metadata.softwareVersion = strdup(metadata->softwareVersion);
+        snprintf(encapsuler->untimed_metadata.softwareVersion,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE, "%s",
+                 metadata->softwareVersion);
     }
-    if (metadata->runDate)
+    if (strlen(metadata->runDate))
     {
-        encapsuler->untimed_metadata.runDate = strdup(metadata->runDate);
+        snprintf(encapsuler->untimed_metadata.runDate,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE, "%s",
+                 metadata->runDate);
     }
-    if (metadata->runUuid)
+    if (strlen(metadata->runUuid))
     {
-        encapsuler->untimed_metadata.runUuid = strdup(metadata->runUuid);
+        snprintf(encapsuler->untimed_metadata.runUuid,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE, "%s",
+                 metadata->runUuid);
     }
     encapsuler->untimed_metadata.takeoffLatitude = metadata->takeoffLatitude;
     encapsuler->untimed_metadata.takeoffLongitude = metadata->takeoffLongitude;
@@ -479,7 +489,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetVideoThumbnail (ARMEDIA_VideoEncapsule
         return ARMEDIA_ERROR_ENCAPSULER;
     }
 
-    encapsuler->thumbnailFilePath = strdup(file);
+    snprintf(encapsuler->thumbnailFilePath,
+             ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s",
+             file);
 
     return ARMEDIA_OK;
 }
@@ -1510,14 +1522,14 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         moovAtom = atomFromData(0, "moov", NULL);
 
         // Untimed metadata
-        if ((encaps->got_untimed_metadata) || (encaps->thumbnailFilePath))
+        if (encaps->got_untimed_metadata || strlen(encaps->thumbnailFilePath))
         {
             udtaAtom = atomFromData(0, "udta", NULL);
             uint32_t zero = 0;
             metaAtom = atomFromData(4, "meta", (uint8_t*)&zero);
             hdlrMetaAtom = hdlrAtomForMetadata();
             ilstMetaAtom = atomFromData(0, "ilst", NULL);
-            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.makerAndModel))
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.makerAndModel))
             {
                 artistMetaAtom = metadataAtomFromTagAndValue("ART", encaps->untimed_metadata.makerAndModel, 1);
                 if (artistMetaAtom)
@@ -1525,7 +1537,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     insertAtomIntoAtom(ilstMetaAtom, &artistMetaAtom);
                 }
             }
-            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.runDate))
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.runDate))
             {
                 titleMetaAtom = metadataAtomFromTagAndValue("nam", encaps->untimed_metadata.runDate, 1);
                 if (titleMetaAtom)
@@ -1533,7 +1545,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     insertAtomIntoAtom(ilstMetaAtom, &titleMetaAtom);
                 }
             }
-            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.serialNumber))
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.serialNumber))
             {
                 encoderMetaAtom = metadataAtomFromTagAndValue("too", encaps->untimed_metadata.serialNumber, 1);
                 if (encoderMetaAtom)
@@ -1541,8 +1553,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     insertAtomIntoAtom(ilstMetaAtom, &encoderMetaAtom);
                 }
             }
-            if ((encaps->got_untimed_metadata) && ((encaps->untimed_metadata.softwareVersion)
-                    || (encaps->untimed_metadata.runUuid)
+            if ((encaps->got_untimed_metadata) && (strlen(encaps->untimed_metadata.softwareVersion)
+                    || strlen(encaps->untimed_metadata.runUuid)
                     || ((encaps->untimed_metadata.takeoffLatitude != 500.) && (encaps->untimed_metadata.takeoffLongitude != 500.))
                     || (encaps->untimed_metadata.pictureHFov != 0.)
                     || (encaps->untimed_metadata.pictureVFov != 0.)))
@@ -1552,11 +1564,11 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 if (cmt != NULL)
                 {
                     setlocale(LC_ALL,"C");
-                    if (encaps->untimed_metadata.softwareVersion)
+                    if (strlen(encaps->untimed_metadata.softwareVersion))
                     {
                         json_object_object_add(cmt, "software_version", json_object_new_string(encaps->untimed_metadata.softwareVersion));
                     }
-                    if (encaps->untimed_metadata.runUuid)
+                    if (strlen(encaps->untimed_metadata.runUuid))
                     {
                         json_object_object_add(cmt, "run_uuid", json_object_new_string(encaps->untimed_metadata.runUuid));
                     }
@@ -1586,7 +1598,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     setlocale(LC_ALL,"");
                 }
             }
-            if (encaps->thumbnailFilePath)
+
+            if (strlen(encaps->thumbnailFilePath))
             {
                 coverMetaAtom = metadataAtomFromTagAndFile("covr", encaps->thumbnailFilePath, 13);
                 if (coverMetaAtom)
@@ -1900,9 +1913,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
  */
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler, bool rename_tempFile)
 {
-    ARMEDIA_Audio_t *audio = NULL;
-    ARMEDIA_Video_t *video = NULL;
-    ARMEDIA_Metadata_t *metadata = NULL;
     ARMEDIA_VideoEncapsuler_t* encaps = NULL;
 
     if (NULL == encapsuler)
@@ -1917,12 +1927,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
     } else {
         encaps = *encapsuler;
     }
-    audio = encaps->audio;
-    video = encaps->video;
-    metadata = encaps->metadata;
 
-    if(NULL!=encaps->dataFile) fclose (encaps->dataFile);
-    if(NULL!=encaps->metaFile) fclose (encaps->metaFile);
+    ENCAPSULER_CLEANUP(fclose, encaps->dataFile);
+    ENCAPSULER_CLEANUP(fclose, encaps->metaFile);
     remove (encaps->metaFilePath);
 
     if (rename_tempFile)
@@ -1941,28 +1948,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
         remove (encaps->dataFilePath);
     }
 
-    if (video->sps)
-    {
-        free (video->sps);
-        video->sps = NULL;
-    }
-    if (video->pps)
-    {
-        free (video->pps);
-        video->pps = NULL;
-    }
+    ENCAPSULER_CLEANUP(free, encaps->video->sps);
+    ENCAPSULER_CLEANUP(free, encaps->video->pps);
 
-    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.makerAndModel);
-    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.serialNumber);
-    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.softwareVersion);
-    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.runDate);
-    ENCAPSULER_CLEANUP(free, encaps->untimed_metadata.runUuid);
-    ENCAPSULER_CLEANUP(free, encaps->thumbnailFilePath);
-
-
-    ENCAPSULER_CLEANUP(free, audio);
-    ENCAPSULER_CLEANUP(free, video);
-    ENCAPSULER_CLEANUP(free, metadata);
+    ENCAPSULER_CLEANUP(free, encaps->audio);
+    ENCAPSULER_CLEANUP(free, encaps->video);
+    ENCAPSULER_CLEANUP(free, encaps->metadata);
     ENCAPSULER_CLEANUP(free, encaps);
     *encapsuler = NULL;
 
