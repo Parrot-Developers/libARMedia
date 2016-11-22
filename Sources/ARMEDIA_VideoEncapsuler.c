@@ -456,6 +456,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsul
                  ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE, "%s",
                  metadata->softwareVersion);
     }
+    if (strlen(metadata->mediaDate))
+    {
+        snprintf(encapsuler->untimed_metadata.mediaDate,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE, "%s",
+                 metadata->mediaDate);
+    }
     if (strlen(metadata->runDate))
     {
         snprintf(encapsuler->untimed_metadata.runDate,
@@ -1577,6 +1583,10 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                         char takeoff[100];
                         snprintf(takeoff, 100, "%.8f,%.8f,%.8f", encaps->untimed_metadata.takeoffLatitude, encaps->untimed_metadata.takeoffLongitude, encaps->untimed_metadata.takeoffAltitude);
                         json_object_object_add(cmt, "takeoff_position", json_object_new_string(takeoff));
+                    }
+                    if (strlen(encaps->untimed_metadata.mediaDate))
+                    {
+                        json_object_object_add(cmt, "media_date", json_object_new_string(encaps->untimed_metadata.mediaDate));
                     }
                     if (encaps->untimed_metadata.pictureHFov != 0.)
                     {

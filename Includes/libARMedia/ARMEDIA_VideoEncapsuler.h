@@ -59,6 +59,7 @@
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE      (50)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE (19)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE   (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE (23)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE   (23)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE   (33)
 
@@ -145,16 +146,25 @@ typedef struct {
 } ARMEDIA_Sample_Header_t;
 
 typedef struct {
-    char makerAndModel[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];      /* product maker and model */
-    char serialNumber[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE];  /* product serial number */
-    char softwareVersion[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE]; /* software version */
-    char runDate[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE];         /* run date and time */
-    char runUuid[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE];         /* run UUID */
-    double takeoffLatitude;     /* takeoff latitude */
-    double takeoffLongitude;    /* takeoff longitude */
-    float takeoffAltitude;      /* takeoff altitude */
-    float pictureHFov;          /* camera horizontal field of view */
-    float pictureVFov;          /* camera vertical field of view */
+    char makerAndModel[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];      /* product maker and model (commercial name,
+                                                                              * eg. "Parrot Bebop 2") */
+    char serialNumber[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE];  /* product serial number (18 chars string
+                                                                              * for Parrot products) */
+    char softwareVersion[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE]; /* software version (usually "SofwareName A.B.C"
+                                                                              * with A=major, B=minor, C=build) */
+    char mediaDate[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE];     /* media date and time: format is "%FT%H%M%S%z",
+                                                                              * i.e. yyyy-mm-ddThhmmssTz (eg. 2016-11-21T165545+0100)
+                                                                              * @see ARMEDIA_JSON_DESCRIPTION_DATE_FMT) */
+    char runDate[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE];         /* run date and time: format is "%FT%H%M%S%z",
+                                                                              * i.e. yyyy-mm-ddThhmmssTz (eg. 2016-11-21T165545+0100)
+                                                                              * @see ARMEDIA_JSON_DESCRIPTION_DATE_FMT) */
+    char runUuid[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE];         /* run UUID (32-chars hex string representing
+                                                                              * a 128bits value) */
+    double takeoffLatitude;                                                  /* takeoff latitude (deg) */
+    double takeoffLongitude;                                                 /* takeoff longitude (deg) */
+    float takeoffAltitude;                                                   /* takeoff altitude ASL (m) */
+    float pictureHFov;                                                       /* camera horizontal field of view (deg) */
+    float pictureVFov;                                                       /* camera vertical field of view (deg) */
 } ARMEDIA_Untimed_Metadata_t;
 
 /**
