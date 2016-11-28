@@ -666,7 +666,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
 
         if (-1 == fseeko(encapsuler->dataFile, encapsuler->dataOffset, SEEK_SET))
         {
-            ENCAPSULER_ERROR ("Unable to set file write pointer to %d", encapsuler->dataOffset);
+            ENCAPSULER_ERROR ("Unable to set file write pointer to %zu", (size_t)encapsuler->dataOffset);
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
         encapsuler->mdatAtomOffset = encapsuler->dataOffset - 16;
@@ -2162,7 +2162,7 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
             fSize = fSize_tmp;
             if ((asize + vsize + tsize + encapsuler->dataOffset + fSize) > tmpvidSize)
             {
-                ENCAPSULER_DEBUG ("Too many infos : truncate at %u\n", prevInfoIndex);
+                ENCAPSULER_DEBUG ("Too many infos : truncate at %zu\n", (size_t)prevInfoIndex);
                 fseeko(encapsuler->metaFile, 0, SEEK_SET);
                 if (0 != ftruncate (fileno (encapsuler->metaFile), prevInfoIndex))
                 {

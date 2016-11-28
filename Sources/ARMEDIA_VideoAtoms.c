@@ -1086,7 +1086,7 @@ movie_atom_t *metadataAtomFromTagAndFile (const char *tag, const char *file, uin
         }
         else
         {
-            ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "cover file '%s' is too large to fit into atom (size: %d)", file, fileLen);
+            ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "cover file '%s' is too large to fit into atom (size: %zu)", file, (size_t)fileLen);
             return NULL;
         }
     }
