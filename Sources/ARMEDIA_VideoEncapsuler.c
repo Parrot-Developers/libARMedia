@@ -51,6 +51,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <json/json.h>
+#include <locale.h>
 #include <libARDiscovery/ARDiscovery.h>
 #include <libARMedia/ARMedia.h>
 #include <libARSAL/ARSAL_Print.h>
@@ -94,6 +95,9 @@ struct ARMEDIA_VideoEncapsuler_t
     ARMEDIA_Audio_t* audio;
     ARMEDIA_Metadata_t* metadata;
     time_t creationTime;
+    ARMEDIA_Untimed_Metadata_t untimed_metadata;
+    uint8_t got_untimed_metadata;
+    char thumbnailFilePath[ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE];
 
     // Atoms datas
     off_t mdatAtomOffset;
@@ -200,7 +204,6 @@ static eARMEDIA_ERROR ARMEDIA_FillZeros(FILE* file, uint32_t nBytes);
 
 ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, int fps, char* uuid, char* runDate, eARDISCOVERY_PRODUCT product, eARMEDIA_ERROR *error)
 {
-#ifdef AC_VIDEOENC
     ARMEDIA_VideoEncapsuler_t *retVideo = NULL;
 
     if (NULL == error)
@@ -235,6 +238,9 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     retVideo->got_iframe = 0;
     retVideo->got_audio = 0;
     retVideo->got_metadata = 0;
+    retVideo->got_untimed_metadata = 0;
+    memset(&retVideo->untimed_metadata, 0, sizeof(ARMEDIA_Untimed_Metadata_t));
+    memset(retVideo->thumbnailFilePath, 0, sizeof retVideo->thumbnailFilePath);
     retVideo->video = (ARMEDIA_Video_t*) malloc (sizeof(ARMEDIA_Video_t));
     retVideo->audio = NULL;
     retVideo->metadata = NULL;
@@ -301,22 +307,15 @@ ARMEDIA_VideoEncapsuler_t *ARMEDIA_VideoEncapsuler_New (const char *mediaPath, i
     *error = ARMEDIA_OK;
 
     return retVideo;
-#else
-    if (NULL != error)
-    {
-        *error = ARMEDIA_ERROR_NOT_IMPLEMENTED;
-    }
-    return NULL;
-#endif
 }
 
 #define BYTE_STREAM_NALU_START_CODE 0x00000001
 
-static int ARMEDIA_H264StartcodeMatch(uint8_t* pBuf, unsigned int bufSize)
+static int ARMEDIA_H264StartcodeMatch(const uint8_t* pBuf, unsigned int bufSize)
 {
     int ret, pos, end;
     uint32_t shiftVal = 0;
-    uint8_t* ptr = pBuf;
+    const uint8_t* ptr = pBuf;
 
     if (bufSize < 4) return -2;
 
@@ -428,9 +427,83 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetMetadataInfo (ARMEDIA_VideoEncapsuler_
     return ARMEDIA_OK;
 }
 
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsuler_t *encapsuler, const ARMEDIA_Untimed_Metadata_t *metadata)
+{
+    if (!encapsuler)
+    {
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+    if (!metadata)
+    {
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+
+    if (strlen(metadata->makerAndModel))
+    {
+        snprintf(encapsuler->untimed_metadata.makerAndModel,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE, "%s",
+                 metadata->makerAndModel);
+    }
+    if (strlen(metadata->serialNumber))
+    {
+        snprintf(encapsuler->untimed_metadata.serialNumber,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE, "%s",
+                 metadata->serialNumber);
+    }
+    if (strlen(metadata->softwareVersion))
+    {
+        snprintf(encapsuler->untimed_metadata.softwareVersion,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE, "%s",
+                 metadata->softwareVersion);
+    }
+    if (strlen(metadata->mediaDate))
+    {
+        snprintf(encapsuler->untimed_metadata.mediaDate,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE, "%s",
+                 metadata->mediaDate);
+    }
+    if (strlen(metadata->runDate))
+    {
+        snprintf(encapsuler->untimed_metadata.runDate,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE, "%s",
+                 metadata->runDate);
+    }
+    if (strlen(metadata->runUuid))
+    {
+        snprintf(encapsuler->untimed_metadata.runUuid,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE, "%s",
+                 metadata->runUuid);
+    }
+    encapsuler->untimed_metadata.takeoffLatitude = metadata->takeoffLatitude;
+    encapsuler->untimed_metadata.takeoffLongitude = metadata->takeoffLongitude;
+    encapsuler->untimed_metadata.takeoffAltitude = metadata->takeoffAltitude;
+    encapsuler->untimed_metadata.pictureHFov = metadata->pictureHFov;
+    encapsuler->untimed_metadata.pictureVFov = metadata->pictureVFov;
+    encapsuler->got_untimed_metadata = 1;
+
+    return ARMEDIA_OK;
+}
+
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetVideoThumbnail (ARMEDIA_VideoEncapsuler_t *encapsuler, const char *file)
+{
+    if (!encapsuler)
+    {
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+    if (!file)
+    {
+        return ARMEDIA_ERROR_ENCAPSULER;
+    }
+
+    snprintf(encapsuler->thumbnailFilePath,
+             ARMEDIA_ENCAPSULER_VIDEO_PATH_SIZE, "%s",
+             file);
+
+    return ARMEDIA_OK;
+}
+
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *encapsuler, ARMEDIA_Frame_Header_t *frameHeader, const void *metadataBuffer)
 {
-    uint8_t *data;
     uint8_t searchIndex;
     uint32_t descriptorSize;
     movie_atom_t *ftypAtom;
@@ -473,8 +546,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
         return ARMEDIA_ERROR_ENCAPSULER;
     }
 
-    data = frameHeader->frame;
-
     // First frame
     if (!video->width)
     {
@@ -496,21 +567,22 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
             if (ARMEDIA_ENCAPSULER_FRAME_TYPE_I_FRAME != frameHeader->frame_type)
             {
                 // Wait until we get an IFrame 1 to start the actual recording
+                video->width = video->height = frameHeader->codec = 0;
                 return ARMEDIA_ERROR_ENCAPSULER_WAITING_FOR_IFRAME;
             }
 
             if ((NULL == video->sps) && (NULL == video->pps))
             {
-                uint8_t *pSps = NULL, *pPps = NULL;
+                const uint8_t *pSps = NULL, *pPps = NULL;
                 if (frameHeader->avc_nalu_count)
                 {
                     // We consider that on a I-Frame the first NALU is an SPS and the second NALU is a PPS
                     video->spsSize = frameHeader->avc_nalu_size[0];
                     video->ppsSize = frameHeader->avc_nalu_size[1];
-                    if (data)
+                    if (frameHeader->frame)
                     {
-                        pSps = data;
-                        pPps = data + video->spsSize;
+                        pSps = frameHeader->frame;
+                        pPps = frameHeader->frame + video->spsSize;
                     }
                     else
                     {
@@ -524,30 +596,30 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
                     // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
                     for (searchIndex = 4; searchIndex <= frameHeader->frame_size - 4; searchIndex ++)
                     {
-                        if (0 == data[searchIndex  ] &&
-                                0 == data[searchIndex+1] &&
-                                0 == data[searchIndex+2] &&
-                                1 == data[searchIndex+3])
+                        if (0 == frameHeader->frame[searchIndex  ] &&
+                                0 == frameHeader->frame[searchIndex+1] &&
+                                0 == frameHeader->frame[searchIndex+2] &&
+                                1 == frameHeader->frame[searchIndex+3])
                         {
                             break;  // PPS header found
                         }
                     }
                     video->spsSize = searchIndex;
-                    pSps = data;
+                    pSps = frameHeader->frame;
 
                     // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
                     for (searchIndex = video->spsSize+4; searchIndex <= frameHeader->frame_size - 4; searchIndex ++)
                     {
-                        if (0 == data[searchIndex  ] &&
-                                0 == data[searchIndex+1] &&
-                                0 == data[searchIndex+2] &&
-                                1 == data[searchIndex+3])
+                        if (0 == frameHeader->frame[searchIndex  ] &&
+                                0 == frameHeader->frame[searchIndex+1] &&
+                                0 == frameHeader->frame[searchIndex+2] &&
+                                1 == frameHeader->frame[searchIndex+3])
                         {
                             break;  // frame header found
                         }
                     }
                     video->ppsSize = searchIndex - video->spsSize;
-                    pPps = data + video->spsSize;
+                    pPps = frameHeader->frame + video->spsSize;
                 }
 
                 video->sps = malloc (video->spsSize);
@@ -594,7 +666,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
 
         if (-1 == fseeko(encapsuler->dataFile, encapsuler->dataOffset, SEEK_SET))
         {
-            ENCAPSULER_ERROR ("Unable to set file write pointer to %d", encapsuler->dataOffset);
+            ENCAPSULER_ERROR ("Unable to set file write pointer to %zu", (size_t)encapsuler->dataOffset);
             return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
         }
         encapsuler->mdatAtomOffset = encapsuler->dataOffset - 16;
@@ -704,7 +776,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     {
         uint32_t infoLen;
         off_t totalFrameSize = 0;
-        if (data)
+        if (frameHeader->frame)
         {
             totalFrameSize += frameHeader->frame_size;
         }
@@ -769,55 +841,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
     video->lastFrameTimestamp = frameHeader->timestamp;
     video->framesCount++;
 
-    if (video->codec == CODEC_MPEG4_AVC) {
-        // Replace the NAL units start code by the NALU size
-
-        if (frameHeader->avc_nalu_count > 0)
-        {
-            uint32_t i, offset, naluSize;
-            for (i = 0, offset = 0; i < frameHeader->avc_nalu_count; i++)
-            {
-                naluSize = htonl((frameHeader->avc_nalu_size[i] > 4) ? frameHeader->avc_nalu_size[i] - 4 : 0);
-                if (data)
-                {
-                    memcpy(data + offset, &naluSize, sizeof(uint32_t));
-                }
-                else if (frameHeader->avc_nalu_data[i])
-                {
-                    memcpy(frameHeader->avc_nalu_data[i], &naluSize, sizeof(uint32_t));
-                }
-                else
-                {
-                    ENCAPSULER_ERROR ("No valid pointer for NALU");
-                }
-                offset += frameHeader->avc_nalu_size[i];
-            }
-        }
-        else
-        {
-            int startCodePos = 0, naluStart = 0, naluEnd = 0, sizeLeft = frameHeader->frame_size;
-            uint32_t naluSize = 0;
-            startCodePos = ARMEDIA_H264StartcodeMatch(data, sizeLeft);
-            naluStart = startCodePos;
-            while (startCodePos >= 0)
-            {
-                sizeLeft = frameHeader->frame_size - naluStart - 4;
-                startCodePos = ARMEDIA_H264StartcodeMatch(data + naluStart + 4, sizeLeft);
-                if (startCodePos >= 0)
-                {
-                    naluEnd = naluStart + 4 + startCodePos;
-                }
-                else
-                {
-                    naluEnd = frameHeader->frame_size;
-                }
-                naluSize = htonl(naluEnd - naluStart - 4);
-                memcpy(data + naluStart, &naluSize, sizeof(uint32_t));
-                naluStart = naluEnd;
-            }
-        }
-    }
-
     if (frameHeader->avc_insert_ps)
     {
         // Force insertion of SPS and PPS before this frame
@@ -856,27 +879,87 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_AddFrame (ARMEDIA_VideoEncapsuler_t *enca
         }
     }
 
-    if (data)
+    // Write the frame to the data file (and replace the NAL units start code by the NALU size in case of H.264)
+    if ((video->codec == CODEC_MPEG4_AVC) && (frameHeader->avc_nalu_count > 0))
     {
-        if (frameHeader->frame_size != fwrite (data, 1, frameHeader->frame_size, encapsuler->dataFile))
+        uint32_t i, offset, naluSize, naluSizeNE;
+        for (i = 0, offset = 0; i < frameHeader->avc_nalu_count; i++)
         {
-            ENCAPSULER_ERROR ("Unable to write frame into data file");
-            return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
-        }
-        video->totalsize += frameHeader->frame_size;
-    }
-    else
-    {
-        uint32_t i;
-        for (i = 0; i < frameHeader->avc_nalu_count; i++)
-        {
-            if (frameHeader->avc_nalu_size[i] != fwrite (frameHeader->avc_nalu_data[i], 1, frameHeader->avc_nalu_size[i], encapsuler->dataFile))
+            naluSize = (frameHeader->avc_nalu_size[i] > 4) ? frameHeader->avc_nalu_size[i] - 4 : 0;
+            naluSizeNE = htonl(naluSize);
+            if (fwrite(&naluSizeNE, 4, 1, encapsuler->dataFile) != 1)
             {
                 ENCAPSULER_ERROR ("Unable to write frame into data file");
                 return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
             }
+            if (frameHeader->frame)
+            {
+                if (fwrite(frameHeader->frame + offset + 4, naluSize, 1, encapsuler->dataFile) != 1)
+                {
+                    ENCAPSULER_ERROR ("Unable to write frame into data file");
+                    return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+                }
+            }
+            else if (frameHeader->avc_nalu_data[i])
+            {
+                if (fwrite(frameHeader->avc_nalu_data[i] + 4, naluSize, 1, encapsuler->dataFile) != 1)
+                {
+                    ENCAPSULER_ERROR ("Unable to write frame into data file");
+                    return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+                }
+            }
+            else
+            {
+                ENCAPSULER_ERROR ("No valid pointer for NALU");
+            }
+            offset += frameHeader->avc_nalu_size[i];
             video->totalsize += frameHeader->avc_nalu_size[i];
         }
+    }
+    else
+    {
+        if (video->codec == CODEC_MPEG4_AVC)
+        {
+            int startCodePos = 0, naluStart = 0, naluEnd = 0, sizeLeft = frameHeader->frame_size;
+            uint32_t naluSize, naluSizeNE;
+            startCodePos = ARMEDIA_H264StartcodeMatch(frameHeader->frame, sizeLeft);
+            naluStart = startCodePos;
+            while (startCodePos >= 0)
+            {
+                sizeLeft = frameHeader->frame_size - naluStart - 4;
+                startCodePos = ARMEDIA_H264StartcodeMatch(frameHeader->frame + naluStart + 4, sizeLeft);
+                if (startCodePos >= 0)
+                {
+                    naluEnd = naluStart + 4 + startCodePos;
+                }
+                else
+                {
+                    naluEnd = frameHeader->frame_size;
+                }
+                naluSize = naluEnd - naluStart - 4;
+                naluSizeNE = htonl(naluSize);
+                if (fwrite(&naluSizeNE, 4, 1, encapsuler->dataFile) != 1)
+                {
+                    ENCAPSULER_ERROR ("Unable to write frame into data file");
+                    return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+                }
+                if (fwrite(frameHeader->frame + naluStart + 4, naluSize, 1, encapsuler->dataFile) != 1)
+                {
+                    ENCAPSULER_ERROR ("Unable to write frame into data file");
+                    return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+                }
+                naluStart = naluEnd;
+            }
+        }
+        else
+        {
+            if (frameHeader->frame_size != fwrite(frameHeader->frame, 1, frameHeader->frame_size, encapsuler->dataFile))
+            {
+                ENCAPSULER_ERROR ("Unable to write frame into data file");
+                return ARMEDIA_ERROR_ENCAPSULER_FILE_ERROR;
+            }
+        }
+        video->totalsize += frameHeader->frame_size;
     }
 
     if (metadataBuffer != NULL && metadata != NULL && metadata->block_size > 0)
@@ -1104,6 +1187,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     uint32_t *frameSizeBufferNE   = NULL;
     uint64_t *videoOffsetBuffer   = NULL;
     uint32_t *frameTimeSyncBuffer = NULL;
+    uint32_t *metadataTimeSyncBuffer = NULL;
     uint32_t *iFrameIndexBuffer   = NULL;
     // metadata
     uint64_t *metadataOffsetBuffer = NULL;
@@ -1161,6 +1245,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         frameSizeBufferNE   = calloc (video->framesCount, sizeof (uint32_t));
         videoOffsetBuffer   = calloc (video->framesCount, sizeof (uint64_t));
         frameTimeSyncBuffer = calloc (2*video->framesCount, sizeof (uint32_t));
+        metadataTimeSyncBuffer = calloc (2*video->framesCount, sizeof (uint32_t));
         if (encaps->got_metadata && metadata != NULL && metadata->block_size > 0)
         {
             metadataOffsetBuffer = calloc (metadata->framesCount, sizeof (uint64_t));
@@ -1176,6 +1261,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         if (NULL == frameSizeBufferNE   ||
                 NULL == videoOffsetBuffer   ||
                 NULL == frameTimeSyncBuffer ||
+                NULL == metadataTimeSyncBuffer ||
                 (encaps->got_metadata && metadata != NULL && metadata->block_size > 0
                  && NULL == metadataOffsetBuffer) ||
                 (NULL == iFrameIndexBuffer && video->codec == CODEC_MPEG4_AVC) ||
@@ -1187,6 +1273,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
             ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
             ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
+            ENCAPSULER_CLEANUP(free, metadataTimeSyncBuffer);
             ENCAPSULER_CLEANUP(free, metadataOffsetBuffer);
             ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
             ENCAPSULER_CLEANUP(free, audioOffsetBuffer);
@@ -1207,8 +1294,11 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         uint32_t vtimescale = encaps->timescale;
         // Video time management
         uint32_t videosttsNentries = 0;
+        uint32_t metadatasttsNentries = 0;
         uint32_t groupInterFrameDT = 0;
         uint32_t groupNframes = 0;
+        uint32_t metadataGroupInterFrameDT = 0;
+        uint32_t metadataGroupNframes = 0;
         uint32_t videoDuration = 0;
         off_t videoUniqueSize = 0;
 
@@ -1231,6 +1321,15 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t* stscAtom;         // |       > stsc
         movie_atom_t* stszAtom;         // |       > stsz
         movie_atom_t* stcoAtom;         // |       > stco
+        movie_atom_t* udtaAtom;         // > udta (used with untimed metadata and thumbnail)
+        movie_atom_t* metaAtom;         // | > meta
+        movie_atom_t* hdlrMetaAtom;     // |   > hdlr
+        movie_atom_t* ilstMetaAtom;     // |   > ilst
+        movie_atom_t* artistMetaAtom;   // |     > ART
+        movie_atom_t* titleMetaAtom;    // |     > nam
+        movie_atom_t* encoderMetaAtom;  // |     > too
+        movie_atom_t* commentMetaAtom;  // |     > cmt
+        movie_atom_t* coverMetaAtom;    // |     > covr
 
         uint32_t stssDataLen;
         uint8_t *stssBuffer;
@@ -1348,6 +1447,28 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                     uint64_t n_co_l = htonl(chunkOffset & 0xffffffff);
                     uint64_t n_co_h = htonl(chunkOffset >> 32);
                     metadataOffsetBuffer[nbtFrames] = (n_co_l << 32) + n_co_h;
+
+                    // from microseconds to time units
+                    tmpinterframeDT = ((uint64_t)vtimescale) * ((uint64_t) interframeDT);
+                    interframeDT = (uint32_t)(tmpinterframeDT / 1000000);
+                    // Time sync mgmt
+                    if (interframeDT != 0) {
+                        // not first frame
+                        if (interframeDT != metadataGroupInterFrameDT) {
+                            // new entry => save previous entry and create a new one
+                            if (metadataGroupInterFrameDT != 0) { // not first group
+                                metadataTimeSyncBuffer[2*metadatasttsNentries] = htonl(metadataGroupNframes);
+                                metadataTimeSyncBuffer[2*metadatasttsNentries+1] = htonl(metadataGroupInterFrameDT);
+                                metadatasttsNentries++;
+                            }
+                            metadataGroupNframes = 1;
+                            metadataGroupInterFrameDT = interframeDT;
+                        } else {
+                            // use previous entry
+                            metadataGroupNframes++;
+                        }
+                    }
+
                     nbtFrames++;
                 }
                 chunkOffset += fSize; // common computation of chunk offset
@@ -1375,6 +1496,25 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         videoDuration += groupNframes * groupInterFrameDT;
         videosttsNentries++;
 
+        // last frame to default DT + last entry
+        // from microseconds to time units
+        tmpinterframeDT = ((uint64_t)vtimescale) * ((uint64_t) video->defaultFrameDuration);
+        interframeDT = (uint32_t)(tmpinterframeDT / 1000000);
+        if (metadataGroupInterFrameDT == interframeDT) { // add last frame to previous entry
+            metadataGroupNframes++;
+        } else { // write previous entry then add last frame to new entry
+            if (metadataGroupInterFrameDT != 0) { // not first group
+                metadataTimeSyncBuffer[2*metadatasttsNentries] = htonl(metadataGroupNframes);
+                metadataTimeSyncBuffer[2*metadatasttsNentries+1] = htonl(metadataGroupInterFrameDT);
+                metadatasttsNentries++;
+            }
+            metadataGroupNframes = 1;
+            metadataGroupInterFrameDT = interframeDT;
+        }
+        metadataTimeSyncBuffer[2*metadatasttsNentries] = htonl(metadataGroupNframes);
+        metadataTimeSyncBuffer[2*metadatasttsNentries+1] = htonl(metadataGroupInterFrameDT);
+        metadatasttsNentries++;
+
         // get time values
         tzset();
         nowTm = localtime (&(encaps->creationTime));
@@ -1386,6 +1526,103 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         // create atoms
         // Generating Atoms
         moovAtom = atomFromData(0, "moov", NULL);
+
+        // Untimed metadata
+        if (encaps->got_untimed_metadata || strlen(encaps->thumbnailFilePath))
+        {
+            udtaAtom = atomFromData(0, "udta", NULL);
+            uint32_t zero = 0;
+            metaAtom = atomFromData(4, "meta", (uint8_t*)&zero);
+            hdlrMetaAtom = hdlrAtomForMetadata();
+            ilstMetaAtom = atomFromData(0, "ilst", NULL);
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.makerAndModel))
+            {
+                artistMetaAtom = metadataAtomFromTagAndValue("ART", encaps->untimed_metadata.makerAndModel, 1);
+                if (artistMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &artistMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.runDate))
+            {
+                titleMetaAtom = metadataAtomFromTagAndValue("nam", encaps->untimed_metadata.runDate, 1);
+                if (titleMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &titleMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.serialNumber))
+            {
+                encoderMetaAtom = metadataAtomFromTagAndValue("too", encaps->untimed_metadata.serialNumber, 1);
+                if (encoderMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &encoderMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && (strlen(encaps->untimed_metadata.softwareVersion)
+                    || strlen(encaps->untimed_metadata.runUuid)
+                    || ((encaps->untimed_metadata.takeoffLatitude != 500.) && (encaps->untimed_metadata.takeoffLongitude != 500.))
+                    || (encaps->untimed_metadata.pictureHFov != 0.)
+                    || (encaps->untimed_metadata.pictureVFov != 0.)))
+            {
+                struct json_object* cmt;
+                cmt = json_object_new_object();
+                if (cmt != NULL)
+                {
+                    setlocale(LC_ALL,"C");
+                    if (strlen(encaps->untimed_metadata.softwareVersion))
+                    {
+                        json_object_object_add(cmt, "software_version", json_object_new_string(encaps->untimed_metadata.softwareVersion));
+                    }
+                    if (strlen(encaps->untimed_metadata.runUuid))
+                    {
+                        json_object_object_add(cmt, "run_uuid", json_object_new_string(encaps->untimed_metadata.runUuid));
+                    }
+                    if ((encaps->untimed_metadata.takeoffLatitude != 500.) && (encaps->untimed_metadata.takeoffLongitude != 500.))
+                    {
+                        char takeoff[100];
+                        snprintf(takeoff, 100, "%.8f,%.8f,%.8f", encaps->untimed_metadata.takeoffLatitude, encaps->untimed_metadata.takeoffLongitude, encaps->untimed_metadata.takeoffAltitude);
+                        json_object_object_add(cmt, "takeoff_position", json_object_new_string(takeoff));
+                    }
+                    if (strlen(encaps->untimed_metadata.mediaDate))
+                    {
+                        json_object_object_add(cmt, "media_date", json_object_new_string(encaps->untimed_metadata.mediaDate));
+                    }
+                    if (encaps->untimed_metadata.pictureHFov != 0.)
+                    {
+                        char hfov[20];
+                        snprintf(hfov, 20, "%.2f", encaps->untimed_metadata.pictureHFov);
+                        json_object_object_add(cmt, "picture_hfov", json_object_new_string(hfov));
+                    }
+                    if (encaps->untimed_metadata.pictureVFov != 0.)
+                    {
+                        char vfov[20];
+                        snprintf(vfov, 20, "%.2f", encaps->untimed_metadata.pictureVFov);
+                        json_object_object_add(cmt, "picture_vfov", json_object_new_string(vfov));
+                    }
+                    commentMetaAtom = metadataAtomFromTagAndValue("cmt", json_object_to_json_string(cmt), 1);
+                    if (commentMetaAtom)
+                    {
+                        insertAtomIntoAtom(ilstMetaAtom, &commentMetaAtom);
+                    }
+                    setlocale(LC_ALL,"");
+                }
+            }
+
+            if (strlen(encaps->thumbnailFilePath))
+            {
+                coverMetaAtom = metadataAtomFromTagAndFile("covr", encaps->thumbnailFilePath, 13);
+                if (coverMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &coverMetaAtom);
+                }
+            }
+            insertAtomIntoAtom(metaAtom, &hdlrMetaAtom);
+            insertAtomIntoAtom(metaAtom, &ilstMetaAtom);
+            insertAtomIntoAtom(udtaAtom, &metaAtom);
+            insertAtomIntoAtom(moovAtom, &udtaAtom);
+        }
+
         mvhdAtom = mvhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, cdate);
         trakAtom = atomFromData(0, "trak", NULL);
         tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (video->width, video->height, encaps->timescale, videoDuration, cdate, ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO);
@@ -1473,12 +1710,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             stsdAtom = stsdAtomForMetadata (
                     metadata->content_encoding, metadata->mime_format);
 
-            sttsDataLen = (8 + 2 * sizeof(uint32_t));
+            // Generate stts atom from metadataTimeSyncBuffer
+            sttsDataLen = (8 + 2 * metadatasttsNentries * sizeof(uint32_t));
             sttsBuffer = (uint8_t*) calloc (sttsDataLen, 1);
-            sttsNentriesNE = htonl(1);
+            sttsNentriesNE = htonl(metadatasttsNentries);
             memcpy (&sttsBuffer[4], &sttsNentriesNE, sizeof(uint32_t));
-            memcpy (&sttsBuffer[8], &nbtFramesNE, sizeof(uint32_t));
-            memcpy (&sttsBuffer[12], &sttsNentriesNE, sizeof(uint32_t));
+            memcpy (&sttsBuffer[8], metadataTimeSyncBuffer, 2 * metadatasttsNentries * sizeof(uint32_t));
             sttsAtom = atomFromData (sttsDataLen, "stts", sttsBuffer);
             free(sttsBuffer);
 
@@ -1669,6 +1906,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
     ENCAPSULER_CLEANUP(free, frameSizeBufferNE);
     ENCAPSULER_CLEANUP(free, videoOffsetBuffer);
     ENCAPSULER_CLEANUP(free, frameTimeSyncBuffer);
+    ENCAPSULER_CLEANUP(free, metadataTimeSyncBuffer);
     ENCAPSULER_CLEANUP(free, iFrameIndexBuffer);
     ENCAPSULER_CLEANUP(free, metadataOffsetBuffer);
     ENCAPSULER_CLEANUP(free, audioOffsetBuffer);
@@ -1685,9 +1923,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
  */
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **encapsuler, bool rename_tempFile)
 {
-    ARMEDIA_Audio_t *audio = NULL;
-    ARMEDIA_Video_t *video = NULL;
-    ARMEDIA_Metadata_t *metadata = NULL;
     ARMEDIA_VideoEncapsuler_t* encaps = NULL;
 
     if (NULL == encapsuler)
@@ -1702,12 +1937,9 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
     } else {
         encaps = *encapsuler;
     }
-    audio = encaps->audio;
-    video = encaps->video;
-    metadata = encaps->metadata;
 
-    if(NULL!=encaps->dataFile) fclose (encaps->dataFile);
-    if(NULL!=encaps->metaFile) fclose (encaps->metaFile);
+    ENCAPSULER_CLEANUP(fclose, encaps->dataFile);
+    ENCAPSULER_CLEANUP(fclose, encaps->metaFile);
     remove (encaps->metaFilePath);
 
     if (rename_tempFile)
@@ -1726,20 +1958,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Cleanup (ARMEDIA_VideoEncapsuler_t **enca
         remove (encaps->dataFilePath);
     }
 
-    if (video->sps)
-    {
-        free (video->sps);
-        video->sps = NULL;
-    }
-    if (video->pps)
-    {
-        free (video->pps);
-        video->pps = NULL;
-    }
+    ENCAPSULER_CLEANUP(free, encaps->video->sps);
+    ENCAPSULER_CLEANUP(free, encaps->video->pps);
 
-    ENCAPSULER_CLEANUP(free, audio);
-    ENCAPSULER_CLEANUP(free, video);
-    ENCAPSULER_CLEANUP(free, metadata);
+    ENCAPSULER_CLEANUP(free, encaps->audio);
+    ENCAPSULER_CLEANUP(free, encaps->video);
+    ENCAPSULER_CLEANUP(free, encaps->metadata);
     ENCAPSULER_CLEANUP(free, encaps);
     *encapsuler = NULL;
 
@@ -1938,7 +2162,7 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
             fSize = fSize_tmp;
             if ((asize + vsize + tsize + encapsuler->dataOffset + fSize) > tmpvidSize)
             {
-                ENCAPSULER_DEBUG ("Too many infos : truncate at %u\n", prevInfoIndex);
+                ENCAPSULER_DEBUG ("Too many infos : truncate at %zu\n", (size_t)prevInfoIndex);
                 fseeko(encapsuler->metaFile, 0, SEEK_SET);
                 if (0 != ftruncate (fileno (encapsuler->metaFile), prevInfoIndex))
                 {
@@ -2001,8 +2225,9 @@ int ARMEDIA_VideoEncapsuler_TryFixMediaFile (const char *metaFilePath)
         /* ARMEDIA_VideoEncapsuler_Finish function will do the cleanup
          * even if it fails */
         ret = 0;
-        goto no_cleanup;
     }
+
+    goto no_cleanup;
 
 cleanup:
     if (!ret)

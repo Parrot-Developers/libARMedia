@@ -33,10 +33,6 @@ LOCAL_INSTALL_HEADERS := \
 	Includes/libARMedia/ARMEDIA_VideoEncapsuler.h:usr/include/libARMedia/ \
 	Includes/libARMedia/ARMedia.h:usr/include/libARMedia/
 
-ifndef ARSDK_BUILD_FOR_APP
-LOCAL_CFLAGS += -DAC_VIDEOENC
-endif
-
 ifeq ("$(TARGET_OS)","darwin")
 ifneq ("$(TARGET_OS_FLAVOUR)","native")
 LOCAL_LIBRARIES += libARDataTransfer

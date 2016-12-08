@@ -56,6 +56,13 @@
 
 #define ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX   (128)
 
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE      (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE (19)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE   (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE (23)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE   (23)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE   (33)
+
 // File extension for informations files (frame sizes / types)
 #define METAFILE_EXT "-encaps.dat"
 
@@ -111,10 +118,10 @@ typedef struct {
     uint16_t height;
     uint64_t timestamp;                /* in microseconds */
     eARMEDIA_ENCAPSULER_FRAME_TYPE frame_type;               /* I-frame, P-frame, JPEG-frame */
-    uint8_t* frame;
+    const uint8_t* frame;
     uint32_t avc_nalu_count;
     uint32_t avc_nalu_size[ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX];
-    uint8_t *avc_nalu_data[ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX];
+    const uint8_t *avc_nalu_data[ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX];
     uint32_t avc_insert_ps;            /* if not null, insert SPS and PPS before this frame */
 } ARMEDIA_Frame_Header_t;
 
@@ -137,6 +144,28 @@ typedef struct {
     uint32_t sample_size;
     uint8_t* sample;
 } ARMEDIA_Sample_Header_t;
+
+typedef struct {
+    char makerAndModel[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];      /* product maker and model (commercial name,
+                                                                              * eg. "Parrot Bebop 2") */
+    char serialNumber[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE];  /* product serial number (18 chars string
+                                                                              * for Parrot products) */
+    char softwareVersion[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE]; /* software version (usually "SofwareName A.B.C"
+                                                                              * with A=major, B=minor, C=build) */
+    char mediaDate[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE];     /* media date and time: format is "%FT%H%M%S%z",
+                                                                              * i.e. yyyy-mm-ddThhmmssTz (eg. 2016-11-21T165545+0100)
+                                                                              * @see ARMEDIA_JSON_DESCRIPTION_DATE_FMT) */
+    char runDate[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE];         /* run date and time: format is "%FT%H%M%S%z",
+                                                                              * i.e. yyyy-mm-ddThhmmssTz (eg. 2016-11-21T165545+0100)
+                                                                              * @see ARMEDIA_JSON_DESCRIPTION_DATE_FMT) */
+    char runUuid[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE];         /* run UUID (32-chars hex string representing
+                                                                              * a 128bits value) */
+    double takeoffLatitude;                                                  /* takeoff latitude (deg) */
+    double takeoffLongitude;                                                 /* takeoff longitude (deg) */
+    float takeoffAltitude;                                                   /* takeoff altitude ASL (m) */
+    float pictureHFov;                                                       /* camera horizontal field of view (deg) */
+    float pictureVFov;                                                       /* camera vertical field of view (deg) */
+} ARMEDIA_Untimed_Metadata_t;
 
 /**
  * @brief Callback called when remove_all fixes a media file
@@ -183,6 +212,22 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetAvcParameterSets (ARMEDIA_VideoEncapsu
  * @return Possible return values are in eARMEDIA_ERROR
  */
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetMetadataInfo (ARMEDIA_VideoEncapsuler_t *encapsuler, const char *content_encoding, const char *mime_format, uint32_t metadata_block_size);
+
+/**
+ * @brief Set the video untimed metadata
+ * @param encapsuler ARMedia video encapsuler created by ARMEDIA_VideoEncapsuler_new()
+ * @param metadata Untimed metadata
+ * @return Possible return values are in eARMEDIA_ERROR
+ */
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsuler_t *encapsuler, const ARMEDIA_Untimed_Metadata_t *metadata);
+
+/**
+ * @brief Set the video thumbnail to include in metadata
+ * @param encapsuler ARMedia video encapsuler created by ARMEDIA_VideoEncapsuler_new()
+ * @param file File path (JPEG format only)
+ * @return Possible return values are in eARMEDIA_ERROR
+ */
+eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetVideoThumbnail (ARMEDIA_VideoEncapsuler_t *encapsuler, const char *file);
 
 /**
  * Add a video frame to an encapsulated video
