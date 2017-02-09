@@ -470,6 +470,28 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     return retAtom;
 }
 
+movie_atom_t *cdscAtomGen (uint32_t *target_track_id, uint32_t target_track_id_count)
+{
+    uint32_t dataSize = target_track_id_count * sizeof(uint32_t);
+    uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
+    uint32_t currentIndex = 0, i;
+    movie_atom_t *retAtom;
+
+    if (NULL == data)
+    {
+        return NULL;
+    }
+
+    for (i = 0; i < target_track_id_count; i++)
+    {
+        ATOM_WRITE_U32 (target_track_id[i]); /* track_IDs[] */
+    }
+
+    retAtom = atomFromData (dataSize, "cdsc", data);
+    ATOM_FREE (data);
+    return retAtom;
+}
+
 movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date)
 {
     uint32_t dataSize = 24;

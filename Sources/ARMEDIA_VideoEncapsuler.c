@@ -1306,6 +1306,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t* mvhdAtom;         // > mvhd
         movie_atom_t* trakAtom;         // > trak
         movie_atom_t* tkhdAtom;         // | > tkhd
+        movie_atom_t* trefAtom;         // | > tref
+        movie_atom_t* cdscAtom;         // |   > cdsc
         movie_atom_t* mdiaAtom;         // | > mdia
         movie_atom_t* mdhdAtom;         // |   > mdhd
         movie_atom_t* hdlrmdiaAtom;     // |   > hdlr
@@ -1763,7 +1765,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
             trakAtom = atomFromData(0, "trak", NULL);
             tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (0, 0, encaps->timescale, videoDuration, cdate, ARMEDIA_VIDEOATOM_MEDIATYPE_METADATA);
+            trefAtom = atomFromData(0, "tref", NULL);
+            uint32_t cdsc_track_id = ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO + 1;
+            cdscAtom = cdscAtomGen (&cdsc_track_id, 1);
             insertAtomIntoAtom(trakAtom, &tkhdAtom);
+            insertAtomIntoAtom(trefAtom, &cdscAtom);
+            insertAtomIntoAtom(trakAtom, &trefAtom);
             insertAtomIntoAtom(trakAtom, &mdiaAtom);
             insertAtomIntoAtom(moovAtom, &trakAtom);
         }
