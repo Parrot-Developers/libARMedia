@@ -519,46 +519,25 @@ movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
 
 movie_atom_t *hdlrAtomForMdia (eARMEDIA_VIDEOATOM_MEDIATYPE type)
 {
-    uint8_t data [37] =  {0x00, 0x00, 0x00, 0x00,
+    uint8_t data [25] =  {0x00, 0x00, 0x00, 0x00,
                           'm', 'h', 'l', 'r',
                           'v', 'i', 'd', 'e',
                           0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00,
-                          0x0c, 'V', 'i', 'd',
-                          'e', 'o', 'H', 'a',
-                          'n', 'd', 'l', 'e',
-                          'r'};
-    int dataSize = 37;
+                          0x00};
+    int dataSize = 25;
 
     if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND) {
         data[8] = 's';
         data[9] = 'o';
         data[10] = 'u';
         data[11] = 'n';
-
-        data[25] = 'S';
-        data[26] = 'o';
-        data[27] = 'u';
-        data[28] = 'n';
-        data[29] = 'd';
     } else if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_METADATA) {
         data[8] = 'm';
         data[9] = 'e';
         data[10] = 't';
         data[11] = 'a';
-
-        data[24] = 0x08;
-        data[25] = 'M';
-        data[26] = 'e';
-        data[27] = 't';
-        data[28] = 'a';
-        data[29] = 'd';
-        data[30] = 'a';
-        data[31] = 't';
-        data[32] = 'a';
-
-        dataSize = 33;
     }
     return atomFromData (dataSize, "hdlr", data);
 }
@@ -568,9 +547,10 @@ movie_atom_t *hdlrAtomForMetadata ()
     uint8_t data [25] =  {0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00,
                           'm', 'd', 'i', 'r',
-                          'a', 'p', 'p', 'l', 0x00,
+                          'a', 'p', 'p', 'l',
                           0x00, 0x00, 0x00, 0x00,
-                          0x00, 0x00, 0x00, 0x00};
+                          0x00, 0x00, 0x00, 0x00,
+                          0x00};
 
     return atomFromData (25, "hdlr", data);
 }
@@ -598,16 +578,14 @@ movie_atom_t *nmhdAtomGen (void)
 
 movie_atom_t *hdlrAtomForMinf (void)
 {
-    uint8_t data [36] =  {0x00, 0x00, 0x00, 0x00,
+    uint8_t data [25] =  {0x00, 0x00, 0x00, 0x00,
                           'd', 'h', 'l', 'r',
                           'u', 'r', 'l', ' ',
                           0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00,
-                          0x0b, 'D', 'a', 't',
-                          'a', 'H', 'a', 'n',
-                          'd', 'l', 'e', 'r'};
-    return atomFromData (36, "hdlr", data);
+                          0x00};
+    return atomFromData (25, "hdlr", data);
 }
 
 movie_atom_t *drefAtomGen (void)
