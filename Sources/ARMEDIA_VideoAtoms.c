@@ -53,7 +53,7 @@
 #define ATOM_FREE(PTR) free(PTR)
 #define ATOM_MEMCOPY(DST, SRC, SIZE) memcpy(DST, SRC, SIZE)
 
-#define TIMESTAMP_FROM_1970_TO_1904 (0x7c25b080U)
+#define TIMESTAMP_FROM_1970_TO_1904 (0x7c25b080UL)
 #define ATOM_SIZE 4
 
 #define ARMEDIA_TAG "ARMEDIA_VideoAtoms"
@@ -366,6 +366,7 @@ movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize)
 
 movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date)
 {
+    uint32_t date_1904 = (uint32_t)date + TIMESTAMP_FROM_1970_TO_1904;
     uint32_t dataSize = 100;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
     uint32_t currentIndex = 0;
@@ -376,9 +377,10 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
         return NULL;
     }
 
+
     ATOM_WRITE_U32 (0); /* Version (8) + Flags (24) */
-    ATOM_WRITE_U32 (0); /* Creation time */
-    ATOM_WRITE_U32 (0); /* Modification time */
+    ATOM_WRITE_U32 (date_1904); /* Creation time */
+    ATOM_WRITE_U32 (date_1904); /* Modification time */
     ATOM_WRITE_U32 (timescale); /* Timescale */
     ATOM_WRITE_U32 (duration); /* Duration (in timescale units) */
 
@@ -406,13 +408,14 @@ movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (4); /* Next track id */
 
-    retAtom = atomFromData (100, "mvhd", data);
+    retAtom = atomFromData (dataSize, "mvhd", data);
     ATOM_FREE (data);
     return retAtom;
 }
 
 movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date, eARMEDIA_VIDEOATOM_MEDIATYPE type)
 {
+    uint32_t date_1904 = (uint32_t)date + TIMESTAMP_FROM_1970_TO_1904;
     uint32_t dataSize = 84;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
     uint32_t currentIndex = 0;
@@ -424,11 +427,11 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
     }
 
     ATOM_WRITE_U32 (0x0000000f); /* Version (8) + Flags (24) */
-    ATOM_WRITE_U32 (0); /* Creation time */
-    ATOM_WRITE_U32 (0); /* Modification time */
+    ATOM_WRITE_U32 (date_1904); /* Creation time */
+    ATOM_WRITE_U32 (date_1904); /* Modification time */
     ATOM_WRITE_U32 ((type+1)); /* Track ID */
     ATOM_WRITE_U32 (0); /* Reserved */
-    ATOM_WRITE_U32 (duration); /* Duration, in timescale unit */
+    ATOM_WRITE_U32 (duration); /* Duration (in timescale units) */
     ATOM_WRITE_U32 (0); /* Reserved */
     ATOM_WRITE_U32 (0); /* Reserved */
     if (type == ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND)
@@ -464,7 +467,7 @@ movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h,
         ATOM_WRITE_U32 (0);
     }
 
-    retAtom = atomFromData (84, "tkhd", data);
+    retAtom = atomFromData (dataSize, "tkhd", data);
     ATOM_FREE (data);
     data = NULL;
     return retAtom;
@@ -494,6 +497,7 @@ movie_atom_t *cdscAtomGen (uint32_t *target_track_id, uint32_t target_track_id_c
 
 movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date)
 {
+    uint32_t date_1904 = (uint32_t)date + TIMESTAMP_FROM_1970_TO_1904;
     uint32_t dataSize = 24;
     uint32_t currentIndex = 0;
     uint8_t *data = (uint8_t*) ATOM_MALLOC (dataSize);
@@ -505,13 +509,13 @@ movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t dura
     }
 
     ATOM_WRITE_U32 (0); /* Version (8) + Flags (24) */
-    ATOM_WRITE_U32 (0); /* Creation time */
-    ATOM_WRITE_U32 (0); /* Modification time */
+    ATOM_WRITE_U32 (date_1904); /* Creation time */
+    ATOM_WRITE_U32 (date_1904); /* Modification time */
     ATOM_WRITE_U32 (timescale); /* Timescale */
-    ATOM_WRITE_U32 (duration); /* Duration */
+    ATOM_WRITE_U32 (duration); /* Duration (in timescale units) */
     ATOM_WRITE_U32 (0x55c40000); /* Language code (16) + Quality (16) */
 
-    retAtom = atomFromData (24, "mdhd", data);
+    retAtom = atomFromData (dataSize, "mdhd", data);
     ATOM_FREE (data);
     data = NULL;
     return retAtom;
