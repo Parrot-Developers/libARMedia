@@ -1306,6 +1306,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t* mvhdAtom;         // > mvhd
         movie_atom_t* trakAtom;         // > trak
         movie_atom_t* tkhdAtom;         // | > tkhd
+        movie_atom_t* trefAtom;         // | > tref
+        movie_atom_t* cdscAtom;         // |   > cdsc
         movie_atom_t* mdiaAtom;         // | > mdia
         movie_atom_t* mdhdAtom;         // |   > mdhd
         movie_atom_t* hdlrmdiaAtom;     // |   > hdlr
@@ -1515,13 +1517,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         metadataTimeSyncBuffer[2*metadatasttsNentries+1] = htonl(metadataGroupInterFrameDT);
         metadatasttsNentries++;
 
-        // get time values
-        tzset();
+        // get the local time value
         nowTm = localtime (&(encaps->creationTime));
-        time_t cdate = encaps->creationTime - timezone;
-        if (nowTm->tm_isdst >= 0) {
-            cdate += (3600 * nowTm->tm_isdst);
-        }
 
         // create atoms
         // Generating Atoms
@@ -1623,11 +1620,11 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             insertAtomIntoAtom(moovAtom, &udtaAtom);
         }
 
-        mvhdAtom = mvhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, cdate);
+        mvhdAtom = mvhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, encaps->creationTime);
         trakAtom = atomFromData(0, "trak", NULL);
-        tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (video->width, video->height, encaps->timescale, videoDuration, cdate, ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO);
+        tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (video->width, video->height, encaps->timescale, videoDuration, encaps->creationTime, ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO);
         mdiaAtom = atomFromData(0, "mdia", NULL);
-        mdhdAtom = mdhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, cdate);
+        mdhdAtom = mdhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, encaps->creationTime);
         hdlrmdiaAtom = hdlrAtomForMdia (ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO);
         minfAtom = atomFromData(0, "minf", NULL);
         vmhdAtom = vmhdAtomGen ();
@@ -1753,7 +1750,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
 
             mdiaAtom = atomFromData(0, "mdia", NULL);
-            mdhdAtom = mdhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, cdate);
+            mdhdAtom = mdhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, encaps->creationTime);
             hdlrmdiaAtom = hdlrAtomForMdia (ARMEDIA_VIDEOATOM_MEDIATYPE_METADATA);
 
             insertAtomIntoAtom(mdiaAtom, &mdhdAtom);
@@ -1762,8 +1759,13 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
 
             trakAtom = atomFromData(0, "trak", NULL);
-            tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (0, 0, encaps->timescale, videoDuration, cdate, ARMEDIA_VIDEOATOM_MEDIATYPE_METADATA);
+            tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (0, 0, encaps->timescale, videoDuration, encaps->creationTime, ARMEDIA_VIDEOATOM_MEDIATYPE_METADATA);
+            trefAtom = atomFromData(0, "tref", NULL);
+            uint32_t cdsc_track_id = ARMEDIA_VIDEOATOM_MEDIATYPE_VIDEO + 1;
+            cdscAtom = cdscAtomGen (&cdsc_track_id, 1);
             insertAtomIntoAtom(trakAtom, &tkhdAtom);
+            insertAtomIntoAtom(trefAtom, &cdscAtom);
+            insertAtomIntoAtom(trakAtom, &trefAtom);
             insertAtomIntoAtom(trakAtom, &mdiaAtom);
             insertAtomIntoAtom(moovAtom, &trakAtom);
         }
@@ -1823,7 +1825,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
 
             mdiaAtom = atomFromData(0, "mdia", NULL);
-            mdhdAtom = mdhdAtomFromFpsNumFramesAndDate (audio->freq, nbSamples, cdate);
+            mdhdAtom = mdhdAtomFromFpsNumFramesAndDate (audio->freq, nbSamples, encaps->creationTime);
             hdlrmdiaAtom = hdlrAtomForMdia (ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND);
 
             insertAtomIntoAtom(mdiaAtom, &mdhdAtom);
@@ -1832,7 +1834,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
 
 
             trakAtom = atomFromData(0, "trak", NULL);
-            tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (0, 0, encaps->timescale, videoDuration, cdate, ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND);
+            tkhdAtom = tkhdAtomWithResolutionNumFramesFpsAndDate (0, 0, encaps->timescale, videoDuration, encaps->creationTime, ARMEDIA_VIDEOATOM_MEDIATYPE_SOUND);
             insertAtomIntoAtom(trakAtom, &tkhdAtom);
             insertAtomIntoAtom(trakAtom, &mdiaAtom);
             insertAtomIntoAtom(moovAtom, &trakAtom);

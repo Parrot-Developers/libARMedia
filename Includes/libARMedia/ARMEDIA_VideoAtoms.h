@@ -118,6 +118,7 @@ movie_atom_t *ftypAtomForFormatAndCodecWithOffset (eARMEDIA_ENCAPSULER_VIDEO_COD
 movie_atom_t *mdatAtomForFormatWithVideoSize (uint64_t videoSize);
 movie_atom_t *mvhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date);
 movie_atom_t *tkhdAtomWithResolutionNumFramesFpsAndDate (uint32_t w, uint32_t h, uint32_t timescale, uint32_t duration, time_t date, eARMEDIA_VIDEOATOM_MEDIATYPE type);
+movie_atom_t *cdscAtomGen (uint32_t *target_track_id, uint32_t target_track_id_count);
 movie_atom_t *mdhdAtomFromFpsNumFramesAndDate (uint32_t timescale, uint32_t duration, time_t date);
 movie_atom_t *hdlrAtomForMdia (eARMEDIA_VIDEOATOM_MEDIATYPE type);
 movie_atom_t *vmhdAtomGen (void);
