@@ -57,6 +57,10 @@
 #define ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX   (128)
 
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE      (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_SIZE      (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_TITLE_SIZE      (100)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COMMENT_SIZE    (200)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COPYRIGHT_SIZE  (100)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE (19)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE   (50)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE (23)
@@ -148,10 +152,20 @@ typedef struct {
 typedef struct {
     char makerAndModel[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];      /* product maker and model (commercial name,
                                                                               * eg. "Parrot Bebop 2") */
+    char maker[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];              /* product maker (company name,
+                                                                              * eg. "Parrot") */
+    char model[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_SIZE];              /* product model (commercial name,
+                                                                              * eg. "Bebop 2") */
     char serialNumber[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE];  /* product serial number (18 chars string
                                                                               * for Parrot products) */
     char softwareVersion[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE]; /* software version (usually "SofwareName A.B.C"
                                                                               * with A=major, B=minor, C=build) */
+    char title[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_TITLE_SIZE];              /* video title (the run date will be used if no
+                                                                                title is provided */
+    char comment[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COMMENT_SIZE];          /* user-provided comment
+                                                                              */
+    char copyright[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COPYRIGHT_SIZE];      /* user-provided copyright
+                                                                              */
     char mediaDate[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE];     /* media date and time: format is "%FT%H%M%S%z",
                                                                               * i.e. yyyy-mm-ddThhmmssTz (eg. 2016-11-21T165545+0100)
                                                                               * @see ARMEDIA_JSON_DESCRIPTION_DATE_FMT) */

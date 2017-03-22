@@ -64,6 +64,46 @@
 #define ENCAPSULER_DEBUG_ENABLE (1)
 #define ENCAPSULER_LOG_TIMESTAMPS (0)
 
+
+typedef enum {
+    ARMEDIA_UNTIMED_METADATA_KEY_LOCATION = 0,
+    ARMEDIA_UNTIMED_METADATA_KEY_ARTIST,
+    ARMEDIA_UNTIMED_METADATA_KEY_TITLE,
+    ARMEDIA_UNTIMED_METADATA_KEY_DATE,
+    ARMEDIA_UNTIMED_METADATA_KEY_COMMENT,
+    ARMEDIA_UNTIMED_METADATA_KEY_COPYRIGHT,
+    ARMEDIA_UNTIMED_METADATA_KEY_MAKER,
+    ARMEDIA_UNTIMED_METADATA_KEY_MODEL,
+    ARMEDIA_UNTIMED_METADATA_KEY_VERSION,
+    ARMEDIA_UNTIMED_METADATA_KEY_COVER,
+    ARMEDIA_UNTIMED_METADATA_KEY_SERIAL,
+    ARMEDIA_UNTIMED_METADATA_KEY_RUN_ID,
+    ARMEDIA_UNTIMED_METADATA_KEY_RUN_DATE,
+    ARMEDIA_UNTIMED_METADATA_KEY_PICTURE_HFOV,
+    ARMEDIA_UNTIMED_METADATA_KEY_PICTURE_VFOV,
+    ARMEDIA_UNTIMED_METADATA_KEY_MAX,
+} eARMEDIA_UNTIMED_METADATA_KEY;
+
+static const char *ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_MAX] =
+{
+    "com.apple.quicktime.location.ISO6709",
+    "com.apple.quicktime.artist",
+    "com.apple.quicktime.title",
+    "com.apple.quicktime.creationdate",
+    "com.apple.quicktime.comment",
+    "com.apple.quicktime.copyright",
+    "com.apple.quicktime.make",
+    "com.apple.quicktime.model",
+    "com.apple.quicktime.software",
+    "com.apple.quicktime.artwork",
+    "com.parrot.serial",
+    "com.parrot.run.id",
+    "com.parrot.run.date",
+    "com.parrot.picture.hfov",
+    "com.parrot.picture.vfov",
+};
+
+
 #if ENCAPSULER_LOG_TIMESTAMPS
 FILE* tslogger = NULL;
 #include <inttypes.h>
@@ -444,6 +484,18 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsul
                  ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE, "%s",
                  metadata->makerAndModel);
     }
+    if (strlen(metadata->maker))
+    {
+        snprintf(encapsuler->untimed_metadata.maker,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE, "%s",
+                 metadata->maker);
+    }
+    if (strlen(metadata->model))
+    {
+        snprintf(encapsuler->untimed_metadata.model,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_SIZE, "%s",
+                 metadata->model);
+    }
     if (strlen(metadata->serialNumber))
     {
         snprintf(encapsuler->untimed_metadata.serialNumber,
@@ -455,6 +507,24 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsul
         snprintf(encapsuler->untimed_metadata.softwareVersion,
                  ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE, "%s",
                  metadata->softwareVersion);
+    }
+    if (strlen(metadata->title))
+    {
+        snprintf(encapsuler->untimed_metadata.title,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_TITLE_SIZE, "%s",
+                 metadata->title);
+    }
+    if (strlen(metadata->comment))
+    {
+        snprintf(encapsuler->untimed_metadata.comment,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COMMENT_SIZE, "%s",
+                 metadata->comment);
+    }
+    if (strlen(metadata->copyright))
+    {
+        snprintf(encapsuler->untimed_metadata.copyright,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COPYRIGHT_SIZE, "%s",
+                 metadata->copyright);
     }
     if (strlen(metadata->mediaDate))
     {
@@ -1323,15 +1393,42 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t* stscAtom;         // |       > stsc
         movie_atom_t* stszAtom;         // |       > stsz
         movie_atom_t* stcoAtom;         // |       > stco
-        movie_atom_t* udtaAtom;         // > udta (used with untimed metadata and thumbnail)
-        movie_atom_t* metaAtom;         // | > meta
-        movie_atom_t* hdlrMetaAtom;     // |   > hdlr
-        movie_atom_t* ilstMetaAtom;     // |   > ilst
-        movie_atom_t* artistMetaAtom;   // |     > ART
-        movie_atom_t* titleMetaAtom;    // |     > nam
-        movie_atom_t* encoderMetaAtom;  // |     > too
-        movie_atom_t* commentMetaAtom;  // |     > cmt
-        movie_atom_t* coverMetaAtom;    // |     > covr
+        movie_atom_t* udtaAtom;         // > udta
+        movie_atom_t* xyzUdtaAtom;      // | > xyz
+        movie_atom_t* metaUdtaAtom;     // | > meta
+        movie_atom_t* hdlrMetaUdtaAtom; // |   > hdlr
+        movie_atom_t* ilstMetaUdtaAtom; // |   > ilst
+        movie_atom_t* artistMetaUdtaAtom;   // |     > ART
+        movie_atom_t* titleMetaUdtaAtom;    // |     > nam
+        movie_atom_t* dateMetaUdtaAtom;     // |     > day
+        movie_atom_t* commentMetaUdtaAtom;  // |     > cmt
+        movie_atom_t* copyrightMetaUdtaAtom;// |     > cpy
+        movie_atom_t* makerMetaUdtaAtom;    // |     > mak
+        movie_atom_t* modelMetaUdtaAtom;    // |     > mod
+        movie_atom_t* versionMetaUdtaAtom;  // |     > swr
+        movie_atom_t* encoderMetaUdtaAtom;  // |     > too
+        movie_atom_t* coverMetaUdtaAtom;    // |     > covr
+        movie_atom_t* freeUdtaAtom;         // | > free
+        movie_atom_t* metaAtom;         // > meta
+        movie_atom_t* hdlrMetaAtom;     // | > hdlr
+        movie_atom_t* keysMetaAtom;     // | > keys
+        movie_atom_t* ilstMetaAtom;     // | > ilst
+        movie_atom_t* locationMetaAtom; // |   > com.apple.quicktime.location.ISO6709
+        movie_atom_t* artistMetaAtom;   // |   > com.apple.quicktime.artist
+        movie_atom_t* titleMetaAtom;    // |   > com.apple.quicktime.title
+        movie_atom_t* dateMetaAtom;     // |   > com.apple.quicktime.creationdate
+        movie_atom_t* commentMetaAtom;  // |   > com.apple.quicktime.comment
+        movie_atom_t* copyrightMetaAtom;// |   > com.apple.quicktime.copyright
+        movie_atom_t* makerMetaAtom;    // |   > com.apple.quicktime.make
+        movie_atom_t* modelMetaAtom;    // |   > com.apple.quicktime.model
+        movie_atom_t* versionMetaAtom;  // |   > com.apple.quicktime.software
+        movie_atom_t* coverMetaAtom;    // |   > com.apple.quicktime.artwork
+        movie_atom_t* serialMetaAtom;   // |   > com.parrot.serial
+        movie_atom_t* runidMetaAtom;    // |   > com.parrot.run.id
+        movie_atom_t* rundateMetaAtom;  // |   > com.parrot.run.date
+        movie_atom_t* picturehfovMetaAtom;  // |   > com.parrot.picture.hfov
+        movie_atom_t* picturevfovMetaAtom;  // |   > com.parrot.picture.vfov
+        movie_atom_t* freeMetaAtom;         // | > free
 
         uint32_t stssDataLen;
         uint8_t *stssBuffer;
@@ -1527,97 +1624,301 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         // Untimed metadata
         if (encaps->got_untimed_metadata || strlen(encaps->thumbnailFilePath))
         {
+            const char *key[ARMEDIA_UNTIMED_METADATA_KEY_MAX];
+            uint32_t keyCount = 0;
             udtaAtom = atomFromData(0, "udta", NULL);
             uint32_t zero = 0;
-            metaAtom = atomFromData(4, "meta", (uint8_t*)&zero);
+            metaUdtaAtom = atomFromData(4, "meta", (uint8_t*)&zero);
+            hdlrMetaUdtaAtom = hdlrAtomForUdtaMetadata();
+            ilstMetaUdtaAtom = atomFromData(0, "ilst", NULL);
+            metaAtom = atomFromData(0, "meta", NULL);
             hdlrMetaAtom = hdlrAtomForMetadata();
             ilstMetaAtom = atomFromData(0, "ilst", NULL);
             if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.makerAndModel))
             {
-                artistMetaAtom = metadataAtomFromTagAndValue("ART", encaps->untimed_metadata.makerAndModel, 1);
+                artistMetaUdtaAtom = metadataAtomFromTagAndValue(0, "ART", encaps->untimed_metadata.makerAndModel, 1);
+                if (artistMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &artistMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_ARTIST];
+                if (key[keyCount]) keyCount++;
+                artistMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.makerAndModel, 1);
                 if (artistMetaAtom)
                 {
                     insertAtomIntoAtom(ilstMetaAtom, &artistMetaAtom);
                 }
             }
-            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.runDate))
+            else if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.maker) && strlen(encaps->untimed_metadata.model))
             {
-                titleMetaAtom = metadataAtomFromTagAndValue("nam", encaps->untimed_metadata.runDate, 1);
+                // Build the artist string as maker + model
+                char artist[100];
+                snprintf(artist, sizeof(artist), "%s %s",
+                         encaps->untimed_metadata.maker,
+                         encaps->untimed_metadata.model);
+                artistMetaUdtaAtom = metadataAtomFromTagAndValue(0, "ART", artist, 1);
+                if (artistMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &artistMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_ARTIST];
+                if (key[keyCount]) keyCount++;
+                artistMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, artist, 1);
+                if (artistMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &artistMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.title))
+            {
+                titleMetaUdtaAtom = metadataAtomFromTagAndValue(0, "nam", encaps->untimed_metadata.title, 1);
+                if (titleMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &titleMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_TITLE];
+                if (key[keyCount]) keyCount++;
+                titleMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.title, 1);
                 if (titleMetaAtom)
                 {
                     insertAtomIntoAtom(ilstMetaAtom, &titleMetaAtom);
                 }
             }
+            else if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.runDate))
+            {
+                // If no title is defined, used the run date
+                titleMetaUdtaAtom = metadataAtomFromTagAndValue(0, "nam", encaps->untimed_metadata.runDate, 1);
+                if (titleMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &titleMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_TITLE];
+                if (key[keyCount]) keyCount++;
+                titleMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.runDate, 1);
+                if (titleMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &titleMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.mediaDate))
+            {
+                dateMetaUdtaAtom = metadataAtomFromTagAndValue(0, "day", encaps->untimed_metadata.mediaDate, 1);
+                if (dateMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &dateMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_DATE];
+                if (key[keyCount]) keyCount++;
+                dateMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.mediaDate, 1);
+                if (dateMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &dateMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.takeoffLatitude != 500.) && (encaps->untimed_metadata.takeoffLongitude != 500.))
+            {
+                char xyz[100];
+                char *location = xyz + 4;
+                /* ISO 6709 Annex H string expression */
+                snprintf(location, sizeof(xyz) - 4, "%+08.4f%+09.4f/",
+                         encaps->untimed_metadata.takeoffLatitude,
+                         encaps->untimed_metadata.takeoffLongitude);
+                xyz[0] = (strlen(location) >> 8) & 0xFF;
+                xyz[1] = strlen(location) & 0xFF;
+                xyz[2] = 0x15; // language code = 0x15c7
+                xyz[3] = 0xc7; // language code = 0x15c7
+                xyzUdtaAtom = atomFromData (4 + strlen(location), "\xA9xyz", (uint8_t*)xyz);
+                if (xyzUdtaAtom)
+                {
+                    insertAtomIntoAtom(udtaAtom, &xyzUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_LOCATION];
+                if (key[keyCount]) keyCount++;
+                snprintf(xyz, sizeof(xyz), "%+012.8f%+013.8f%+.2f/",
+                         encaps->untimed_metadata.takeoffLatitude,
+                         encaps->untimed_metadata.takeoffLongitude,
+                         encaps->untimed_metadata.takeoffAltitude);
+                locationMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, xyz, 1);
+                if (locationMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &locationMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.maker))
+            {
+                makerMetaUdtaAtom = metadataAtomFromTagAndValue(0, "mak", encaps->untimed_metadata.maker, 1);
+                if (makerMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &makerMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_MAKER];
+                if (key[keyCount]) keyCount++;
+                makerMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.maker, 1);
+                if (makerMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &makerMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.model))
+            {
+                modelMetaUdtaAtom = metadataAtomFromTagAndValue(0, "mod", encaps->untimed_metadata.model, 1);
+                if (modelMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &modelMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_MODEL];
+                if (key[keyCount]) keyCount++;
+                modelMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.model, 1);
+                if (modelMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &modelMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.softwareVersion))
+            {
+                versionMetaUdtaAtom = metadataAtomFromTagAndValue(0, "swr", encaps->untimed_metadata.softwareVersion, 1);
+                if (versionMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &versionMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_VERSION];
+                if (key[keyCount]) keyCount++;
+                versionMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.softwareVersion, 1);
+                if (versionMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &versionMetaAtom);
+                }
+            }
             if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.serialNumber))
             {
-                encoderMetaAtom = metadataAtomFromTagAndValue("too", encaps->untimed_metadata.serialNumber, 1);
-                if (encoderMetaAtom)
+                encoderMetaUdtaAtom = metadataAtomFromTagAndValue(0, "too", encaps->untimed_metadata.serialNumber, 1);
+                if (encoderMetaUdtaAtom)
                 {
-                    insertAtomIntoAtom(ilstMetaAtom, &encoderMetaAtom);
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &encoderMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_SERIAL];
+                if (key[keyCount]) keyCount++;
+                serialMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.serialNumber, 1);
+                if (serialMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &serialMetaAtom);
                 }
             }
-            if ((encaps->got_untimed_metadata) && (strlen(encaps->untimed_metadata.softwareVersion)
-                    || strlen(encaps->untimed_metadata.runUuid)
-                    || ((encaps->untimed_metadata.takeoffLatitude != 500.) && (encaps->untimed_metadata.takeoffLongitude != 500.))
-                    || (encaps->untimed_metadata.pictureHFov != 0.)
-                    || (encaps->untimed_metadata.pictureVFov != 0.)))
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.comment))
             {
-                struct json_object* cmt;
-                cmt = json_object_new_object();
-                if (cmt != NULL)
+                commentMetaUdtaAtom = metadataAtomFromTagAndValue(0, "cmt", encaps->untimed_metadata.comment, 1);
+                if (commentMetaUdtaAtom)
                 {
-                    setlocale(LC_ALL,"C");
-                    if (strlen(encaps->untimed_metadata.softwareVersion))
-                    {
-                        json_object_object_add(cmt, "software_version", json_object_new_string(encaps->untimed_metadata.softwareVersion));
-                    }
-                    if (strlen(encaps->untimed_metadata.runUuid))
-                    {
-                        json_object_object_add(cmt, "run_uuid", json_object_new_string(encaps->untimed_metadata.runUuid));
-                    }
-                    if ((encaps->untimed_metadata.takeoffLatitude != 500.) && (encaps->untimed_metadata.takeoffLongitude != 500.))
-                    {
-                        char takeoff[100];
-                        snprintf(takeoff, 100, "%.8f,%.8f,%.8f", encaps->untimed_metadata.takeoffLatitude, encaps->untimed_metadata.takeoffLongitude, encaps->untimed_metadata.takeoffAltitude);
-                        json_object_object_add(cmt, "takeoff_position", json_object_new_string(takeoff));
-                    }
-                    if (strlen(encaps->untimed_metadata.mediaDate))
-                    {
-                        json_object_object_add(cmt, "media_date", json_object_new_string(encaps->untimed_metadata.mediaDate));
-                    }
-                    if (encaps->untimed_metadata.pictureHFov != 0.)
-                    {
-                        char hfov[20];
-                        snprintf(hfov, 20, "%.2f", encaps->untimed_metadata.pictureHFov);
-                        json_object_object_add(cmt, "picture_hfov", json_object_new_string(hfov));
-                    }
-                    if (encaps->untimed_metadata.pictureVFov != 0.)
-                    {
-                        char vfov[20];
-                        snprintf(vfov, 20, "%.2f", encaps->untimed_metadata.pictureVFov);
-                        json_object_object_add(cmt, "picture_vfov", json_object_new_string(vfov));
-                    }
-                    commentMetaAtom = metadataAtomFromTagAndValue("cmt", json_object_to_json_string(cmt), 1);
-                    if (commentMetaAtom)
-                    {
-                        insertAtomIntoAtom(ilstMetaAtom, &commentMetaAtom);
-                    }
-                    setlocale(LC_ALL,"");
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &commentMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_COMMENT];
+                if (key[keyCount]) keyCount++;
+                commentMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.comment, 1);
+                if (commentMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &commentMetaAtom);
                 }
             }
-
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.copyright))
+            {
+                copyrightMetaUdtaAtom = metadataAtomFromTagAndValue(0, "cpy", encaps->untimed_metadata.copyright, 1);
+                if (copyrightMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &copyrightMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_COPYRIGHT];
+                if (key[keyCount]) keyCount++;
+                copyrightMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.copyright, 1);
+                if (copyrightMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &copyrightMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.runUuid))
+            {
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_RUN_ID];
+                if (key[keyCount]) keyCount++;
+                runidMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.runUuid, 1);
+                if (runidMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &runidMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.runDate))
+            {
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_RUN_DATE];
+                if (key[keyCount]) keyCount++;
+                rundateMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.runDate, 1);
+                if (rundateMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &rundateMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.pictureHFov != 0.))
+            {
+                char hfov[20];
+                snprintf(hfov, 20, "%.2f", encaps->untimed_metadata.pictureHFov);
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_PICTURE_HFOV];
+                if (key[keyCount]) keyCount++;
+                picturehfovMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, hfov, 1);
+                if (picturehfovMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &picturehfovMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && (encaps->untimed_metadata.pictureVFov != 0.))
+            {
+                char vfov[20];
+                snprintf(vfov, 20, "%.2f", encaps->untimed_metadata.pictureVFov);
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_PICTURE_VFOV];
+                if (key[keyCount]) keyCount++;
+                picturevfovMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, vfov, 1);
+                if (picturevfovMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &picturevfovMetaAtom);
+                }
+            }
             if (strlen(encaps->thumbnailFilePath))
             {
-                coverMetaAtom = metadataAtomFromTagAndFile("covr", encaps->thumbnailFilePath, 13);
+                coverMetaUdtaAtom = metadataAtomFromTagAndFile(0, "covr", encaps->thumbnailFilePath, 13);
+                if (coverMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &coverMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_COVER];
+                if (key[keyCount]) keyCount++;
+                coverMetaAtom = metadataAtomFromTagAndFile(keyCount, NULL, encaps->thumbnailFilePath, 13);
                 if (coverMetaAtom)
                 {
                     insertAtomIntoAtom(ilstMetaAtom, &coverMetaAtom);
                 }
             }
-            insertAtomIntoAtom(metaAtom, &hdlrMetaAtom);
-            insertAtomIntoAtom(metaAtom, &ilstMetaAtom);
-            insertAtomIntoAtom(udtaAtom, &metaAtom);
+
+            keysMetaAtom = metadataKeysAtom(key, keyCount);
+
+            // Add 1kB free space at the end of the udta and meta boxes to allow post-editing of metadata
+            uint32_t emptydatasize = 1024 - 8; // remove 8 bytes for box size and type
+            uint8_t *emptydata = calloc(emptydatasize, sizeof(uint8_t));
+            if (emptydata == NULL) {
+                ENCAPSULER_ERROR("Error allocating free data");
+                freeUdtaAtom = NULL;
+                freeMetaAtom = NULL;
+            } else {
+                freeUdtaAtom = atomFromData(emptydatasize, "free", emptydata);
+                freeMetaAtom = atomFromData(emptydatasize, "free", emptydata);
+                free(emptydata);
+            }
+
+            insertAtomIntoAtom(metaUdtaAtom, &hdlrMetaUdtaAtom);
+            insertAtomIntoAtom(metaUdtaAtom, &ilstMetaUdtaAtom);
+            insertAtomIntoAtom(udtaAtom, &metaUdtaAtom);
+            if (freeUdtaAtom) insertAtomIntoAtom(udtaAtom, &freeUdtaAtom);
             insertAtomIntoAtom(moovAtom, &udtaAtom);
+            insertAtomIntoAtom(metaAtom, &hdlrMetaAtom);
+            insertAtomIntoAtom(metaAtom, &keysMetaAtom);
+            insertAtomIntoAtom(metaAtom, &ilstMetaAtom);
+            if (freeMetaAtom) insertAtomIntoAtom(metaAtom, &freeMetaAtom);
+            insertAtomIntoAtom(moovAtom, &metaAtom);
         }
 
         mvhdAtom = mvhdAtomFromFpsNumFramesAndDate (encaps->timescale, videoDuration, encaps->creationTime);

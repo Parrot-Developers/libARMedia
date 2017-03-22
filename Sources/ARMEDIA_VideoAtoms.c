@@ -550,6 +550,19 @@ movie_atom_t *hdlrAtomForMetadata ()
 {
     uint8_t data [25] =  {0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00, 0x00, 0x00,
+                          'm', 'd', 't', 'a',
+                          0x00, 0x00, 0x00, 0x00,
+                          0x00, 0x00, 0x00, 0x00,
+                          0x00, 0x00, 0x00, 0x00,
+                          0x00};
+
+    return atomFromData (25, "hdlr", data);
+}
+
+movie_atom_t *hdlrAtomForUdtaMetadata ()
+{
+    uint8_t data [25] =  {0x00, 0x00, 0x00, 0x00,
+                          0x00, 0x00, 0x00, 0x00,
                           'm', 'd', 'i', 'r',
                           'a', 'p', 'p', 'l',
                           0x00, 0x00, 0x00, 0x00,
@@ -985,29 +998,140 @@ movie_atom_t *stszAtomGen(uint32_t uniqueSize, uint32_t* sizeTable, uint32_t nSa
     return retAtom;
 }
 
-movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, uint8_t classId)
+movie_atom_t *metadataKeysAtom(const char *key[], uint32_t keyCount)
+{
+    movie_atom_t* retAtom = NULL;
+    uint32_t currentIndex = 0, i;
+    uint8_t* data;
+    uint32_t dataSize = 2 * sizeof(uint32_t);
+    for (i = 0; i < keyCount; i++)
+    {
+        dataSize += (2 * sizeof(uint32_t) + strlen(key[i]));
+    }
+
+    data = (uint8_t*) ATOM_MALLOC(dataSize);
+    if (data == NULL) {
+        return NULL;
+    }
+
+    ATOM_WRITE_U32(0); // versions & flags
+    ATOM_WRITE_U32(keyCount); // entry_count
+    for (i = 0; i < keyCount; i++)
+    {
+        ATOM_WRITE_U32((8 + strlen(key[i]))); // key_size
+        ATOM_WRITE_4CC('m', 'd', 't', 'a'); // key_namespace
+        ATOM_WRITE_BYTES(key[i], strlen(key[i])); // key_value
+    }
+
+    retAtom = atomFromData(dataSize, "keys", data);
+    ATOM_FREE(data);
+    return retAtom;
+}
+
+movie_atom_t *metadataAtomFromTagAndValue (uint32_t tagId, const char *tag, const char *value, uint8_t classId)
 {
     movie_atom_t *retAtom = NULL;
     movie_atom_t *dataAtom = NULL;
     char locTag [4] = {0};
-    /* If tag have a length of 3 chars, the (c) sign is added by this function */
-    if (3 == strlen (tag))
+    if (tagId != 0)
     {
-        locTag[0] = '\251'; // (c) sign
-        strncpy (&locTag[1], tag, 3);
+        locTag[0] = (tagId >> 24) & 0xFF;
+        locTag[1] = (tagId >> 16) & 0xFF;
+        locTag[2] = (tagId >> 8) & 0xFF;
+        locTag[3] = tagId & 0xFF;
     }
-    /* Custom tag */
-    else if (4 == strlen (tag))
+    else
     {
-        strncpy (locTag, tag, 4);
+        if (!tag)
+        {
+            return NULL;
+        }
+        /* If tag have a length of 3 chars, the (c) sign is added by this function */
+        if (3 == strlen (tag))
+        {
+            locTag[0] = '\251'; // (c) sign
+            strncpy (&locTag[1], tag, 3);
+        }
+        /* Custom tag */
+        else if (4 == strlen (tag))
+        {
+            strncpy (locTag, tag, 4);
+        }
     }
 
-    /* Continue only if we got a valid tag */
-    if (0 != locTag [0])
+    uint16_t valLen = (uint16_t) strlen (value);
+    uint32_t currentIndex = 0;
+    uint32_t dataSize = valLen + 8;
+    uint8_t *data = ATOM_MALLOC (dataSize);
+    if (NULL != data)
     {
-        uint16_t valLen = (uint16_t) strlen (value);
+        ATOM_WRITE_U8 (0);
+        ATOM_WRITE_U8 (0);
+        ATOM_WRITE_U8 (0);
+        ATOM_WRITE_U8 (classId);
+        ATOM_WRITE_U8 (0);
+        ATOM_WRITE_U8 (0);
+        ATOM_WRITE_U8 (0);
+        ATOM_WRITE_U8 (0);
+        ATOM_WRITE_BYTES (value, valLen); /* Actual value */
+        dataAtom = atomFromData (dataSize, "data", data);
+        ATOM_FREE (data);
+        data = NULL;
+        retAtom = atomFromData(0, locTag, NULL);
+        insertAtomIntoAtom(retAtom, &dataAtom);
+    }
+    return retAtom;
+}
+
+movie_atom_t *metadataAtomFromTagAndFile (uint32_t tagId, const char *tag, const char *file, uint8_t classId)
+{
+    movie_atom_t *retAtom = NULL;
+    movie_atom_t *dataAtom = NULL;
+    char locTag [4] = {0};
+    if (tagId != 0)
+    {
+        locTag[0] = (tagId >> 24) & 0xFF;
+        locTag[1] = (tagId >> 16) & 0xFF;
+        locTag[2] = (tagId >> 8) & 0xFF;
+        locTag[3] = tagId & 0xFF;
+    }
+    else
+    {
+        if (!tag)
+        {
+            return NULL;
+        }
+        /* If tag have a length of 3 chars, the (c) sign is added by this function */
+        if (3 == strlen (tag))
+        {
+            locTag[0] = '\251'; // (c) sign
+            strncpy (&locTag[1], tag, 3);
+        }
+        /* Custom tag */
+        else if (4 == strlen (tag))
+        {
+            strncpy (locTag, tag, 4);
+        }
+    }
+
+    FILE *f = fopen(file, "rb");
+    if (!f)
+    {
+        ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "failed to open cover file '%s'", file);
+        return NULL;
+    }
+    fseeko(f, 0, SEEK_END);
+    off_t fileLen = ftello(f);
+    fseeko(f, 0, SEEK_SET);
+    if (fileLen <= 0)
+    {
+        ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "null length for cover file '%s'", file);
+        return NULL;
+    }
+    if (fileLen < 0xFFFFFFFF - 8)
+    {
         uint32_t currentIndex = 0;
-        uint32_t dataSize = valLen + 8;
+        uint32_t dataSize = fileLen + 8;
         uint8_t *data = ATOM_MALLOC (dataSize);
         if (NULL != data)
         {
@@ -1019,7 +1143,8 @@ movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, u
             ATOM_WRITE_U8 (0);
             ATOM_WRITE_U8 (0);
             ATOM_WRITE_U8 (0);
-            ATOM_WRITE_BYTES (value, valLen); /* Actual value */
+            fread(data + 8, dataSize, 1, f);
+            ATOM_WRITE_BYTES (data + 8, fileLen); /* Actual data */
             dataAtom = atomFromData (dataSize, "data", data);
             ATOM_FREE (data);
             data = NULL;
@@ -1027,72 +1152,10 @@ movie_atom_t *metadataAtomFromTagAndValue (const char *tag, const char *value, u
             insertAtomIntoAtom(retAtom, &dataAtom);
         }
     }
-    return retAtom;
-}
-
-movie_atom_t *metadataAtomFromTagAndFile (const char *tag, const char *file, uint8_t classId)
-{
-    movie_atom_t *retAtom = NULL;
-    movie_atom_t *dataAtom = NULL;
-    char locTag [4] = {0};
-    /* If tag have a length of 3 chars, the (c) sign is added by this function */
-    if (3 == strlen (tag))
+    else
     {
-        locTag[0] = '\251'; // (c) sign
-        strncpy (&locTag[1], tag, 3);
-    }
-    /* Custom tag */
-    else if (4 == strlen (tag))
-    {
-        strncpy (locTag, tag, 4);
-    }
-
-    /* Continue only if we got a valid tag */
-    if (0 != locTag [0])
-    {
-        FILE *f = fopen(file, "rb");
-        if (!f)
-        {
-            ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "failed to open cover file '%s'", file);
-            return NULL;
-        }
-        fseeko(f, 0, SEEK_END);
-        off_t fileLen = ftello(f);
-        fseeko(f, 0, SEEK_SET);
-        if (fileLen <= 0)
-        {
-            ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "null length for cover file '%s'", file);
-            return NULL;
-        }
-        if (fileLen < 0xFFFFFFFF - 8)
-        {
-            uint32_t currentIndex = 0;
-            uint32_t dataSize = fileLen + 8;
-            uint8_t *data = ATOM_MALLOC (dataSize);
-            if (NULL != data)
-            {
-                ATOM_WRITE_U8 (0);
-                ATOM_WRITE_U8 (0);
-                ATOM_WRITE_U8 (0);
-                ATOM_WRITE_U8 (classId);
-                ATOM_WRITE_U8 (0);
-                ATOM_WRITE_U8 (0);
-                ATOM_WRITE_U8 (0);
-                ATOM_WRITE_U8 (0);
-                fread(data + 8, dataSize, 1, f);
-                ATOM_WRITE_BYTES (data + 8, fileLen); /* Actual data */
-                dataAtom = atomFromData (dataSize, "data", data);
-                ATOM_FREE (data);
-                data = NULL;
-                retAtom = atomFromData(0, locTag, NULL);
-                insertAtomIntoAtom(retAtom, &dataAtom);
-            }
-        }
-        else
-        {
-            ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "cover file '%s' is too large to fit into atom (size: %zu)", file, (size_t)fileLen);
-            return NULL;
-        }
+        ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "cover file '%s' is too large to fit into atom (size: %zu)", file, (size_t)fileLen);
+        return NULL;
     }
     return retAtom;
 }
