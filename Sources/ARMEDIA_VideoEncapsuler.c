@@ -77,6 +77,8 @@ typedef enum {
     ARMEDIA_UNTIMED_METADATA_KEY_VERSION,
     ARMEDIA_UNTIMED_METADATA_KEY_COVER,
     ARMEDIA_UNTIMED_METADATA_KEY_SERIAL,
+    ARMEDIA_UNTIMED_METADATA_KEY_MODEL_ID,
+    ARMEDIA_UNTIMED_METADATA_KEY_BUILD_ID,
     ARMEDIA_UNTIMED_METADATA_KEY_RUN_ID,
     ARMEDIA_UNTIMED_METADATA_KEY_RUN_DATE,
     ARMEDIA_UNTIMED_METADATA_KEY_PICTURE_HFOV,
@@ -97,6 +99,8 @@ static const char *ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_MAX] 
     "com.apple.quicktime.software",
     "com.apple.quicktime.artwork",
     "com.parrot.serial",
+    "com.parrot.model.id",
+    "com.parrot.build.id",
     "com.parrot.run.id",
     "com.parrot.run.date",
     "com.parrot.picture.hfov",
@@ -496,6 +500,12 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsul
                  ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_SIZE, "%s",
                  metadata->model);
     }
+    if (strlen(metadata->modelId))
+    {
+        snprintf(encapsuler->untimed_metadata.modelId,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_ID_SIZE, "%s",
+                 metadata->modelId);
+    }
     if (strlen(metadata->serialNumber))
     {
         snprintf(encapsuler->untimed_metadata.serialNumber,
@@ -507,6 +517,18 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsul
         snprintf(encapsuler->untimed_metadata.softwareVersion,
                  ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE, "%s",
                  metadata->softwareVersion);
+    }
+    if (strlen(metadata->buildId))
+    {
+        snprintf(encapsuler->untimed_metadata.buildId,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_BUILD_ID_SIZE, "%s",
+                 metadata->buildId);
+    }
+    if (strlen(metadata->artist))
+    {
+        snprintf(encapsuler->untimed_metadata.artist,
+                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_ARTIST_SIZE, "%s",
+                 metadata->artist);
     }
     if (strlen(metadata->title))
     {
@@ -1424,6 +1446,8 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t* versionMetaAtom;  // |   > com.apple.quicktime.software
         movie_atom_t* coverMetaAtom;    // |   > com.apple.quicktime.artwork
         movie_atom_t* serialMetaAtom;   // |   > com.parrot.serial
+        movie_atom_t* modelidMetaAtom;  // |   > com.parrot.model.id
+        movie_atom_t* buildidMetaAtom;  // |   > com.parrot.build.id
         movie_atom_t* runidMetaAtom;    // |   > com.parrot.run.id
         movie_atom_t* rundateMetaAtom;  // |   > com.parrot.run.date
         movie_atom_t* picturehfovMetaAtom;  // |   > com.parrot.picture.hfov
@@ -1634,7 +1658,22 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
             metaAtom = atomFromData(0, "meta", NULL);
             hdlrMetaAtom = hdlrAtomForMetadata();
             ilstMetaAtom = atomFromData(0, "ilst", NULL);
-            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.makerAndModel))
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.artist))
+            {
+                artistMetaUdtaAtom = metadataAtomFromTagAndValue(0, "ART", encaps->untimed_metadata.artist, 1);
+                if (artistMetaUdtaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaUdtaAtom, &artistMetaUdtaAtom);
+                }
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_ARTIST];
+                if (key[keyCount]) keyCount++;
+                artistMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.artist, 1);
+                if (artistMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &artistMetaAtom);
+                }
+            }
+            else if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.makerAndModel))
             {
                 artistMetaUdtaAtom = metadataAtomFromTagAndValue(0, "ART", encaps->untimed_metadata.makerAndModel, 1);
                 if (artistMetaUdtaAtom)
@@ -1772,6 +1811,26 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 if (modelMetaAtom)
                 {
                     insertAtomIntoAtom(ilstMetaAtom, &modelMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.modelId))
+            {
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_MODEL_ID];
+                if (key[keyCount]) keyCount++;
+                modelidMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.modelId, 1);
+                if (modelidMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &modelidMetaAtom);
+                }
+            }
+            if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.buildId))
+            {
+                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_BUILD_ID];
+                if (key[keyCount]) keyCount++;
+                buildidMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.buildId, 1);
+                if (buildidMetaAtom)
+                {
+                    insertAtomIntoAtom(ilstMetaAtom, &buildidMetaAtom);
                 }
             }
             if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.softwareVersion))
