@@ -153,8 +153,6 @@ typedef struct {
 } ARMEDIA_Sample_Header_t;
 
 typedef struct {
-    char makerAndModel[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];      /* product maker and model (commercial name,
-                                                                              * eg. "Parrot Bebop 2") */
     char maker[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];              /* product maker (brand name,
                                                                               * eg. "Parrot") */
     char model[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_SIZE];              /* product model (commercial name,

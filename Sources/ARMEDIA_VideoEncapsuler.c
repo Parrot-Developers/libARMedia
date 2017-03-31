@@ -482,12 +482,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsul
         return ARMEDIA_ERROR_ENCAPSULER;
     }
 
-    if (strlen(metadata->makerAndModel))
-    {
-        snprintf(encapsuler->untimed_metadata.makerAndModel,
-                 ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE, "%s",
-                 metadata->makerAndModel);
-    }
     if (strlen(metadata->maker))
     {
         snprintf(encapsuler->untimed_metadata.maker,
@@ -1668,21 +1662,6 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_ARTIST];
                 if (key[keyCount]) keyCount++;
                 artistMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.artist, 1);
-                if (artistMetaAtom)
-                {
-                    insertAtomIntoAtom(ilstMetaAtom, &artistMetaAtom);
-                }
-            }
-            else if ((encaps->got_untimed_metadata) && strlen(encaps->untimed_metadata.makerAndModel))
-            {
-                artistMetaUdtaAtom = metadataAtomFromTagAndValue(0, "ART", encaps->untimed_metadata.makerAndModel, 1);
-                if (artistMetaUdtaAtom)
-                {
-                    insertAtomIntoAtom(ilstMetaUdtaAtom, &artistMetaUdtaAtom);
-                }
-                key[keyCount] = ARMEDIA_UntimedMetadataKey[ARMEDIA_UNTIMED_METADATA_KEY_ARTIST];
-                if (key[keyCount]) keyCount++;
-                artistMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.makerAndModel, 1);
                 if (artistMetaAtom)
                 {
                     insertAtomIntoAtom(ilstMetaAtom, &artistMetaAtom);
