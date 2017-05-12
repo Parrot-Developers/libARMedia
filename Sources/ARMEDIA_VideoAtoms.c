@@ -40,7 +40,7 @@
 #include <libARMedia/ARMedia.h>
 #include <libARMedia/ARMEDIA_VideoEncapsuler.h>
 #include <libARSAL/ARSAL_Print.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 #include <string.h>
 #include <arpa/inet.h>

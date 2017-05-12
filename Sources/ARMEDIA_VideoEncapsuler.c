@@ -50,7 +50,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <json/json.h>
+#include <json-c/json.h>
 #include <locale.h>
 #include <libARDiscovery/ARDiscovery.h>
 #include <libARMedia/ARMedia.h>
