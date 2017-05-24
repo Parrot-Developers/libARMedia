@@ -57,8 +57,15 @@
 #define ARMEDIA_ENCAPSULER_AVC_NALU_COUNT_MAX   (128)
 
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE      (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_SIZE      (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_ID_SIZE   (5)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_ARTIST_SIZE     (100)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_TITLE_SIZE      (100)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COMMENT_SIZE    (200)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COPYRIGHT_SIZE  (100)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE (19)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE   (50)
+#define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_BUILD_ID_SIZE   (100)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE (23)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_DATE_SIZE   (23)
 #define ARMEDIA_ENCAPSULER_UNTIMED_METADATA_RUN_UUID_SIZE   (33)
@@ -146,12 +153,26 @@ typedef struct {
 } ARMEDIA_Sample_Header_t;
 
 typedef struct {
-    char makerAndModel[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];      /* product maker and model (commercial name,
-                                                                              * eg. "Parrot Bebop 2") */
+    char maker[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MAKER_SIZE];              /* product maker (brand name,
+                                                                              * eg. "Parrot") */
+    char model[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_SIZE];              /* product model (commercial name,
+                                                                              * eg. "Bebop 2") */
+    char modelId[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MODEL_ID_SIZE];         /* product model ID (ARSDK 16-bit model ID
+                                                                              * in hex ASCII, eg. "090c") */
     char serialNumber[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SERIAL_NUM_SIZE];  /* product serial number (18 chars string
                                                                               * for Parrot products) */
     char softwareVersion[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_SOFT_VER_SIZE]; /* software version (usually "SofwareName A.B.C"
                                                                               * with A=major, B=minor, C=build) */
+    char buildId[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_BUILD_ID_SIZE];         /* software build ID (internal unique build
+                                                                                identifier) */
+    char artist[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_ARTIST_SIZE];            /* artist (the maker + model will be used
+                                                                                if no artist is provided) */
+    char title[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_TITLE_SIZE];              /* title (the run date will be used if no
+                                                                                title is provided) */
+    char comment[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COMMENT_SIZE];          /* user-provided comment
+                                                                              */
+    char copyright[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_COPYRIGHT_SIZE];      /* user-provided copyright
+                                                                              */
     char mediaDate[ARMEDIA_ENCAPSULER_UNTIMED_METADATA_MEDIA_DATE_SIZE];     /* media date and time: format is "%FT%H%M%S%z",
                                                                               * i.e. yyyy-mm-ddThhmmssTz (eg. 2016-11-21T165545+0100)
                                                                               * @see ARMEDIA_JSON_DESCRIPTION_DATE_FMT) */
