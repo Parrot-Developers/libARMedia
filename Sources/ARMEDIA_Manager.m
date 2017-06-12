@@ -177,37 +177,36 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
 - (eARMEDIA_MANAGER_ERROR)update
 {
     __block eARMEDIA_MANAGER_ERROR retVal = ARMEDIA_MANAGER_OK;
-    
-    if(!_isInit)
-        retVal = ARMEDIA_MANAGER_NOT_INITIALIZED;
-    
+
     // Get All assets from camera roll
     NSLog(@"Get All assets from camera roll");
     void (^assetGroupEnumerator)(ALAssetsGroup *, BOOL *) =  ^(ALAssetsGroup *group, BOOL *stop)
     {
-        if (group != nil)
+        if (group != nil && [group valueForProperty:ALAssetsGroupPropertyName])
         {
             [_groupMediaDictionary setValue:[group valueForProperty:ALAssetsGroupPropertyURL] forKey:[group valueForProperty:ALAssetsGroupPropertyName]];
             if([(NSNumber *)[group valueForProperty:ALAssetsGroupPropertyType] intValue] == ALAssetsGroupSavedPhotos)
             {
                 // Get count of assets
                 _mediaAssetsCount = [group numberOfAssets];
-                
+
                 NSLog(@"mediaAssetCount : %d",(int)[group numberOfAssets]);
                 if(_mediaAssetsCount > 0)
                 {
                     [self retrieveAssetsWithGroup:group];
                 }
-                else
-                {
-                    _projectsDictionary = [_privateProjectsDictionary copy];
-                    [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
-                    _isUpdate = YES;
-                }
+
             }
         }
+        if (group == nil) // end enumeration
+        {
+            _projectsDictionary = [_privateProjectsDictionary copy];
+            [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
+            _isUpdate = YES;
+            _isUpdating = NO;
+        }
     };
-    
+
     void (^failureBlock)(NSError *) = ^(NSError *error)
     {
         NSLog(@"Failure : %@", error);
@@ -219,13 +218,25 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
         _projectsDictionary = [_privateProjectsDictionary copy];
         _isUpdate = NO;
     };
-    
-    ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
-    _isUpdate = NO;
-    [library enumerateGroupsWithTypes:ALAssetsGroupAll
-                           usingBlock:assetGroupEnumerator
-                         failureBlock:failureBlock];
-    
+
+
+    if(!_isInit)
+    {
+        retVal = ARMEDIA_MANAGER_NOT_INITIALIZED;
+    }
+    else if (!_isUpdating)
+    {
+        _isUpdating = YES;
+        ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
+        _isUpdate = NO;
+        [library enumerateGroupsWithTypes:ALAssetsGroupAll
+                               usingBlock:assetGroupEnumerator
+                             failureBlock:failureBlock];
+    }
+    else
+    {
+        retVal = ARMEDIA_ERROR;
+    }
     return retVal;
 }
 
@@ -467,11 +478,9 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
             _projectsDictionary = [_privateProjectsDictionary copy];
             [[NSNotificationCenter defaultCenter] postNotificationName:kARMediaManagerNotificationUpdated object:nil];
             _isUpdate = YES;
-            _isUpdating = NO;
         }
         *stop = _cancelRefresh;
     };
-    _isUpdating = YES;
     [group enumerateAssetsUsingBlock:assetEnumerator];
 }
 
