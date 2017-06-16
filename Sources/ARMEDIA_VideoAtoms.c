@@ -1128,7 +1128,7 @@ movie_atom_t *metadataAtomFromTagAndFile (uint32_t tagId, const char *tag, const
         ARSAL_PRINT(ARSAL_PRINT_ERROR, ARMEDIA_TAG, "null length for cover file '%s'", file);
         return NULL;
     }
-    if (fileLen < 0xFFFFFFFF - 8)
+    if (fileLen < (INT32_MAX - 8))
     {
         uint32_t currentIndex = 0;
         uint32_t dataSize = fileLen + 8;

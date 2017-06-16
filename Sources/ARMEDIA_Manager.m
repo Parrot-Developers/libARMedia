@@ -112,7 +112,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
     return _sharedARMediaManager;
 }
 
-- (eARMEDIA_MANAGER_ERROR)initWithProjectIDs:(NSArray *)projectIDs;
+- (eARMEDIA_MANAGER_ERROR)initWithProjectIDs:(NSArray *)projectIDs
 {
     NSUInteger returnVal = ARMEDIA_MANAGER_ALREADY_INITIALIZED;
     if(!_isInit)
@@ -363,7 +363,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
             NSString *stringAsset = nil;
             ALAssetRepresentation *representation = [asset defaultRepresentation];
             ARMediaObject *mediaObject = [[ARMediaObject alloc]init];
-            if ([[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] intValue] > index)
+            if ([[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] unsignedIntegerValue] > index)
             {
                 stringAsset = [[representation url] absoluteString];
                 for (NSString *projectID in _privateProjectsDictionary)

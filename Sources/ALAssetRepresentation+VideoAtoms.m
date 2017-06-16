@@ -48,7 +48,12 @@
     int result = 0;
     NSDictionary *retVal = nil;
     
-    movie_atom_t atom = { 0 };
+    movie_atom_t atom = {
+        .size = 0,
+        .tag = "",
+        .data = NULL,
+        .wide = 0,
+    };
    
     NSError *error = nil;
     long long offset = 0;
