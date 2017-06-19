@@ -363,7 +363,7 @@ typedef void (^ARMediaManagerTranferingBlock)(NSString *assetURLString);
             NSString *stringAsset = nil;
             ALAssetRepresentation *representation = [asset defaultRepresentation];
             ARMediaObject *mediaObject = [[ARMediaObject alloc]init];
-            if ([[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] unsignedIntegerValue] > index)
+            if ((NSUInteger)[[[NSUserDefaults standardUserDefaults] valueForKey:kARMediaManagerKey] intValue] > index)
             {
                 stringAsset = [[representation url] absoluteString];
                 for (NSString *projectID in _privateProjectsDictionary)
