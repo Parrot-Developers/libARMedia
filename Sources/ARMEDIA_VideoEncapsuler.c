@@ -473,6 +473,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetMetadataInfo (ARMEDIA_VideoEncapsuler_
 
 eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsuler_t *encapsuler, const ARMEDIA_Untimed_Metadata_t *metadata)
 {
+    int i, k;
     if (!encapsuler)
     {
         return ARMEDIA_ERROR_ENCAPSULER;
@@ -565,6 +566,19 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_SetUntimedMetadata (ARMEDIA_VideoEncapsul
     encapsuler->untimed_metadata.takeoffAltitude = metadata->takeoffAltitude;
     encapsuler->untimed_metadata.pictureHFov = metadata->pictureHFov;
     encapsuler->untimed_metadata.pictureVFov = metadata->pictureVFov;
+    for (i = 0, k = 0; i < ARMEDIA_ENCAPSULER_UNTIMED_METADATA_CUSTOM_MAX_COUNT; i++)
+    {
+        if (strlen(metadata->custom[i].key) && strlen(metadata->custom[i].value))
+        {
+            snprintf(encapsuler->untimed_metadata.custom[k].key,
+                     ARMEDIA_ENCAPSULER_UNTIMED_METADATA_CUSTOM_KEY_SIZE, "%s",
+                     metadata->custom[i].key);
+            snprintf(encapsuler->untimed_metadata.custom[k].value,
+                     ARMEDIA_ENCAPSULER_UNTIMED_METADATA_CUSTOM_VALUE_SIZE, "%s",
+                     metadata->custom[i].value);
+            k++;
+        }
+    }
     encapsuler->got_untimed_metadata = 1;
 
     return ARMEDIA_OK;
@@ -1444,6 +1458,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         movie_atom_t* buildidMetaAtom;  // |   > com.parrot.build.id
         movie_atom_t* runidMetaAtom;    // |   > com.parrot.run.id
         movie_atom_t* rundateMetaAtom;  // |   > com.parrot.run.date
+        movie_atom_t* customMetaAtom;   // |   > user-defined
         movie_atom_t* picturehfovMetaAtom;  // |   > com.parrot.picture.hfov
         movie_atom_t* picturevfovMetaAtom;  // |   > com.parrot.picture.vfov
         movie_atom_t* freeMetaAtom;         // | > free
@@ -1642,7 +1657,7 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
         // Untimed metadata
         if (encaps->got_untimed_metadata || strlen(encaps->thumbnailFilePath))
         {
-            const char *key[ARMEDIA_UNTIMED_METADATA_KEY_MAX];
+            const char *key[ARMEDIA_UNTIMED_METADATA_KEY_MAX + ARMEDIA_ENCAPSULER_UNTIMED_METADATA_CUSTOM_MAX_COUNT];
             uint32_t keyCount = 0;
             udtaAtom = atomFromData(0, "udta", NULL);
             uint32_t zero = 0;
@@ -1914,6 +1929,23 @@ eARMEDIA_ERROR ARMEDIA_VideoEncapsuler_Finish (ARMEDIA_VideoEncapsuler_t **encap
                 if (picturevfovMetaAtom)
                 {
                     insertAtomIntoAtom(ilstMetaAtom, &picturevfovMetaAtom);
+                }
+            }
+            if (encaps->got_untimed_metadata)
+            {
+                int i;
+                for (i = 0; i < ARMEDIA_ENCAPSULER_UNTIMED_METADATA_CUSTOM_MAX_COUNT; i++)
+                {
+                    if ((strlen(encaps->untimed_metadata.custom[i].key)) && (strlen(encaps->untimed_metadata.custom[i].value)))
+                    {
+                        key[keyCount] = encaps->untimed_metadata.custom[i].key;
+                        keyCount++;
+                        customMetaAtom = metadataAtomFromTagAndValue(keyCount, NULL, encaps->untimed_metadata.custom[i].value, 1);
+                        if (customMetaAtom)
+                        {
+                            insertAtomIntoAtom(ilstMetaAtom, &customMetaAtom);
+                        }
+                    }
                 }
             }
             if (strlen(encaps->thumbnailFilePath))
